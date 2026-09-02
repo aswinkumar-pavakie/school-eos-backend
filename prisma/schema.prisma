@@ -1,0 +1,2 @@
+// Start with User/Role/Permission/Student/Guardian models only —
+// add tables module-by-module, matching each feature you build.
