@@ -1,0 +1,596 @@
+================================================================================
+SCHOOL EOS — BACKEND WORKFLOW, BY LOGIN
+One shared NestJS backend. This document walks through what THAT backend
+actually does when each of the 9 logins calls it — not 9 separate
+backends, one backend, viewed 9 times from 9 different callers.
+
+v2.0 CHANGE: Sports Manager is removed as a standalone login. Its
+backend work is redistributed exactly like the Transport Manager
+removal before it — one authorize() call, gated differently by who is
+calling, never a duplicated code path. Sports structure/assets (sport
+and category definitions, facilities, equipment master data, coach
+assignment) route through the SAME Admin-gated pattern as Transport
+and Hostel structure. Sports operations (teams, rosters, trials,
+training sessions, tournaments, fixtures, results, achievements,
+equipment issue/return) route through Faculty's authorize() resolution
+under a new assignment-scoped permission set, `sports.faculty.*`,
+exactly like Class Advisor or Health In-Charge scoping — see LOGIN 5 —
+FACULTY below. Logins 6-10 in the prior version are renumbered 5-9
+below to close the gap; there is no "Login 5 removed" placeholder, the
+same way Transport Manager left no placeholder when it was absorbed
+into Admin.
+
+Companion document: school-eos-frontend-workflow-by-login.txt — the SAME
+logins, from the screen/client side.
+================================================================================
+
+READ THIS FIRST — WHY "BY LOGIN" DOES NOT MEAN "BUILT 10 TIMES"
+--------------------------------------------------------------------------------
+There is exactly one backend codebase. Every login below hits the exact
+same controllers, the exact same authorization resolver, the exact same
+database. What changes per login is WHICH permissions resolve to WHICH
+scope for THAT caller — nothing else.
+
+If you are building this and you find yourself writing a second version
+of a controller, a service, or a validation rule because "Admin needs it
+to work slightly differently than Faculty," STOP. That difference belongs
+in the authorization layer (Core 2 below), not in a duplicated code path.
+This exact discipline is why the module build order further down is
+listed once, not once per login.
+
+--------------------------------------------------------------------------------
+THE SEVEN SHARED CORE SERVICES (built once, used by every login's every request)
+--------------------------------------------------------------------------------
+Every backend workflow described for every login below passes through
+these seven services, in this order. They are not re-explained per login
+— once you understand this pipeline, every login section is just "which
+data, which scope, which business rule."
+
+  1. AUTH GUARD           — validates the Bearer token (or device
+                             credential for logins 9/10), attaches the
+                             resolved identity to the request. Global,
+                             not attached per-controller by hand.
+  2. AUTHORIZATION        — the ONE resolver every endpoint calls:
+                             authorize(actor, action, resource) walks
+                             permissions -> assignments -> object
+                             relationship -> current state -> allow/deny.
+                             Any exception inside this step is a DENIAL,
+                             never a pass-through.
+  3. VALIDATION           — DTO shape, types, enums, required fields,
+                             before any business logic runs.
+  4. IDEMPOTENCY          — for any consequential write (money, a
+                             boarding event, a card tap): checks the
+                             `Idempotency-Key` against a stored key
+                             before the handler body runs at all.
+  5. BUSINESS/DOMAIN LOGIC — the actual operation: state transitions,
+                             calculations, invariant checks.
+  6. TRANSACTION + AUDIT  — the write commits atomically with an
+                             audit_event row. No module writes audit
+                             directly; this is the one path.
+  7. OUTBOX               — after commit, anything needing a
+                             notification is enqueued here, never
+                             called directly to a provider from inside
+                             business logic.
+
+Full detail on all seven, plus the 12-module build order that implements
+them, is not repeated in each login section below — see "THE MODULE
+BUILD ORDER" at the end of this document for that one-time reference.
+
+
+================================================================================
+LOGIN 1 — ADMIN                                    (backend perspective)
+================================================================================
+Admin is the highest-volume, highest-privilege login on the write side.
+Almost every backend module has at least one Admin-authorized endpoint.
+
+SIGNATURE WORKFLOW: Create a student and link a guardian
+--------------------------------------------------------------------------------
+1. AUTH GUARD confirms the caller holds an active Admin session.
+2. AUTHORIZATION: `authorize(admin, 'student.create', null)` — Admin
+   holds this permission unconditionally, no object-scope check needed
+   because the object doesn't exist yet.
+3. VALIDATION: student DTO checked against schema constraints (unique
+   admission number, valid medium reference, etc.).
+4. BUSINESS LOGIC: `student` row created; a `student_enrolment` row
+   created for the CURRENT academic year, pointing at the given section
+   — never a direct `section_id` on the student row itself, because
+   enrolment is year-scoped by design (this is what makes promoting a
+   student next year safe).
+5. Guardian link: a SEPARATE call, `POST /students/{{id}}/guardians`,
+   creates a `guardian_link` row. If the guardian's `person` record
+   doesn't exist yet, it is created first — a phone number match against
+   an EXISTING person is checked first, so a parent with a second child
+   never ends up as two separate person records.
+6. TRANSACTION + AUDIT: both the student and enrolment insert happen in
+   one transaction — a partial student-with-no-enrolment is not a valid
+   state this system permits to exist even momentarily.
+7. OUTBOX: nothing fires automatically here — account creation and
+   credential issuance are typically a separate deliberate step, not an
+   automatic side effect of adding a record.
+
+SIGNATURE WORKFLOW: Set up hostel structure and allocate a bed
+--------------------------------------------------------------------------------
+1. AUTHORIZATION is the entire point of this workflow's backend design:
+   `authorize(admin, 'hostel.structure.create', hostel)` succeeds for
+   Admin. The SAME endpoint, called by a Hostel Warden token, fails at
+   this exact step — not because there are two different endpoints, but
+   because the Warden's resolved permission set does not include
+   `hostel.structure.create` at all. One controller, one code path, two
+   different outcomes based entirely on step 2.
+2. Bed allocation: `POST /hostel/allocations` runs inside a transaction
+   using `SELECT ... FOR UPDATE` on the target bed row — this is the
+   concurrency control that guarantees two Admin staff clicking "assign"
+   on the same bed within the same second cannot both succeed.
+3. The Hostel Warden's daily roster (a completely different login, a
+   completely different set of endpoints) reads this allocation via a
+   plain read query. It never writes to it. That boundary is enforced at
+   step 2 (authorization), not by which screen exists in the frontend.
+
+SIGNATURE WORKFLOW: Register a biometric terminal
+--------------------------------------------------------------------------------
+1. `POST /devices { deviceType: "BIOMETRIC_TERMINAL" }` — same endpoint
+   used for every other device type (GPS trackers, NFC terminals). No
+   special-case controller for biometric hardware.
+2. BUSINESS LOGIC generates a device credential (a long-lived signed
+   token, distinct in structure from a user's access/refresh token pair)
+   and returns it once. It is not retrievable again — if lost, the
+   device must be deactivated and re-registered.
+3. This credential is what step 1 of the AUTH GUARD checks on every
+   subsequent call FROM that device — `POST /staff/attendance/biometric-events`
+   and every NFC/GPS ingestion endpoint validate against this same
+   device-credential mechanism, not a second one built per device type.
+
+SIGNATURE WORKFLOW: Sports structure and asset setup (moved here from the former Sports Manager role)
+--------------------------------------------------------------------------------
+1. `authorize(admin, 'sports.structure.create', null)` succeeds for
+   Admin on sport/category definitions, facility records, and
+   equipment master data — the exact same authorization shape as
+   Transport vehicle records and Hostel structure. A Faculty token,
+   including one holding the Sports Faculty assignment, is never
+   granted this permission at the seed-data level; the absence of the
+   grant IS the enforcement, not a hidden button.
+2. Assigning a coach to a team (`POST /sports/teams/{id}/coaches`) is
+   an Admin-only write for the same reason driver assignment is
+   Admin-only: BUSINESS LOGIC checks `coach.verification_expiry`
+   against the current date before allowing the assignment — an
+   expired external coach's police verification blocks the write with
+   a 422, same pattern as an expired transport driver document.
+3. Equipment issue/return (who currently holds a given piece of
+   equipment) is NOT part of this workflow — that is a daily
+   operational write, and stays with Sports Faculty on the Faculty
+   login below, reading against the equipment master rows Admin
+   creates here, never writing to them.
+
+
+================================================================================
+LOGIN 2 — PRINCIPAL                                (backend perspective)
+================================================================================
+Principal is almost entirely a READ + APPROVE login on the backend —
+very few endpoints exist where Principal is the sole creator of a record.
+
+SIGNATURE WORKFLOW: Approve a high-value fee concession
+--------------------------------------------------------------------------------
+1. The concession was created by Finance, which — per the approval
+   engine — generated an `approval_request` with a MULTI-STEP chain
+   (Finance -> Principal for this value band, per the seeded
+   `approval_policy` rows).
+2. `POST /approvals/{{id}}/approve` — AUTHORIZATION checks that the
+   CURRENT step of THIS SPECIFIC request is assigned to the Principal
+   role, not just that the caller generically holds a Principal login.
+   A Principal cannot approve a step that isn't currently theirs to
+   approve, even for a request type they can approve in general.
+3. BUSINESS LOGIC advances `approval_request.current_step`. If this was
+   the final step, the underlying object (the concession) transitions
+   from PENDING to APPROVED in the SAME transaction — an approval and
+   its effect are never two separate commits that could disagree if the
+   process crashes between them.
+4. OUTBOX enqueues notification to Finance (approved) and the parent
+   (concession applied), from the SAME commit that changed the state,
+   never from a follow-up unguaranteed step.
+
+SIGNATURE WORKFLOW: Fire an SOS / emergency broadcast
+--------------------------------------------------------------------------------
+1. AUTHORIZATION for this one endpoint is deliberately narrow — very
+   few roles can call it, and it additionally requires the caller's
+   session to be recently re-authenticated (a fresh token issued within
+   a short window), enforced as an extra check beyond the normal
+   AuthGuard, specifically to prevent a stolen long-lived session from
+   being able to fire a school-wide emergency alert.
+2. BUSINESS LOGIC does NOT compute the escalation tiers itself inline —
+   it writes an `sos_incident` row and hands off to the OUTBOX/alert
+   queue, which reads the seeded `escalation_policy` table (Tier 1
+   immediate, Tier 2 at +2 min if unacknowledged, Tier 3 — parents — at
+   +5 min). This separation matters: the API responds fast (the write
+   commits immediately), while the actual multi-minute escalation timing
+   is entirely the job worker's concern, running asynchronously.
+3. Acknowledgement by any one Tier 1 recipient halts further escalation
+   — the job worker checks `sos_incident.acknowledged_at` before firing
+   each subsequent tier, so a late acknowledgement genuinely stops
+   Tier 3 (parents) from ever being contacted for a resolved incident.
+
+
+================================================================================
+LOGIN 3 — VICE PRINCIPAL                           (backend perspective)
+================================================================================
+Read-heavy. The one place this login has real write access is delegated
+approvals — a subset of `approval_policy` rows can name Vice Principal
+as an approver, configured per school, not hardcoded.
+
+SIGNATURE WORKFLOW: Reviewing academic oversight data
+--------------------------------------------------------------------------------
+1. `GET /reports/academic-oversight` does NOT run ad-hoc aggregation
+   queries against live transactional tables on every request at this
+   school's scale it could, but the pattern to follow as data grows is:
+   this endpoint reads from a periodically-refreshed read model, kept
+   updated by a scheduled job, rather than becoming an increasingly slow
+   live query as more academic years accumulate.
+2. AUTHORIZATION scopes this to whatever academic oversight breadth has
+   been delegated — by default, read access across all sections, no
+   write access to any of it.
+
+
+================================================================================
+LOGIN 4 — FINANCE / ACCOUNTS                       (backend perspective)
+================================================================================
+The module with the strictest transactional discipline in the backend,
+because money is the one category of error that cannot be silently
+"corrected later" without real-world consequences.
+
+SIGNATURE WORKFLOW: Record a payment and settle across siblings
+--------------------------------------------------------------------------------
+1. A single `payment` row is created — NOT one row per child, even when
+   the payment covers fee obligations for multiple siblings.
+2. `payment_allocation` rows bridge that ONE payment to MULTIPLE
+   `fee_demand` rows, potentially belonging to different students. This
+   is the schema decision that makes "one payment, several children,
+   separate receipts" possible without duplicating the payment record.
+3. TRANSACTION: creating the payment, creating every allocation row, and
+   updating each fee_demand's paid status all happen in ONE database
+   transaction. A partial allocation (payment recorded but only some
+   demands updated) is not a state this system allows to exist even
+   transiently.
+4. Receipt generation is a SEPARATE step, one receipt PER STUDENT,
+   because the school needs a receipt per child even though there was
+   one payment — this runs as a follow-up job (Core 7/outbox pattern),
+   not inline in the payment transaction, since PDF generation is slow
+   and should never block the payment response.
+
+SIGNATURE WORKFLOW: Payment gateway webhook confirms an online payment
+--------------------------------------------------------------------------------
+1. `POST /finance/payment-events` is NOT protected by the normal
+   AuthGuard at all — it has its OWN guard that verifies a cryptographic
+   signature from the payment provider over the RAW, unparsed request
+   body. This is the one endpoint in the entire backend authenticated by
+   "prove you are the payment provider," not "prove you are a logged-in
+   user."
+2. IDEMPOTENCY here uses the PROVIDER's own event ID as the key, not a
+   client-generated one — because the provider itself may retry
+   delivery of the same webhook, and a second delivery of an already-
+   processed event must be a no-op, returning the SAME result, not an
+   error and not a second confirmation.
+3. This is the ONLY code path anywhere in the backend allowed to mark a
+   payment CONFIRMED. Not the Finance web screen, not any mobile call —
+   only this signature-verified endpoint. A cash payment recorded by
+   Finance at the counter is a DIFFERENT `mode` value on the same
+   `payment` table, confirmed directly by Finance's own authority in
+   that case, since no gateway is involved for cash.
+
+
+================================================================================
+LOGIN 5 — FACULTY                                  (backend perspective)
+================================================================================
+The most-called login on the backend by request volume, and the one
+where the offline-sync pattern was established first (Module 2), then
+reused by two other logins later (Transport, Canteen).
+
+Faculty is a single login with several possible assignments resolved
+per account — Class Advisor, Academic Coordinator, Health In-Charge,
+Community In-Charge, and (v2.0) Sports Faculty. All of them hit the
+exact same controllers; AUTHORIZATION just resolves a different scope
+per assignment, same discipline as every other role difference in this
+document. None of them — Academic Coordinator included — resolve to a
+web-tagged endpoint; Faculty's AUTH GUARD never issues a session that
+passes a WEB-only route's platform check, regardless of assignment.
+
+SIGNATURE WORKFLOW: Sports Faculty records a fixture result (moved here from the former Sports Manager role)
+--------------------------------------------------------------------------------
+1. `authorize(faculty, 'sports.fixture.result.record', fixture)` — this
+   only resolves ALLOW when the caller holds the Sports Faculty
+   assignment AND the fixture's team is inside that assignment's scope.
+   The same Faculty token calling this for a team it is not assigned to
+   gets the same DENIAL any other unauthorized caller would get — there
+   is no separate "Sports Manager" code path anymore for this check to
+   live in.
+2. BUSINESS LOGIC enforces a state/timing invariant server-side: a
+   result cannot be recorded with a timestamp earlier than the fixture's
+   own scheduled start time. This is checked in the domain layer, not
+   assumed from client-side date-picker constraints, because a client
+   can always be bypassed by a direct API call.
+3. Recording an achievement from this result is a write into a SHARED
+   `achievement` table, also written to by the Community module for
+   non-sports achievements. Sports Faculty's endpoint calls into the
+   SAME repository method Community uses — it does not maintain its own
+   parallel achievements table, which is exactly the kind of duplication
+   Core module design exists to prevent.
+4. Equipment issue/return, facility bookings, training-session
+   attendance, and team-ranking snapshots follow this exact same
+   assignment-and-object-scope check — one authorize() call per
+   endpoint, scoped to the caller's assigned sport(s)/team(s), never a
+   school-wide grant. Sport/category definitions, facility records, and
+   equipment master data are NOT writable here at all — see Login 1's
+   sports structure workflow; the absence of that grant on the Faculty
+   role is what keeps structure and operations from blurring together.
+
+SIGNATURE WORKFLOW: Mark attendance, including the offline case
+--------------------------------------------------------------------------------
+1. Online path: `POST /attendance/sessions` then
+   `POST /attendance/sessions/{{id}}/records` — straightforward, goes
+   through the standard seven-step pipeline once per request.
+2. Offline path: the SAME data arrives later, batched, via
+   `POST /attendance/sessions/sync`. BUSINESS LOGIC processes each
+   queued item INDEPENDENTLY — one rejected item in a batch of forty
+   does not roll back the other thirty-nine.
+3. IDEMPOTENCY here is evaluated PER ITEM within the batch, using a
+   client-generated key unique per device. A duplicate key returns
+   `ACCEPTED... already recorded` as a SUCCESS outcome — this is a
+   deliberate design choice: a retry after a timeout is the expected
+   normal case for an offline-capable client, not an error condition.
+4. AUTHORIZATION for marks scope uses a database VIEW
+   (`v_person_markable_offering`), not an inline query built fresh in
+   the controller — meaning the exact same scope logic that governs "can
+   this Faculty member enter marks for this subject" governs "can this
+   Faculty member sync an offline attendance batch for this class,"
+   because both check against the same underlying view.
+
+SIGNATURE WORKFLOW: Faculty self-reports manual attendance (device down)
+--------------------------------------------------------------------------------
+1. `POST /staff/attendance/manual` — the SAME endpoint Admin/Principal
+   use for direct entry. AUTHORIZATION resolves DIFFERENTLY based on who
+   is calling and whose record it concerns:
+     - Admin/Principal, any staff member -> BUSINESS LOGIC writes
+       `state = CONFIRMED` immediately.
+     - Faculty, OWN record only -> BUSINESS LOGIC writes
+       `state = PENDING` and, in the SAME transaction, creates an
+       `approval_request` with type `STAFF_ATTENDANCE_MANUAL_ENTRY`.
+2. This is enforced in the domain service, not the controller — a
+   Faculty member's own token can never produce a CONFIRMED result from
+   this endpoint no matter what the request body claims, because the
+   confirming/pending branch depends on comparing the caller's identity
+   against the `staffId` in the payload, a check that has nothing to do
+   with client-supplied data.
+3. On later approval (`POST /approvals/{{id}}/approve`), BUSINESS LOGIC
+   transitions the attendance event's state from PENDING to CONFIRMED —
+   it does not create a new row; the original row's state changes, so
+   there is exactly one attendance record with a clear history, not two
+   competing records.
+
+
+================================================================================
+LOGIN 6 — PARENT                                   (backend perspective)
+================================================================================
+Every single read this login performs passes through one extra
+authorization step that no other login needs: resolving the
+`guardian_link` relationship before anything else is even considered.
+
+SIGNATURE WORKFLOW: View a child's data (the pattern behind EVERY parent screen)
+--------------------------------------------------------------------------------
+1. `GET /students/{{id}}` — AUTHORIZATION step 2 does not check "is this
+   caller a parent," it checks "does an ACTIVE `guardian_link` row exist
+   connecting this caller's person record to THIS specific student ID."
+2. No such link -> the resolver returns a DENIAL, and the controller
+   returns 404, not 403 — object existence is never disclosed to a
+   caller who has no relationship to it, even a caller who is legitimately
+   a parent of some OTHER student.
+3. This ONE check, implemented ONCE in Core 2, is what every parent-
+   facing endpoint in the ENTIRE backend relies on — the students module,
+   the attendance module, the finance module, the wallet module, the
+   transport module, the health module. None of them re-implement this
+   guardian check independently; they all call the same resolver.
+
+SIGNATURE WORKFLOW: One payment covering multiple children
+--------------------------------------------------------------------------------
+1. `POST /finance/payments` accepts obligation references spanning
+   MULTIPLE student IDs in one request — AUTHORIZATION checks the
+   guardian_link for EVERY student ID referenced, not just the first
+   one, before the payment is created.
+2. See Login 4's payment workflow above for what happens next — this is
+   the exact same backend code path, just initiated by a Parent token
+   instead of a Finance token, with the caller's own guardian
+   relationships determining which obligations they were even allowed
+   to reference in the first place.
+
+SIGNATURE WORKFLOW: View live bus position
+--------------------------------------------------------------------------------
+1. `GET /students/{{id}}/transport/live` — beyond the guardian_link
+   check, BUSINESS LOGIC adds a SECOND condition: the student's
+   allocated route must have a trip CURRENTLY in `STARTED` or
+   `IN_PROGRESS` state. Outside that window, this returns 404 regardless
+   of the guardian relationship being valid — there is nothing to show,
+   and the endpoint does not pretend otherwise with an empty success
+   response.
+2. This endpoint NEVER queries historical telemetry, structurally —
+   it is written against the CURRENT-position read model only. Historical
+   trip playback is a completely different endpoint, with completely
+   different (much narrower) authorization, and Parent's token is never
+   accepted there at all.
+
+
+================================================================================
+LOGIN 7 — HOSTEL WARDEN                            (backend perspective)
+================================================================================
+
+SIGNATURE WORKFLOW: Night roll call
+--------------------------------------------------------------------------------
+1. `GET /hostel/attendance?date=X&session=NIGHT` — the roster this
+   returns is built from `hostel_allocation` rows that ADMIN created.
+   This endpoint performs a READ JOIN against that table; it has no
+   corresponding write endpoint accessible to the Warden's resolved
+   permission set.
+2. `POST /hostel/attendance` (marking present/absent) — AUTHORIZATION
+   confirms the Warden holds `hostel.attendance.record` for this
+   specific hostel, but explicitly does NOT check for
+   `hostel.structure.write` or `hostel.allocation.write` — those
+   permissions are simply never granted to the Warden role at all, at
+   the seed-data level, not filtered out defensively in the controller.
+   The absence of the grant IS the enforcement.
+
+SIGNATURE WORKFLOW: Emergency gate pass
+--------------------------------------------------------------------------------
+1. `POST /hostel/gate-passes/emergency` — BUSINESS LOGIC issues the pass
+   IMMEDIATELY, no approval gate before the write commits, because a
+   genuine emergency cannot wait on an approval chain.
+2. In the SAME transaction, an `approval_request` with type
+   `EMERGENCY_GATE_PASS` and `is_retrospective = true` is created,
+   assigned to Principal, due within 24 hours.
+3. A SEPARATE server-side check — not something the Warden's frontend
+   can bypass by hiding a button — blocks the gate pass from ever
+   transitioning to CLOSED while its linked retrospective approval
+   remains unresolved. This is the backend's own guarantee that an
+   emergency path with no audit never quietly becomes the default path.
+
+
+================================================================================
+LOGIN 8 — BUS ATTENDANT                            (backend perspective)
+================================================================================
+Device-scoped, and the backend treats "the person operating this device
+today" as irrelevant information — authorization here is about the
+DEVICE's registered assignment, not a human identity at all.
+
+SIGNATURE WORKFLOW: A student taps their card to board
+--------------------------------------------------------------------------------
+1. AUTH GUARD validates the DEVICE credential, resolves it to a
+   registered terminal, and — critically — resolves that terminal's
+   CURRENT route/vehicle assignment for today. A device credential is
+   not enough alone; the device must additionally be actively assigned
+   to the trip it's reporting against.
+2. `POST /transport/trips/{{id}}/boardings` — BUSINESS LOGIC checks
+   `card_tap_event` for the resolved student's card, confirms the
+   trip is STARTED or IN_PROGRESS, then checks whether this student
+   has an ACTIVE `student_transport_allocation` for THIS specific
+   route.
+3. No allocation for this route -> `is_wrong_bus = true` is set on the
+   boarding event, and the OUTBOX enqueues a `WRONG_BUS` alert to the
+   parent, the attendant's own device, AND Admin — three different
+   recipients from one write, all handled by outbox fan-out, not three
+   separate notification calls written into the boarding logic itself.
+4. IDEMPOTENCY: a second tap from the SAME card within a short debounce
+   window is recorded as a duplicate outcome, not a second boarding
+   event — this prevents a card lingering near the reader from
+   registering as multiple boards.
+
+SIGNATURE WORKFLOW: Closing boarding (the most safety-critical write in the backend)
+--------------------------------------------------------------------------------
+1. `POST /transport/trips/{{id}}/boarding/close` — BUSINESS LOGIC finds
+   every `student_trip_status` row still in `EXPECTED` for this trip and
+   transitions each to `NOT_BOARDED`, UNLESS that student has an
+   approved leave record or a not-travelling flag for today's date — in
+   which case the transition goes to `ABSENT` instead, and NO alert
+   fires.
+2. Every genuine `NOT_BOARDED` transition enqueues an alert via OUTBOX
+   — this is stated as a MUST in the business rule, not an optional
+   notification a module can skip. The suppression check (leave/not-
+   travelling) happens BEFORE this enqueue, not as a filter applied
+   afterward that could be accidentally bypassed.
+3. This endpoint is fully IDEMPOTENT — calling it again on an already-
+   closed trip returns success and raises no further alerts, which
+   matters because a flaky connection on the attendant's device
+   retrying this exact call must never re-alert parents whose children
+   already boarded fine.
+
+
+================================================================================
+LOGIN 9 — CANTEEN VENDOR                          (backend perspective)
+================================================================================
+
+SIGNATURE WORKFLOW: A wallet sale at the counter
+--------------------------------------------------------------------------------
+1. AUTH GUARD validates the terminal's device credential, same
+   mechanism as Login 8 — this is intentionally the SAME code path, not
+   a parallel one written for "canteen devices" specifically.
+2. BUSINESS LOGIC runs a strict ORDERED sequence of checks BEFORE
+   touching the wallet balance at all: card not blocked -> wallet
+   ACTIVE -> within per-transaction cap -> within today's cumulative
+   cap -> no parent item-block on the selected items -> sufficient
+   balance (or within the configured grace allowance). Each check that
+   fails returns a DISTINCT error code — there is no single generic
+   "declined" response, because the frontend needs to show the cashier
+   exactly which of these failed, not force a re-tap that risks a
+   double charge.
+3. TRANSACTION: the `wallet_ledger_entry` (DEBIT) and the
+   `pos_transaction` row are written in ONE transaction. A sale
+   recorded with no corresponding ledger debit, or a debit with no
+   corresponding sale record, is not a state this system allows to
+   exist even momentarily — this pairing is the actual definition of
+   "the sale happened" as far as the backend is concerned.
+4. IDEMPOTENCY: the `deviceIdempotencyKey` uniqueness constraint is
+   enforced at the DATABASE level (a unique index), not merely checked
+   in application code first — this is deliberate, because it is the
+   backstop against the exact double-charge scenario a busy lunch queue
+   with re-tapping cashiers would otherwise produce.
+
+SIGNATURE WORKFLOW: Offline sale, synced later
+--------------------------------------------------------------------------------
+1. Structurally identical to Login 5's offline attendance sync and
+   Login 8's offline tap handling — the SAME per-item outcome pattern
+   (`ACCEPTED` / `DUPLICATE` / `REJECTED`), because this pattern was
+   deliberately designed once and reused, not reinvented per feature.
+2. The one CANTEEN-SPECIFIC addition: BUSINESS LOGIC checks each queued
+   sale against `terminal.offline_floor_paise` for that student and
+   date — sales within the configured floor are accepted even though
+   the terminal couldn't verify the LIVE balance at the moment of sale;
+   sales exceeding it are `REJECTED` and flagged for manual settlement,
+   because the backend will not silently let an offline terminal debit
+   an amount it had no way to actually confirm was available.
+
+
+================================================================================
+THE MODULE BUILD ORDER — ONE-TIME REFERENCE, NOT PER-LOGIN
+================================================================================
+Every workflow above is implemented by one of these 12 modules. Build in
+this order; each is built exactly once regardless of how many logins
+call into it.
+
+  Module 1  — Identity & People        (Core 1/2 + person, staff, student,
+                                         guardian_link, enrolment)
+  Module 2  — Academics                (subjects, timetable, attendance +
+                                         its offline sync pattern, LMS)
+  Module 3  — Assessment               (exams, marks, report cards)
+  Module 4  — Approvals                (build BEFORE Finance — every
+                                         money/safety decision routes here)
+  Module 5  — Finance                  (fees, payments, payroll,
+                                         payment-events webhook)
+  Module 6  — Wallet & Canteen         (device-authenticated sales,
+                                         reuses Module 2's sync pattern)
+  Module 7  — Development, Community,
+              Sports                   (shared achievement/activity model.
+                                         Sports structure/assets: Admin-
+                                         gated. Sports operations:
+                                         Faculty-gated, scoped to the
+                                         Sports Faculty assignment — same
+                                         module, same tables, no separate
+                                         Sports Manager code path)
+  Module 8  — Transport, NFC, Devices  (ONE tap-ingestion endpoint,
+                                         routed by context — never two)
+  Module 9  — Hostel                   (Admin: structure/allocation.
+                                         Warden: daily ops only — same
+                                         controller, permission-gated)
+  Module 10 — Health & Camps           (camps write into health via
+                                         Module 10's own repository,
+                                         never a duplicate copy)
+  Module 11 — Communication & Safety   (the outbox's consumer side —
+                                         every module above has been
+                                         enqueueing into this since
+                                         Module 1)
+  Module 12 — Reporting, Bulk, Audit   (read-only across every table
+                                         above; built last on purpose)
+
+Full detail on each module's schema dependencies, API phase mapping, and
+specific reuse/duplication warnings: see school-eos-backend-build-workflow.txt
+Part 2, which this document assumes as background and does not repeat.
+
+
+================================================================================
+END OF DOCUMENT — 9 logins, 1 shared backend.
+See school-eos-frontend-workflow-by-login.txt for the same 9 logins
+from the screen/client side.
+================================================================================

@@ -1,0 +1,117 @@
+%%07_Transport_GPS_NFC — COMPLETE DOMAIN ERD
+%% Full column list is embedded in each table node.
+%% Cross-domain FKs are shown as dashed references to shared entities.
+%%{init: {"flowchart": {"curve": "basis", "nodeSpacing": 28, "rankSpacing": 55}, "theme": {"fontFamily": "Arial", "fontSize": "11px"}}}%%
+flowchart LR
+  vehicles["<b>vehicles</b><br/>PK id : uuid<br/>registration_number : text<br/>vehicle_number : text<br/>vehicle_type : text<br/>make : text<br/>model : text<br/>capacity : integer<br/>manufacture_year : smallint<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  vehicle_documents["<b>vehicle_documents</b><br/>PK id : uuid<br/>FK vehicle_id : uuid<br/>document_type : text<br/>document_number : text<br/>valid_from : date<br/>valid_until : date<br/>FK document_id : uuid<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  devices["<b>devices</b><br/>PK id : uuid<br/>device_serial : text<br/>device_type : text<br/>name : text<br/>firmware_version : text<br/>status : text<br/>last_seen_at : timestamptz<br/>FK registered_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  nfc_reader_devices["<b>nfc_reader_devices</b><br/>PK id : uuid<br/>FK device_id : uuid<br/>reader_type : text<br/>FK vehicle_id : uuid<br/>configuration : jsonb<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  gps_devices["<b>gps_devices</b><br/>PK id : uuid<br/>FK device_id : uuid<br/>provider : text<br/>device_identifier : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  vehicle_gps_assignments["<b>vehicle_gps_assignments</b><br/>PK id : uuid<br/>FK vehicle_id : uuid<br/>FK gps_device_id : uuid<br/>valid_from : timestamptz<br/>valid_until : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  cards["<b>cards</b><br/>PK id : uuid<br/>card_uid_hash : text<br/>card_serial : text<br/>card_type : text<br/>status : text<br/>issued_at : timestamptz<br/>expires_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  card_assignments["<b>card_assignments</b><br/>PK id : uuid<br/>FK card_id : uuid<br/>FK student_id : uuid<br/>valid_from : timestamptz<br/>valid_until : timestamptz<br/>assignment_reason : text<br/>status : text<br/>FK assigned_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  tap_events["<b>tap_events</b><br/>PK id : uuid<br/>client_event_id : text<br/>FK device_id : uuid<br/>FK card_id : uuid<br/>occurred_at : timestamptz<br/>received_at : timestamptz<br/>sequence_number : bigint<br/>event_type : text<br/>processing_status : text<br/>idempotency_key : text<br/>metadata : jsonb"]
+  transport_routes["<b>transport_routes</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>direction : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  transport_stops["<b>transport_stops</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>latitude : numeric(9,6)<br/>longitude : numeric(9,6)<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  route_stops["<b>route_stops</b><br/>PK id : uuid<br/>FK route_id : uuid<br/>FK stop_id : uuid<br/>sequence_no : smallint<br/>planned_offset_minutes : integer<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  vehicle_route_assignments["<b>vehicle_route_assignments</b><br/>PK id : uuid<br/>FK vehicle_id : uuid<br/>FK route_id : uuid<br/>valid_from : date<br/>valid_until : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  transport_personnel_assignments["<b>transport_personnel_assignments</b><br/>PK id : uuid<br/>FK vehicle_id : uuid<br/>FK staff_id : uuid<br/>assignment_type : text<br/>valid_from : date<br/>valid_until : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  driver_licenses["<b>driver_licenses</b><br/>PK id : uuid<br/>FK staff_id : uuid<br/>license_number : text<br/>license_type : text<br/>valid_from : date<br/>valid_until : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  student_transport_allocations["<b>student_transport_allocations</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK route_id : uuid<br/>FK stop_id : uuid<br/>FK vehicle_id : uuid<br/>valid_from : date<br/>valid_until : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  transport_trips["<b>transport_trips</b><br/>PK id : uuid<br/>FK vehicle_id : uuid<br/>FK route_id : uuid<br/>trip_date : date<br/>trip_type : text<br/>scheduled_start_at : timestamptz<br/>actual_start_at : timestamptz<br/>actual_end_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  trip_crew_assignments["<b>trip_crew_assignments</b><br/>PK id : uuid<br/>FK trip_id : uuid<br/>FK staff_id : uuid<br/>role : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  transport_student_events["<b>transport_student_events</b><br/>PK id : uuid<br/>FK trip_id : uuid<br/>FK student_id : uuid<br/>FK tap_event_id : uuid<br/>FK stop_id : uuid<br/>event_type : text<br/>event_status : text<br/>occurred_at : timestamptz<br/>recorded_at : timestamptz<br/>validation_result : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  transport_event_corrections["<b>transport_event_corrections</b><br/>PK id : uuid<br/>FK transport_student_event_id : uuid<br/>old_event_type : text<br/>new_event_type : text<br/>reason : text<br/>FK requested_by : uuid<br/>FK approved_by : uuid<br/>approved_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  gps_telemetry["<b>gps_telemetry</b><br/>PK id : bigint<br/>FK gps_device_id : uuid<br/>FK vehicle_id : uuid<br/>FK trip_id : uuid<br/>recorded_at : timestamptz<br/>received_at : timestamptz<br/>latitude : numeric(9,6)<br/>longitude : numeric(9,6)<br/>speed_kmh : numeric(7,2)<br/>heading : numeric(6,2)<br/>accuracy_m : numeric(8,2)<br/>satellite_count : smallint<br/>ignition_on : boolean"]
+  transport_alerts["<b>transport_alerts</b><br/>PK id : uuid<br/>FK trip_id : uuid<br/>FK vehicle_id : uuid<br/>alert_type : text<br/>severity : text<br/>description : text<br/>occurred_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  transport_incidents["<b>transport_incidents</b><br/>PK id : uuid<br/>FK trip_id : uuid<br/>FK vehicle_id : uuid<br/>FK student_id : uuid<br/>incident_type : text<br/>severity : text<br/>description : text<br/>occurred_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  transport_sos_incidents["<b>transport_sos_incidents</b><br/>PK id : uuid<br/>FK trip_id : uuid<br/>FK vehicle_id : uuid<br/>FK emergency_incident_id : uuid<br/>triggered_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  vehicle_maintenance_records["<b>vehicle_maintenance_records</b><br/>PK id : uuid<br/>FK vehicle_id : uuid<br/>maintenance_type : text<br/>description : text<br/>cost : numeric(19,4)<br/>maintenance_date : date<br/>next_due_date : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  transport_trip_tracks["<b>transport_trip_tracks</b><br/>PK id : uuid<br/>FK trip_id : uuid<br/>track_date : date<br/>simplified_track : jsonb<br/>generated_at : timestamptz"]
+  transport_route_geofences["<b>transport_route_geofences</b><br/>PK id : uuid<br/>FK route_id : uuid<br/>FK stop_id : uuid<br/>geometry : jsonb<br/>geofence_type : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  sync_batches["<b>sync_batches</b><br/>PK id : uuid<br/>FK device_id : uuid<br/>started_at : timestamptz<br/>completed_at : timestamptz<br/>event_count : integer<br/>success_count : integer<br/>failure_count : integer<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  sync_failures["<b>sync_failures</b><br/>PK id : uuid<br/>FK sync_batch_id : uuid<br/>client_event_id : text<br/>error_code : text<br/>error_message : text<br/>retryable : boolean<br/>occurred_at : timestamptz<br/>resolved_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  classDef transport fill:#EAF5F3,stroke:#566573,stroke-width:1px;
+  class vehicles transport;
+  class vehicle_documents transport;
+  class devices transport;
+  class nfc_reader_devices transport;
+  class gps_devices transport;
+  class vehicle_gps_assignments transport;
+  class cards transport;
+  class card_assignments transport;
+  class tap_events transport;
+  class transport_routes transport;
+  class transport_stops transport;
+  class route_stops transport;
+  class vehicle_route_assignments transport;
+  class transport_personnel_assignments transport;
+  class driver_licenses transport;
+  class student_transport_allocations transport;
+  class transport_trips transport;
+  class trip_crew_assignments transport;
+  class transport_student_events transport;
+  class transport_event_corrections transport;
+  class gps_telemetry transport;
+  class transport_alerts transport;
+  class transport_incidents transport;
+  class transport_sos_incidents transport;
+  class vehicle_maintenance_records transport;
+  class transport_trip_tracks transport;
+  class transport_route_geofences transport;
+  class sync_batches transport;
+  class sync_failures transport;
+  cards -->|card_id| card_assignments
+  cards -->|card_id| tap_events
+  devices -->|device_id| gps_devices
+  devices -->|device_id| nfc_reader_devices
+  devices -->|device_id| sync_batches
+  devices -->|device_id| tap_events
+  documents -.->|document_id| vehicle_documents
+  emergency_incidents -.->|emergency_incident_id| transport_sos_incidents
+  gps_devices -->|gps_device_id| gps_telemetry
+  gps_devices -->|gps_device_id| vehicle_gps_assignments
+  school -.->|school_id| transport_routes
+  school -.->|school_id| transport_stops
+  staff -.->|staff_id| driver_licenses
+  staff -.->|staff_id| transport_personnel_assignments
+  staff -.->|staff_id| trip_crew_assignments
+  students -.->|student_id| card_assignments
+  students -.->|student_id| student_transport_allocations
+  students -.->|student_id| transport_incidents
+  students -.->|student_id| transport_student_events
+  tap_events -->|tap_event_id| transport_student_events
+  transport_routes -->|route_id| route_stops
+  transport_routes -->|route_id| student_transport_allocations
+  transport_routes -->|route_id| transport_route_geofences
+  transport_routes -->|route_id| transport_trips
+  transport_routes -->|route_id| vehicle_route_assignments
+  transport_stops -->|stop_id| route_stops
+  transport_stops -->|stop_id| student_transport_allocations
+  transport_stops -->|stop_id| transport_route_geofences
+  transport_stops -->|stop_id| transport_student_events
+  transport_student_events -->|transport_student_event_id| transport_event_corrections
+  transport_trips -->|trip_id| gps_telemetry
+  transport_trips -->|trip_id| transport_alerts
+  transport_trips -->|trip_id| transport_incidents
+  transport_trips -->|trip_id| transport_sos_incidents
+  transport_trips -->|trip_id| transport_student_events
+  transport_trips -->|trip_id| transport_trip_tracks
+  transport_trips -->|trip_id| trip_crew_assignments
+  user_accounts -.->|assigned_by| card_assignments
+  user_accounts -.->|registered_by| devices
+  user_accounts -.->|approved_by| transport_event_corrections
+  user_accounts -.->|requested_by| transport_event_corrections
+  vehicles -->|vehicle_id| gps_telemetry
+  vehicles -->|vehicle_id| nfc_reader_devices
+  vehicles -->|vehicle_id| student_transport_allocations
+  vehicles -->|vehicle_id| transport_alerts
+  vehicles -->|vehicle_id| transport_incidents
+  vehicles -->|vehicle_id| transport_personnel_assignments
+  vehicles -->|vehicle_id| transport_sos_incidents
+  vehicles -->|vehicle_id| transport_trips
+  vehicles -->|vehicle_id| vehicle_documents
+  vehicles -->|vehicle_id| vehicle_gps_assignments
+  vehicles -->|vehicle_id| vehicle_maintenance_records
+  vehicles -->|vehicle_id| vehicle_route_assignments

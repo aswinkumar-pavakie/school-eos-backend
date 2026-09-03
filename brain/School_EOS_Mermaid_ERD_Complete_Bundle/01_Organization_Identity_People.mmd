@@ -1,0 +1,91 @@
+%%01_Organization_Identity_People — COMPLETE DOMAIN ERD
+%% Full column list is embedded in each table node.
+%% Cross-domain FKs are shown as dashed references to shared entities.
+%%{init: {"flowchart": {"curve": "basis", "nodeSpacing": 28, "rankSpacing": 55}, "theme": {"fontFamily": "Arial", "fontSize": "11px"}}}%%
+flowchart LR
+  school["<b>school</b><br/>PK id : uuid<br/>name : text<br/>code : text<br/>legal_name : text<br/>timezone : text<br/>currency_code : char(3)<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  campuses["<b>campuses</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>address : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  mediums["<b>mediums</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  academic_years["<b>academic_years</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>starts_on : date<br/>ends_on : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  academic_stages["<b>academic_stages</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>sequence_no : smallint<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  grades["<b>grades</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>FK academic_stage_id : uuid<br/>name : text<br/>code : text<br/>sequence_no : smallint<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  sections["<b>sections</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>FK grade_id : uuid<br/>name : text<br/>code : text<br/>capacity : integer<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  subjects["<b>subjects</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>subject_type : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  academic_calendars["<b>academic_calendars</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>FK academic_year_id : uuid<br/>name : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  academic_calendar_events["<b>academic_calendar_events</b><br/>PK id : uuid<br/>FK academic_calendar_id : uuid<br/>event_type : text<br/>title : text<br/>starts_at : timestamptz<br/>ends_at : timestamptz<br/>description : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  persons["<b>persons</b><br/>PK id : uuid<br/>first_name : text<br/>middle_name : text<br/>last_name : text<br/>preferred_name : text<br/>date_of_birth : date<br/>gender : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  students["<b>students</b><br/>PK id : uuid<br/>FK person_id : uuid<br/>admission_number : text<br/>admission_date : date<br/>student_status : text<br/>FK current_campus_id : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  staff["<b>staff</b><br/>PK id : uuid<br/>FK person_id : uuid<br/>employee_number : text<br/>employment_status : text<br/>joining_date : date<br/>leaving_date : date<br/>FK campus_id : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  guardian_profiles["<b>guardian_profiles</b><br/>PK id : uuid<br/>FK person_id : uuid<br/>occupation : text<br/>employer_name : text<br/>preferred_contact_channel : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  student_guardians["<b>student_guardians</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK guardian_id : uuid<br/>relationship_type : text<br/>is_primary : boolean<br/>is_emergency_contact : boolean<br/>can_access_portal : boolean<br/>valid_from : date<br/>valid_until : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  student_identifiers["<b>student_identifiers</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>identifier_type : text<br/>identifier_value : text<br/>is_primary : boolean<br/>valid_from : date<br/>valid_until : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  student_enrolments["<b>student_enrolments</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK academic_year_id : uuid<br/>FK campus_id : uuid<br/>FK grade_id : uuid<br/>FK section_id : uuid<br/>FK medium_id : uuid<br/>enrolled_from : date<br/>enrolled_until : date<br/>enrolment_status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  admissions["<b>admissions</b><br/>PK id : uuid<br/>application_number : text<br/>FK student_id : uuid<br/>applied_on : date<br/>admission_type : text<br/>status : text<br/>decision : text<br/>decided_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  user_accounts["<b>user_accounts</b><br/>PK id : uuid<br/>auth_user_id : uuid<br/>FK person_id : uuid<br/>status : text<br/>last_login_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  roles["<b>roles</b><br/>PK id : uuid<br/>name : text<br/>code : text<br/>description : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  permissions["<b>permissions</b><br/>PK id : uuid<br/>code : text<br/>name : text<br/>module : text<br/>action : text<br/>description : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  role_permissions["<b>role_permissions</b><br/>PK role_id : uuid<br/>PK permission_id : uuid"]
+  user_roles["<b>user_roles</b><br/>PK id : uuid<br/>FK user_account_id : uuid<br/>FK role_id : uuid<br/>valid_from : timestamptz<br/>valid_until : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  user_assignments["<b>user_assignments</b><br/>PK id : uuid<br/>FK user_account_id : uuid<br/>assignment_type : text<br/>scope_type : text<br/>scope_id : uuid<br/>valid_from : timestamptz<br/>valid_until : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  security_events["<b>security_events</b><br/>PK id : bigint<br/>FK user_account_id : uuid<br/>event_type : text<br/>occurred_at : timestamptz<br/>outcome : text<br/>ip_address_hash : text<br/>user_agent_hash : text<br/>metadata : jsonb"]
+  classDef organization fill:#E8F1F8,stroke:#566573,stroke-width:1px;
+  class school organization;
+  class campuses organization;
+  class mediums organization;
+  class academic_years organization;
+  class academic_stages organization;
+  class grades organization;
+  class sections organization;
+  class subjects organization;
+  class academic_calendars organization;
+  class academic_calendar_events organization;
+  classDef people fill:#EEF6E8,stroke:#566573,stroke-width:1px;
+  class persons people;
+  class students people;
+  class staff people;
+  class guardian_profiles people;
+  class student_guardians people;
+  class student_identifiers people;
+  class student_enrolments people;
+  class admissions people;
+  classDef identity fill:#F7EFE2,stroke:#566573,stroke-width:1px;
+  class user_accounts identity;
+  class roles identity;
+  class permissions identity;
+  class role_permissions identity;
+  class user_roles identity;
+  class user_assignments identity;
+  class security_events identity;
+  academic_calendars -->|academic_calendar_id| academic_calendar_events
+  academic_stages -->|academic_stage_id| grades
+  academic_years -->|academic_year_id| academic_calendars
+  academic_years -->|academic_year_id| student_enrolments
+  campuses -->|campus_id| staff
+  campuses -->|campus_id| student_enrolments
+  grades -->|grade_id| sections
+  grades -->|grade_id| student_enrolments
+  guardian_profiles -->|guardian_id| student_guardians
+  mediums -->|medium_id| student_enrolments
+  permissions -->|permission_id| role_permissions
+  persons -->|person_id| guardian_profiles
+  persons -->|person_id| staff
+  persons -->|person_id| students
+  persons -->|person_id| user_accounts
+  roles -->|role_id| role_permissions
+  roles -->|role_id| user_roles
+  school -->|school_id| academic_calendars
+  school -->|school_id| academic_stages
+  school -->|school_id| academic_years
+  school -->|school_id| campuses
+  school -->|school_id| grades
+  school -->|school_id| mediums
+  school -->|school_id| sections
+  school -->|school_id| subjects
+  sections -->|section_id| student_enrolments
+  students -->|student_id| admissions
+  students -->|student_id| student_enrolments
+  students -->|student_id| student_guardians
+  students -->|student_id| student_identifiers
+  user_accounts -->|user_account_id| security_events
+  user_accounts -->|user_account_id| user_assignments
+  user_accounts -->|user_account_id| user_roles

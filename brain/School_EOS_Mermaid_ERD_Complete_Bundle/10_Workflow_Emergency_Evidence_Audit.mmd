@@ -1,0 +1,65 @@
+%%10_Workflow_Emergency_Evidence_Audit — COMPLETE DOMAIN ERD
+%% Full column list is embedded in each table node.
+%% Cross-domain FKs are shown as dashed references to shared entities.
+%%{init: {"flowchart": {"curve": "basis", "nodeSpacing": 28, "rankSpacing": 55}, "theme": {"fontFamily": "Arial", "fontSize": "11px"}}}%%
+flowchart LR
+  approval_policies["<b>approval_policies</b><br/>PK id : uuid<br/>name : text<br/>code : text<br/>domain : text<br/>operation_type : text<br/>threshold_amount : numeric(19,4)<br/>currency_code : char(3)<br/>required_levels : smallint<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  approval_requests["<b>approval_requests</b><br/>PK id : uuid<br/>FK policy_id : uuid<br/>request_type : text<br/>subject_type : text<br/>subject_id : uuid<br/>FK requested_by : uuid<br/>requested_at : timestamptz<br/>status : text<br/>priority : text<br/>completed_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  approval_steps["<b>approval_steps</b><br/>PK id : uuid<br/>FK approval_request_id : uuid<br/>sequence_number : smallint<br/>approver_role : text<br/>FK approver_user_id : uuid<br/>status : text<br/>due_at : timestamptz<br/>acted_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  approval_decisions["<b>approval_decisions</b><br/>PK id : uuid<br/>FK approval_step_id : uuid<br/>decision : text<br/>FK decided_by : uuid<br/>decided_at : timestamptz<br/>comments : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  approval_delegations["<b>approval_delegations</b><br/>PK id : uuid<br/>FK delegator_user_id : uuid<br/>FK delegate_user_id : uuid<br/>scope : jsonb<br/>valid_from : timestamptz<br/>valid_until : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  emergency_incidents["<b>emergency_incidents</b><br/>PK id : uuid<br/>incident_number : text<br/>source_type : text<br/>source_id : uuid<br/>incident_type : text<br/>severity : text<br/>occurred_at : timestamptz<br/>reported_at : timestamptz<br/>latitude : numeric(9,6)<br/>longitude : numeric(9,6)<br/>description : text<br/>status : text<br/>FK reported_by : uuid<br/>FK resolved_by : uuid<br/>resolved_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  emergency_escalations["<b>emergency_escalations</b><br/>PK id : uuid<br/>FK emergency_incident_id : uuid<br/>tier : smallint<br/>recipient_role : text<br/>FK recipient_user_id : uuid<br/>channel : text<br/>triggered_at : timestamptz<br/>acknowledged_at : timestamptz<br/>resolved_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  emergency_actions["<b>emergency_actions</b><br/>PK id : uuid<br/>FK emergency_incident_id : uuid<br/>action_type : text<br/>description : text<br/>FK performed_by : uuid<br/>performed_at : timestamptz<br/>result : text"]
+  retention_policies["<b>retention_policies</b><br/>PK id : uuid<br/>name : text<br/>code : text<br/>retention_days : integer<br/>retention_basis : text<br/>disposal_action : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  documents["<b>documents</b><br/>PK id : uuid<br/>document_type : text<br/>title : text<br/>description : text<br/>storage_object_key : text<br/>mime_type : text<br/>file_size_bytes : bigint<br/>checksum : text<br/>FK uploaded_by : uuid<br/>uploaded_at : timestamptz<br/>status : text<br/>FK retention_policy_id : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  document_links["<b>document_links</b><br/>PK id : uuid<br/>FK document_id : uuid<br/>entity_type : text<br/>entity_id : uuid<br/>purpose : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  document_versions["<b>document_versions</b><br/>PK id : uuid<br/>FK document_id : uuid<br/>version_number : integer<br/>storage_object_key : text<br/>checksum : text<br/>FK uploaded_by : uuid<br/>uploaded_at : timestamptz<br/>change_summary : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  document_access_events["<b>document_access_events</b><br/>PK id : bigint<br/>FK document_id : uuid<br/>FK actor_user_id : uuid<br/>action : text<br/>accessed_at : timestamptz<br/>request_id : text<br/>outcome : text<br/>ip_address_hash : text<br/>user_agent_hash : text"]
+  report_jobs["<b>report_jobs</b><br/>PK id : uuid<br/>report_type : text<br/>FK requested_by : uuid<br/>parameters : jsonb<br/>status : text<br/>requested_at : timestamptz<br/>started_at : timestamptz<br/>completed_at : timestamptz<br/>FK result_document_id : uuid<br/>failure_reason : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  audit_events["<b>audit_events</b><br/>PK id : bigint<br/>occurred_at : timestamptz<br/>FK actor_user_id : uuid<br/>actor_type : text<br/>action : text<br/>entity_type : text<br/>entity_id : uuid<br/>request_id : text<br/>correlation_id : text<br/>outcome : text<br/>before_data : jsonb<br/>after_data : jsonb<br/>metadata : jsonb<br/>ip_address_hash : text<br/>user_agent_hash : text"]
+  idempotency_keys["<b>idempotency_keys</b><br/>PK id : uuid<br/>key : text<br/>FK actor_user_id : uuid<br/>operation : text<br/>request_hash : text<br/>response_status : integer<br/>response_body : jsonb<br/>created_at : timestamptz<br/>expires_at : timestamptz"]
+  classDef workflow fill:#F7EFE2,stroke:#566573,stroke-width:1px;
+  class approval_policies workflow;
+  class approval_requests workflow;
+  class approval_steps workflow;
+  class approval_decisions workflow;
+  class approval_delegations workflow;
+  classDef emergency fill:#F1E8F7,stroke:#566573,stroke-width:1px;
+  class emergency_incidents emergency;
+  class emergency_escalations emergency;
+  class emergency_actions emergency;
+  classDef evidence fill:#EAF5F3,stroke:#566573,stroke-width:1px;
+  class retention_policies evidence;
+  class documents evidence;
+  class document_links evidence;
+  class document_versions evidence;
+  class document_access_events evidence;
+  classDef reporting fill:#F8E9E9,stroke:#566573,stroke-width:1px;
+  class report_jobs reporting;
+  classDef audit fill:#ECECF8,stroke:#566573,stroke-width:1px;
+  class audit_events audit;
+  classDef reliability fill:#F5F2E8,stroke:#566573,stroke-width:1px;
+  class idempotency_keys reliability;
+  approval_requests -->|approval_request_id| approval_steps
+  approval_steps -->|approval_step_id| approval_decisions
+  documents -->|document_id| document_access_events
+  documents -->|document_id| document_links
+  documents -->|document_id| document_versions
+  emergency_incidents -->|emergency_incident_id| emergency_actions
+  emergency_incidents -->|emergency_incident_id| emergency_escalations
+  retention_policies -->|retention_policy_id| documents
+  user_accounts -.->|delegate_user_id| approval_delegations
+  user_accounts -.->|delegator_user_id| approval_delegations
+  user_accounts -.->|requested_by| approval_requests
+  user_accounts -.->|approver_user_id| approval_steps
+  user_accounts -.->|actor_user_id| audit_events
+  user_accounts -.->|actor_user_id| document_access_events
+  user_accounts -.->|uploaded_by| document_versions
+  user_accounts -.->|uploaded_by| documents
+  user_accounts -.->|performed_by| emergency_actions
+  user_accounts -.->|recipient_user_id| emergency_escalations
+  user_accounts -.->|reported_by| emergency_incidents
+  user_accounts -.->|resolved_by| emergency_incidents
+  user_accounts -.->|actor_user_id| idempotency_keys
+  user_accounts -.->|requested_by| report_jobs

@@ -1,0 +1,101 @@
+%%04_Sports — COMPLETE DOMAIN ERD
+%% Full column list is embedded in each table node.
+%% Cross-domain FKs are shown as dashed references to shared entities.
+%%{init: {"flowchart": {"curve": "basis", "nodeSpacing": 28, "rankSpacing": 55}, "theme": {"fontFamily": "Arial", "fontSize": "11px"}}}%%
+flowchart LR
+  sports["<b>sports</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>description : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  sport_categories["<b>sport_categories</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  sport_offerings["<b>sport_offerings</b><br/>PK id : uuid<br/>FK sport_id : uuid<br/>FK academic_year_id : uuid<br/>FK category_id : uuid<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  student_sport_profiles["<b>student_sport_profiles</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK sport_id : uuid<br/>skill_level : text<br/>notes : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  sport_trials["<b>sport_trials</b><br/>PK id : uuid<br/>FK sport_offering_id : uuid<br/>FK student_id : uuid<br/>trial_date : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  sport_trial_results["<b>sport_trial_results</b><br/>PK id : uuid<br/>FK sport_trial_id : uuid<br/>metric : text<br/>value : numeric(12,3)<br/>result : text<br/>FK recorded_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  student_sport_participations["<b>student_sport_participations</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK sport_offering_id : uuid<br/>started_at : timestamptz<br/>ended_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  sports_teams["<b>sports_teams</b><br/>PK id : uuid<br/>FK sport_id : uuid<br/>name : text<br/>code : text<br/>age_group : text<br/>gender_category : text<br/>season : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  team_rosters["<b>team_rosters</b><br/>PK id : uuid<br/>FK team_id : uuid<br/>FK student_id : uuid<br/>role : text<br/>joined_at : date<br/>left_at : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  team_coaches["<b>team_coaches</b><br/>PK id : uuid<br/>FK team_id : uuid<br/>FK staff_id : uuid<br/>valid_from : date<br/>valid_until : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  training_sessions["<b>training_sessions</b><br/>PK id : uuid<br/>FK team_id : uuid<br/>starts_at : timestamptz<br/>ends_at : timestamptz<br/>location : text<br/>session_type : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  training_attendance["<b>training_attendance</b><br/>PK id : uuid<br/>FK training_session_id : uuid<br/>FK student_id : uuid<br/>attendance_status : text<br/>recorded_at : timestamptz<br/>FK recorded_by : uuid"]
+  tournaments["<b>tournaments</b><br/>PK id : uuid<br/>FK sport_id : uuid<br/>name : text<br/>competition_type : text<br/>starts_at : timestamptz<br/>ends_at : timestamptz<br/>location : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  tournament_entries["<b>tournament_entries</b><br/>PK id : uuid<br/>FK tournament_id : uuid<br/>FK team_id : uuid<br/>entry_status : text<br/>seed : integer<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  fixtures["<b>fixtures</b><br/>PK id : uuid<br/>FK tournament_id : uuid<br/>round_name : text<br/>scheduled_at : timestamptz<br/>venue : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  fixture_participants["<b>fixture_participants</b><br/>PK id : uuid<br/>FK fixture_id : uuid<br/>FK team_id : uuid<br/>side : text<br/>seed : integer<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  fixture_results["<b>fixture_results</b><br/>PK id : uuid<br/>FK fixture_id : uuid<br/>FK winning_team_id : uuid<br/>result_type : text<br/>score_data : jsonb<br/>recorded_at : timestamptz<br/>FK recorded_by : uuid"]
+  team_rankings["<b>team_rankings</b><br/>PK id : uuid<br/>FK tournament_id : uuid<br/>FK team_id : uuid<br/>rank : integer<br/>points : integer<br/>wins : integer<br/>losses : integer<br/>draws : integer<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  sport_achievements["<b>sport_achievements</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK sport_id : uuid<br/>title : text<br/>description : text<br/>achieved_on : date<br/>level : text<br/>FK document_id : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  sport_certificates["<b>sport_certificates</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK sport_id : uuid<br/>title : text<br/>issued_on : date<br/>certificate_number : text<br/>FK document_id : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  sports_facilities["<b>sports_facilities</b><br/>PK id : uuid<br/>FK sport_id : uuid<br/>name : text<br/>facility_type : text<br/>location : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  sports_facility_bookings["<b>sports_facility_bookings</b><br/>PK id : uuid<br/>FK facility_id : uuid<br/>FK booked_by_staff_id : uuid<br/>starts_at : timestamptz<br/>ends_at : timestamptz<br/>purpose : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  sports_equipment["<b>sports_equipment</b><br/>PK id : uuid<br/>FK sport_id : uuid<br/>name : text<br/>asset_code : text<br/>category : text<br/>condition : text<br/>quantity : integer<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  equipment_issues["<b>equipment_issues</b><br/>PK id : uuid<br/>FK equipment_id : uuid<br/>FK student_id : uuid<br/>FK staff_id : uuid<br/>issued_at : timestamptz<br/>due_at : timestamptz<br/>returned_at : timestamptz<br/>condition_out : text<br/>condition_in : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  sports_consents["<b>sports_consents</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK sport_id : uuid<br/>consent_type : text<br/>status : text<br/>requested_at : timestamptz<br/>responded_at : timestamptz<br/>FK document_id : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  classDef sports fill:#F5F2E8,stroke:#566573,stroke-width:1px;
+  class sports sports;
+  class sport_categories sports;
+  class sport_offerings sports;
+  class student_sport_profiles sports;
+  class sport_trials sports;
+  class sport_trial_results sports;
+  class student_sport_participations sports;
+  class sports_teams sports;
+  class team_rosters sports;
+  class team_coaches sports;
+  class training_sessions sports;
+  class training_attendance sports;
+  class tournaments sports;
+  class tournament_entries sports;
+  class fixtures sports;
+  class fixture_participants sports;
+  class fixture_results sports;
+  class team_rankings sports;
+  class sport_achievements sports;
+  class sport_certificates sports;
+  class sports_facilities sports;
+  class sports_facility_bookings sports;
+  class sports_equipment sports;
+  class equipment_issues sports;
+  class sports_consents sports;
+  academic_years -.->|academic_year_id| sport_offerings
+  documents -.->|document_id| sport_achievements
+  documents -.->|document_id| sport_certificates
+  documents -.->|document_id| sports_consents
+  fixtures -->|fixture_id| fixture_participants
+  fixtures -->|fixture_id| fixture_results
+  school -.->|school_id| sport_categories
+  school -.->|school_id| sports
+  sport_offerings -->|sport_offering_id| sport_trials
+  sport_offerings -->|sport_offering_id| student_sport_participations
+  sport_trials -->|sport_trial_id| sport_trial_results
+  sports -->|sport_id| sport_achievements
+  sports -->|sport_id| sport_certificates
+  sports -->|sport_id| sport_offerings
+  sports -->|sport_id| sports_consents
+  sports -->|sport_id| sports_equipment
+  sports -->|sport_id| sports_facilities
+  sports -->|sport_id| sports_teams
+  sports -->|sport_id| student_sport_profiles
+  sports -->|sport_id| tournaments
+  sports_teams -->|team_id| fixture_participants
+  sports_teams -->|team_id| team_coaches
+  sports_teams -->|team_id| team_rankings
+  sports_teams -->|team_id| team_rosters
+  sports_teams -->|team_id| tournament_entries
+  sports_teams -->|team_id| training_sessions
+  staff -.->|staff_id| equipment_issues
+  staff -.->|staff_id| team_coaches
+  students -.->|student_id| equipment_issues
+  students -.->|student_id| sport_achievements
+  students -.->|student_id| sport_certificates
+  students -.->|student_id| sport_trials
+  students -.->|student_id| sports_consents
+  students -.->|student_id| student_sport_participations
+  students -.->|student_id| student_sport_profiles
+  students -.->|student_id| team_rosters
+  students -.->|student_id| training_attendance
+  tournaments -->|tournament_id| fixtures
+  tournaments -->|tournament_id| team_rankings
+  tournaments -->|tournament_id| tournament_entries
+  training_sessions -->|training_session_id| training_attendance
+  user_accounts -.->|recorded_by| fixture_results
+  user_accounts -.->|recorded_by| sport_trial_results
+  user_accounts -.->|booked_by_staff_id| sports_facility_bookings
+  user_accounts -.->|recorded_by| training_attendance

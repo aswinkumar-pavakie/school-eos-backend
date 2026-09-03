@@ -1,0 +1,147 @@
+%%05_Finance_Wallet_Canteen — COMPLETE DOMAIN ERD
+%% Full column list is embedded in each table node.
+%% Cross-domain FKs are shown as dashed references to shared entities.
+%%{init: {"flowchart": {"curve": "basis", "nodeSpacing": 28, "rankSpacing": 55}, "theme": {"fontFamily": "Arial", "fontSize": "11px"}}}%%
+flowchart LR
+  fee_structures["<b>fee_structures</b><br/>PK id : uuid<br/>FK academic_year_id : uuid<br/>name : text<br/>code : text<br/>effective_from : date<br/>effective_until : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  fee_components["<b>fee_components</b><br/>PK id : uuid<br/>FK fee_structure_id : uuid<br/>name : text<br/>code : text<br/>amount : numeric(19,4)<br/>frequency : text<br/>mandatory : boolean<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  student_fee_assessments["<b>student_fee_assessments</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK fee_component_id : uuid<br/>FK academic_year_id : uuid<br/>amount_assessed : numeric(19,4)<br/>effective_date : date<br/>due_date : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  fee_adjustments["<b>fee_adjustments</b><br/>PK id : uuid<br/>FK student_fee_assessment_id : uuid<br/>adjustment_type : text<br/>amount : numeric(19,4)<br/>reason : text<br/>FK approval_request_id : uuid<br/>FK created_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  concessions["<b>concessions</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>type : text<br/>value : numeric(19,4)<br/>eligibility_rule : jsonb<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  student_concessions["<b>student_concessions</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK concession_id : uuid<br/>approved_amount : numeric(19,4)<br/>valid_from : date<br/>valid_until : date<br/>FK approval_request_id : uuid<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  fee_demands["<b>fee_demands</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK academic_year_id : uuid<br/>demand_number : text<br/>demand_date : date<br/>due_date : date<br/>subtotal : numeric(19,4)<br/>adjustment_amount : numeric(19,4)<br/>total_amount : numeric(19,4)<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  fee_demand_items["<b>fee_demand_items</b><br/>PK id : uuid<br/>FK fee_demand_id : uuid<br/>FK student_fee_assessment_id : uuid<br/>description : text<br/>amount : numeric(19,4)"]
+  instalment_plans["<b>instalment_plans</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>number_of_instalments : smallint<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  student_instalments["<b>student_instalments</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK fee_demand_id : uuid<br/>sequence_number : smallint<br/>due_date : date<br/>amount : numeric(19,4)<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  payments["<b>payments</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>payment_number : text<br/>amount : numeric(19,4)<br/>currency_code : char(3)<br/>payment_method : text<br/>status : text<br/>received_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  payment_transactions["<b>payment_transactions</b><br/>PK id : uuid<br/>FK payment_id : uuid<br/>provider_name : text<br/>provider_reference : text<br/>transaction_type : text<br/>gateway_status : text<br/>amount : numeric(19,4)<br/>occurred_at : timestamptz<br/>raw_reference : jsonb<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  payment_allocations["<b>payment_allocations</b><br/>PK id : uuid<br/>FK payment_id : uuid<br/>FK student_fee_assessment_id : uuid<br/>amount : numeric(19,4)<br/>allocated_at : timestamptz"]
+  receipts["<b>receipts</b><br/>PK id : uuid<br/>FK payment_id : uuid<br/>receipt_number : text<br/>issued_at : timestamptz<br/>FK document_id : uuid<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  refunds["<b>refunds</b><br/>PK id : uuid<br/>FK payment_id : uuid<br/>amount : numeric(19,4)<br/>reason : text<br/>FK approval_request_id : uuid<br/>status : text<br/>requested_at : timestamptz<br/>completed_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  payment_reconciliations["<b>payment_reconciliations</b><br/>PK id : uuid<br/>FK payment_transaction_id : uuid<br/>reconciliation_date : date<br/>external_reference : text<br/>expected_amount : numeric(19,4)<br/>actual_amount : numeric(19,4)<br/>difference_amount : numeric(19,4)<br/>status : text<br/>resolved_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  expense_categories["<b>expense_categories</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  vendors["<b>vendors</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>contact_details : jsonb<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  expenses["<b>expenses</b><br/>PK id : uuid<br/>FK category_id : uuid<br/>FK vendor_id : uuid<br/>FK purchase_request_id : uuid<br/>amount : numeric(19,4)<br/>expense_number : text<br/>expense_date : date<br/>status : text<br/>FK created_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  petty_cash_transactions["<b>petty_cash_transactions</b><br/>PK id : uuid<br/>transaction_type : text<br/>amount : numeric(19,4)<br/>description : text<br/>FK created_by : uuid<br/>occurred_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  salary_configurations["<b>salary_configurations</b><br/>PK id : uuid<br/>FK staff_id : uuid<br/>effective_from : date<br/>effective_until : date<br/>currency_code : char(3)<br/>gross_salary : numeric(19,4)<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  salary_components["<b>salary_components</b><br/>PK id : uuid<br/>FK salary_configuration_id : uuid<br/>component_type : text<br/>name : text<br/>amount : numeric(19,4)<br/>percentage : numeric(8,4)<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  payroll_periods["<b>payroll_periods</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>period_start : date<br/>period_end : date<br/>status : text<br/>finalized_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  payslips["<b>payslips</b><br/>PK id : uuid<br/>FK payroll_period_id : uuid<br/>FK staff_id : uuid<br/>gross_amount : numeric(19,4)<br/>deduction_amount : numeric(19,4)<br/>net_amount : numeric(19,4)<br/>status : text<br/>FK document_id : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  wallets["<b>wallets</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>currency_code : char(3)<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  wallet_ledger_entries["<b>wallet_ledger_entries</b><br/>PK id : uuid<br/>FK wallet_id : uuid<br/>entry_type : text<br/>amount : numeric(19,4)<br/>balance_before : numeric(19,4)<br/>balance_after : numeric(19,4)<br/>reference_type : text<br/>reference_id : uuid<br/>idempotency_key : text<br/>occurred_at : timestamptz"]
+  wallet_topups["<b>wallet_topups</b><br/>PK id : uuid<br/>FK wallet_id : uuid<br/>FK payment_id : uuid<br/>amount : numeric(19,4)<br/>status : text<br/>requested_at : timestamptz<br/>completed_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  wallet_limits["<b>wallet_limits</b><br/>PK id : uuid<br/>FK wallet_id : uuid<br/>daily_limit : numeric(19,4)<br/>transaction_limit : numeric(19,4)<br/>effective_from : timestamptz<br/>effective_until : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  wallet_item_blocks["<b>wallet_item_blocks</b><br/>PK id : uuid<br/>FK wallet_id : uuid<br/>FK canteen_item_id : uuid<br/>reason : text<br/>valid_from : timestamptz<br/>valid_until : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  wallet_freezes["<b>wallet_freezes</b><br/>PK id : uuid<br/>FK wallet_id : uuid<br/>reason : text<br/>frozen_at : timestamptz<br/>unfrozen_at : timestamptz<br/>FK frozen_by : uuid<br/>FK unfrozen_by : uuid<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  wallet_refunds["<b>wallet_refunds</b><br/>PK id : uuid<br/>FK wallet_id : uuid<br/>amount : numeric(19,4)<br/>reason : text<br/>reference_type : text<br/>reference_id : uuid<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  canteen_menu_categories["<b>canteen_menu_categories</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  canteen_items["<b>canteen_items</b><br/>PK id : uuid<br/>FK category_id : uuid<br/>name : text<br/>code : text<br/>price : numeric(19,4)<br/>available : boolean<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  canteen_shifts["<b>canteen_shifts</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>starts_at : timestamptz<br/>ends_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  canteen_transactions["<b>canteen_transactions</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK wallet_id : uuid<br/>FK tap_event_id : uuid<br/>total_amount : numeric(19,4)<br/>transaction_number : text<br/>status : text<br/>occurred_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  canteen_transaction_items["<b>canteen_transaction_items</b><br/>PK id : uuid<br/>FK canteen_transaction_id : uuid<br/>FK canteen_item_id : uuid<br/>quantity : numeric(12,3)<br/>unit_price : numeric(19,4)<br/>total_amount : numeric(19,4)"]
+  canteen_preorders["<b>canteen_preorders</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK wallet_id : uuid<br/>FK canteen_shift_id : uuid<br/>ordered_at : timestamptz<br/>pickup_at : timestamptz<br/>total_amount : numeric(19,4)<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  canteen_settlements["<b>canteen_settlements</b><br/>PK id : uuid<br/>FK canteen_shift_id : uuid<br/>expected_amount : numeric(19,4)<br/>actual_amount : numeric(19,4)<br/>difference_amount : numeric(19,4)<br/>status : text<br/>settled_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  canteen_shift_closures["<b>canteen_shift_closures</b><br/>PK id : uuid<br/>FK canteen_shift_id : uuid<br/>total_sales : numeric(19,4)<br/>total_refunds : numeric(19,4)<br/>net_sales : numeric(19,4)<br/>status : text<br/>closed_at : timestamptz<br/>FK closed_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  classDef finance fill:#E8F1F8,stroke:#566573,stroke-width:1px;
+  class fee_structures finance;
+  class fee_components finance;
+  class student_fee_assessments finance;
+  class fee_adjustments finance;
+  class concessions finance;
+  class student_concessions finance;
+  class fee_demands finance;
+  class fee_demand_items finance;
+  class instalment_plans finance;
+  class student_instalments finance;
+  class payments finance;
+  class payment_transactions finance;
+  class payment_allocations finance;
+  class receipts finance;
+  class refunds finance;
+  class payment_reconciliations finance;
+  class expense_categories finance;
+  class vendors finance;
+  class expenses finance;
+  class petty_cash_transactions finance;
+  class salary_configurations finance;
+  class salary_components finance;
+  class payroll_periods finance;
+  class payslips finance;
+  classDef wallet fill:#EEF6E8,stroke:#566573,stroke-width:1px;
+  class wallets wallet;
+  class wallet_ledger_entries wallet;
+  class wallet_topups wallet;
+  class wallet_limits wallet;
+  class wallet_item_blocks wallet;
+  class wallet_freezes wallet;
+  class wallet_refunds wallet;
+  classDef canteen fill:#F7EFE2,stroke:#566573,stroke-width:1px;
+  class canteen_menu_categories canteen;
+  class canteen_items canteen;
+  class canteen_shifts canteen;
+  class canteen_transactions canteen;
+  class canteen_transaction_items canteen;
+  class canteen_preorders canteen;
+  class canteen_settlements canteen;
+  class canteen_shift_closures canteen;
+  academic_years -.->|academic_year_id| fee_demands
+  academic_years -.->|academic_year_id| fee_structures
+  academic_years -.->|academic_year_id| student_fee_assessments
+  approval_requests -.->|approval_request_id| fee_adjustments
+  approval_requests -.->|approval_request_id| refunds
+  approval_requests -.->|approval_request_id| student_concessions
+  canteen_items -->|canteen_item_id| canteen_transaction_items
+  canteen_items -->|canteen_item_id| wallet_item_blocks
+  canteen_shifts -->|canteen_shift_id| canteen_preorders
+  canteen_shifts -->|canteen_shift_id| canteen_settlements
+  canteen_shifts -->|canteen_shift_id| canteen_shift_closures
+  canteen_transactions -->|canteen_transaction_id| canteen_transaction_items
+  concessions -->|concession_id| student_concessions
+  documents -.->|document_id| payslips
+  documents -.->|document_id| receipts
+  fee_components -->|fee_component_id| student_fee_assessments
+  fee_demands -->|fee_demand_id| fee_demand_items
+  fee_demands -->|fee_demand_id| student_instalments
+  fee_structures -->|fee_structure_id| fee_components
+  payment_transactions -->|payment_transaction_id| payment_reconciliations
+  payments -->|payment_id| payment_allocations
+  payments -->|payment_id| payment_transactions
+  payments -->|payment_id| receipts
+  payments -->|payment_id| refunds
+  payments -->|payment_id| wallet_topups
+  payroll_periods -->|payroll_period_id| payslips
+  salary_configurations -->|salary_configuration_id| salary_components
+  school -.->|school_id| canteen_menu_categories
+  school -.->|school_id| canteen_shifts
+  school -.->|school_id| concessions
+  school -.->|school_id| expense_categories
+  school -.->|school_id| instalment_plans
+  school -.->|school_id| payroll_periods
+  school -.->|school_id| vendors
+  staff -.->|staff_id| payslips
+  staff -.->|staff_id| salary_configurations
+  student_fee_assessments -->|student_fee_assessment_id| fee_adjustments
+  student_fee_assessments -->|student_fee_assessment_id| fee_demand_items
+  student_fee_assessments -->|student_fee_assessment_id| payment_allocations
+  students -.->|student_id| canteen_preorders
+  students -.->|student_id| canteen_transactions
+  students -.->|student_id| fee_demands
+  students -.->|student_id| payments
+  students -.->|student_id| student_concessions
+  students -.->|student_id| student_fee_assessments
+  students -.->|student_id| student_instalments
+  students -.->|student_id| wallets
+  tap_events -.->|tap_event_id| canteen_transactions
+  user_accounts -.->|closed_by| canteen_shift_closures
+  user_accounts -.->|created_by| expenses
+  user_accounts -.->|created_by| fee_adjustments
+  user_accounts -.->|created_by| petty_cash_transactions
+  vendors -->|vendor_id| expenses
+  wallets -->|wallet_id| canteen_preorders
+  wallets -->|wallet_id| canteen_transactions
+  wallets -->|wallet_id| wallet_freezes
+  wallets -->|wallet_id| wallet_item_blocks
+  wallets -->|wallet_id| wallet_ledger_entries
+  wallets -->|wallet_id| wallet_limits
+  wallets -->|wallet_id| wallet_refunds
+  wallets -->|wallet_id| wallet_topups

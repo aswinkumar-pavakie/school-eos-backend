@@ -1,0 +1,122 @@
+%%08_Health_Camps — COMPLETE DOMAIN ERD
+%% Full column list is embedded in each table node.
+%% Cross-domain FKs are shown as dashed references to shared entities.
+%%{init: {"flowchart": {"curve": "basis", "nodeSpacing": 28, "rankSpacing": 55}, "theme": {"fontFamily": "Arial", "fontSize": "11px"}}}%%
+flowchart LR
+  health_profiles["<b>health_profiles</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>blood_group : text<br/>emergency_notes : text<br/>general_notes : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  health_allergies["<b>health_allergies</b><br/>PK id : uuid<br/>FK health_profile_id : uuid<br/>allergen : text<br/>reaction : text<br/>severity : text<br/>verified_status : text<br/>FK verified_by : uuid<br/>verified_at : timestamptz<br/>notes : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  health_conditions["<b>health_conditions</b><br/>PK id : uuid<br/>FK health_profile_id : uuid<br/>condition_name : text<br/>description : text<br/>severity : text<br/>diagnosed_date : date<br/>status : text<br/>FK verified_by : uuid<br/>verified_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  health_immunisations["<b>health_immunisations</b><br/>PK id : uuid<br/>FK health_profile_id : uuid<br/>vaccine_name : text<br/>dose_number : text<br/>administered_date : date<br/>next_due_date : date<br/>provider : text<br/>FK document_id : uuid<br/>verification_status : text<br/>FK verified_by : uuid<br/>verified_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  health_medications["<b>health_medications</b><br/>PK id : uuid<br/>FK health_profile_id : uuid<br/>medication_name : text<br/>dosage : text<br/>route : text<br/>frequency : text<br/>start_date : date<br/>end_date : date<br/>prescribed_by : text<br/>instructions : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  health_medication_schedules["<b>health_medication_schedules</b><br/>PK id : uuid<br/>FK health_medication_id : uuid<br/>scheduled_time : time<br/>scheduled_date_from : date<br/>scheduled_date_until : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  infirmary_visits["<b>infirmary_visits</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>visit_number : text<br/>check_in_at : timestamptz<br/>check_out_at : timestamptz<br/>reason : text<br/>complaint : text<br/>priority : text<br/>visit_status : text<br/>FK recorded_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  infirmary_vitals["<b>infirmary_vitals</b><br/>PK id : uuid<br/>FK infirmary_visit_id : uuid<br/>recorded_at : timestamptz<br/>temperature_c : numeric(5,2)<br/>heart_rate : smallint<br/>systolic_bp : smallint<br/>diastolic_bp : smallint<br/>spo2_percent : numeric(5,2)<br/>weight_kg : numeric(6,2)<br/>notes : text<br/>FK recorded_by : uuid"]
+  sick_bay_admissions["<b>sick_bay_admissions</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK infirmary_visit_id : uuid<br/>admitted_at : timestamptz<br/>expected_discharge_at : timestamptz<br/>actual_discharge_at : timestamptz<br/>reason : text<br/>status : text<br/>FK admitted_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  sick_bay_observations["<b>sick_bay_observations</b><br/>PK id : uuid<br/>FK sick_bay_admission_id : uuid<br/>observed_at : timestamptz<br/>observation : text<br/>vital_summary : text<br/>action_taken : text<br/>FK recorded_by : uuid"]
+  sick_bay_discharges["<b>sick_bay_discharges</b><br/>PK id : uuid<br/>FK sick_bay_admission_id : uuid<br/>discharged_at : timestamptz<br/>discharge_reason : text<br/>instructions : text<br/>parent_notified_at : timestamptz<br/>follow_up_required : boolean<br/>follow_up_notes : text<br/>FK discharged_by : uuid"]
+  medication_administration["<b>medication_administration</b><br/>PK id : uuid<br/>FK health_medication_id : uuid<br/>FK student_id : uuid<br/>scheduled_at : timestamptz<br/>administered_at : timestamptz<br/>dose_given : text<br/>administration_status : text<br/>reason_if_not_given : text<br/>FK administered_by : uuid<br/>FK verified_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  health_escalations["<b>health_escalations</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK infirmary_visit_id : uuid<br/>escalation_type : text<br/>severity : text<br/>triggered_at : timestamptz<br/>FK triggered_by : uuid<br/>destination : text<br/>status : text<br/>resolved_at : timestamptz<br/>FK resolved_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  hospital_referrals["<b>hospital_referrals</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK infirmary_visit_id : uuid<br/>FK health_escalation_id : uuid<br/>hospital_name : text<br/>referred_at : timestamptz<br/>reason : text<br/>referral_status : text<br/>returned_at : timestamptz<br/>FK document_id : uuid<br/>FK created_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  fitness_clearances["<b>fitness_clearances</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>clearance_type : text<br/>issued_date : date<br/>valid_until : date<br/>status : text<br/>restrictions : text<br/>FK issued_by : uuid<br/>FK document_id : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  health_followups["<b>health_followups</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK source_visit_id : uuid<br/>FK source_referral_id : uuid<br/>followup_type : text<br/>due_date : date<br/>description : text<br/>FK assigned_to_staff_id : uuid<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  health_followup_events["<b>health_followup_events</b><br/>PK id : uuid<br/>FK health_followup_id : uuid<br/>event_at : timestamptz<br/>event_type : text<br/>notes : text<br/>outcome : text<br/>FK recorded_by : uuid"]
+  camps["<b>camps</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>camp_type : text<br/>description : text<br/>location : text<br/>starts_at : timestamptz<br/>ends_at : timestamptz<br/>status : text<br/>FK created_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  camp_partner_agencies["<b>camp_partner_agencies</b><br/>PK id : uuid<br/>name : text<br/>code : text<br/>contact_name : text<br/>phone : text<br/>email : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  camp_sessions["<b>camp_sessions</b><br/>PK id : uuid<br/>FK camp_id : uuid<br/>name : text<br/>session_date : date<br/>starts_at : timestamptz<br/>ends_at : timestamptz<br/>location : text<br/>description : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  camp_services["<b>camp_services</b><br/>PK id : uuid<br/>FK camp_id : uuid<br/>FK partner_agency_id : uuid<br/>name : text<br/>service_type : text<br/>description : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  camp_target_groups["<b>camp_target_groups</b><br/>PK id : uuid<br/>FK camp_id : uuid<br/>FK grade_id : uuid<br/>FK section_id : uuid<br/>FK academic_stage_id : uuid<br/>description : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  camp_participants["<b>camp_participants</b><br/>PK id : uuid<br/>FK camp_id : uuid<br/>FK student_id : uuid<br/>participation_status : text<br/>registered_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  camp_consents["<b>camp_consents</b><br/>PK id : uuid<br/>FK camp_participant_id : uuid<br/>FK guardian_id : uuid<br/>consent_type : text<br/>consent_status : text<br/>requested_at : timestamptz<br/>responded_at : timestamptz<br/>FK document_id : uuid<br/>remarks : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  camp_checkups["<b>camp_checkups</b><br/>PK id : uuid<br/>FK camp_participant_id : uuid<br/>FK camp_service_id : uuid<br/>performed_at : timestamptz<br/>FK performed_by : uuid<br/>result_status : text<br/>summary : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  camp_checkup_findings["<b>camp_checkup_findings</b><br/>PK id : uuid<br/>FK camp_checkup_id : uuid<br/>finding_type : text<br/>severity : text<br/>description : text<br/>requires_followup : boolean<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  camp_followups["<b>camp_followups</b><br/>PK id : uuid<br/>FK camp_checkup_finding_id : uuid<br/>FK student_id : uuid<br/>due_date : date<br/>followup_type : text<br/>description : text<br/>FK assigned_to_staff_id : uuid<br/>status : text<br/>completed_at : timestamptz<br/>FK completed_by : uuid<br/>outcome : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  classDef health fill:#F8E9E9,stroke:#566573,stroke-width:1px;
+  class health_profiles health;
+  class health_allergies health;
+  class health_conditions health;
+  class health_immunisations health;
+  class health_medications health;
+  class health_medication_schedules health;
+  class infirmary_visits health;
+  class infirmary_vitals health;
+  class sick_bay_admissions health;
+  class sick_bay_observations health;
+  class sick_bay_discharges health;
+  class medication_administration health;
+  class health_escalations health;
+  class hospital_referrals health;
+  class fitness_clearances health;
+  class health_followups health;
+  class health_followup_events health;
+  classDef camps fill:#ECECF8,stroke:#566573,stroke-width:1px;
+  class camps camps;
+  class camp_partner_agencies camps;
+  class camp_sessions camps;
+  class camp_services camps;
+  class camp_target_groups camps;
+  class camp_participants camps;
+  class camp_consents camps;
+  class camp_checkups camps;
+  class camp_checkup_findings camps;
+  class camp_followups camps;
+  academic_stages -.->|academic_stage_id| camp_target_groups
+  camp_checkup_findings -->|camp_checkup_finding_id| camp_followups
+  camp_checkups -->|camp_checkup_id| camp_checkup_findings
+  camp_participants -->|camp_participant_id| camp_checkups
+  camp_participants -->|camp_participant_id| camp_consents
+  camp_services -->|camp_service_id| camp_checkups
+  camps -->|camp_id| camp_participants
+  camps -->|camp_id| camp_services
+  camps -->|camp_id| camp_sessions
+  camps -->|camp_id| camp_target_groups
+  documents -.->|document_id| camp_consents
+  documents -.->|document_id| fitness_clearances
+  documents -.->|document_id| health_immunisations
+  documents -.->|document_id| hospital_referrals
+  grades -.->|grade_id| camp_target_groups
+  guardian_profiles -.->|guardian_id| camp_consents
+  health_escalations -->|health_escalation_id| hospital_referrals
+  health_followups -->|health_followup_id| health_followup_events
+  health_medications -->|health_medication_id| health_medication_schedules
+  health_medications -->|health_medication_id| medication_administration
+  health_profiles -->|health_profile_id| health_allergies
+  health_profiles -->|health_profile_id| health_conditions
+  health_profiles -->|health_profile_id| health_immunisations
+  health_profiles -->|health_profile_id| health_medications
+  infirmary_visits -->|infirmary_visit_id| health_escalations
+  infirmary_visits -->|infirmary_visit_id| hospital_referrals
+  infirmary_visits -->|infirmary_visit_id| infirmary_vitals
+  infirmary_visits -->|infirmary_visit_id| sick_bay_admissions
+  school -.->|school_id| camps
+  sections -.->|section_id| camp_target_groups
+  sick_bay_admissions -->|sick_bay_admission_id| sick_bay_discharges
+  sick_bay_admissions -->|sick_bay_admission_id| sick_bay_observations
+  staff -.->|assigned_to_staff_id| camp_followups
+  staff -.->|assigned_to_staff_id| health_followups
+  students -.->|student_id| camp_followups
+  students -.->|student_id| camp_participants
+  students -.->|student_id| fitness_clearances
+  students -.->|student_id| health_escalations
+  students -.->|student_id| health_followups
+  students -.->|student_id| health_profiles
+  students -.->|student_id| hospital_referrals
+  students -.->|student_id| infirmary_visits
+  students -.->|student_id| medication_administration
+  students -.->|student_id| sick_bay_admissions
+  user_accounts -.->|performed_by| camp_checkups
+  user_accounts -.->|completed_by| camp_followups
+  user_accounts -.->|created_by| camps
+  user_accounts -.->|issued_by| fitness_clearances
+  user_accounts -.->|verified_by| health_allergies
+  user_accounts -.->|verified_by| health_conditions
+  user_accounts -.->|resolved_by| health_escalations
+  user_accounts -.->|triggered_by| health_escalations
+  user_accounts -.->|recorded_by| health_followup_events
+  user_accounts -.->|verified_by| health_immunisations
+  user_accounts -.->|created_by| hospital_referrals
+  user_accounts -.->|recorded_by| infirmary_visits
+  user_accounts -.->|recorded_by| infirmary_vitals
+  user_accounts -.->|verified_by| medication_administration
+  user_accounts -.->|admitted_by| sick_bay_admissions
+  user_accounts -.->|discharged_by| sick_bay_discharges
+  user_accounts -.->|recorded_by| sick_bay_observations

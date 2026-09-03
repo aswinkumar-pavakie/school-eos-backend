@@ -1,0 +1,53 @@
+%%09_Library_Schemes — COMPLETE DOMAIN ERD
+%% Full column list is embedded in each table node.
+%% Cross-domain FKs are shown as dashed references to shared entities.
+%%{init: {"flowchart": {"curve": "basis", "nodeSpacing": 28, "rankSpacing": 55}, "theme": {"fontFamily": "Arial", "fontSize": "11px"}}}%%
+flowchart LR
+  library_categories["<b>library_categories</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>description : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  library_books["<b>library_books</b><br/>PK id : uuid<br/>isbn : text<br/>title : text<br/>subtitle : text<br/>author : text<br/>publisher : text<br/>publication_year : smallint<br/>language : text<br/>description : text<br/>FK category_id : uuid<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  library_book_copies["<b>library_book_copies</b><br/>PK id : uuid<br/>FK book_id : uuid<br/>accession_number : text<br/>barcode : text<br/>shelf_location : text<br/>acquired_at : date<br/>condition : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  library_memberships["<b>library_memberships</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>membership_number : text<br/>valid_from : date<br/>valid_until : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  library_loans["<b>library_loans</b><br/>PK id : uuid<br/>FK book_copy_id : uuid<br/>FK student_id : uuid<br/>issued_at : timestamptz<br/>due_at : timestamptz<br/>returned_at : timestamptz<br/>status : text<br/>FK issued_by : uuid<br/>FK returned_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  library_reservations["<b>library_reservations</b><br/>PK id : uuid<br/>FK book_id : uuid<br/>FK student_id : uuid<br/>reserved_at : timestamptz<br/>expires_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  library_fines["<b>library_fines</b><br/>PK id : uuid<br/>FK loan_id : uuid<br/>FK student_id : uuid<br/>fine_type : text<br/>amount : numeric(19,4)<br/>reason : text<br/>status : text<br/>waived_amount : numeric(19,4)<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  government_schemes["<b>government_schemes</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>description : text<br/>authority_name : text<br/>scheme_type : text<br/>start_date : date<br/>end_date : date<br/>status : text<br/>FK created_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  scheme_eligibility_rules["<b>scheme_eligibility_rules</b><br/>PK id : uuid<br/>FK scheme_id : uuid<br/>rule_type : text<br/>rule_value : jsonb<br/>description : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  student_scheme_applications["<b>student_scheme_applications</b><br/>PK id : uuid<br/>FK scheme_id : uuid<br/>FK student_id : uuid<br/>application_number : text<br/>applied_at : timestamptz<br/>status : text<br/>remarks : text<br/>FK submitted_by : uuid<br/>FK verified_by : uuid<br/>verified_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  scheme_application_documents["<b>scheme_application_documents</b><br/>PK id : uuid<br/>FK application_id : uuid<br/>document_type : text<br/>FK document_id : uuid<br/>verification_status : text<br/>FK verified_by : uuid<br/>verified_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  scheme_benefits["<b>scheme_benefits</b><br/>PK id : uuid<br/>FK application_id : uuid<br/>benefit_type : text<br/>amount : numeric(19,4)<br/>description : text<br/>approved_at : timestamptz<br/>disbursed_at : timestamptz<br/>status : text<br/>reference_number : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  classDef library fill:#F5F2E8,stroke:#566573,stroke-width:1px;
+  class library_categories library;
+  class library_books library;
+  class library_book_copies library;
+  class library_memberships library;
+  class library_loans library;
+  class library_reservations library;
+  class library_fines library;
+  classDef schemes fill:#E8F1F8,stroke:#566573,stroke-width:1px;
+  class government_schemes schemes;
+  class scheme_eligibility_rules schemes;
+  class student_scheme_applications schemes;
+  class scheme_application_documents schemes;
+  class scheme_benefits schemes;
+  documents -.->|document_id| scheme_application_documents
+  government_schemes -->|scheme_id| scheme_eligibility_rules
+  government_schemes -->|scheme_id| student_scheme_applications
+  library_book_copies -->|book_copy_id| library_loans
+  library_books -->|book_id| library_book_copies
+  library_books -->|book_id| library_reservations
+  library_loans -->|loan_id| library_fines
+  school -.->|school_id| government_schemes
+  school -.->|school_id| library_categories
+  student_scheme_applications -->|application_id| scheme_application_documents
+  student_scheme_applications -->|application_id| scheme_benefits
+  students -.->|student_id| library_fines
+  students -.->|student_id| library_loans
+  students -.->|student_id| library_memberships
+  students -.->|student_id| library_reservations
+  students -.->|student_id| student_scheme_applications
+  user_accounts -.->|created_by| government_schemes
+  user_accounts -.->|issued_by| library_loans
+  user_accounts -.->|returned_by| library_loans
+  user_accounts -.->|verified_by| scheme_application_documents
+  user_accounts -.->|submitted_by| student_scheme_applications
+  user_accounts -.->|verified_by| student_scheme_applications
