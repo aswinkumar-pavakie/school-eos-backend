@@ -1,1 +1,35 @@
-// App configuration loader — to be implemented.
+// App configuration loader — typed accessor over process.env, consumed via ConfigService.
+
+export interface AppConfig {
+  port: number;
+  database: {
+    url: string;
+  };
+  jwt: {
+    accessSecret: string;
+    accessExpiresIn: string;
+  };
+  auth: {
+    lockoutThreshold: number;
+    lockoutMinutes: number;
+    refreshTokenTtlDays: number;
+    otpTtlMinutes: number;
+  };
+}
+
+export default (): AppConfig => ({
+  port: parseInt(process.env.PORT ?? '3000', 10),
+  database: {
+    url: process.env.DATABASE_URL ?? '',
+  },
+  jwt: {
+    accessSecret: process.env.JWT_ACCESS_SECRET ?? '',
+    accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? '15m',
+  },
+  auth: {
+    lockoutThreshold: parseInt(process.env.AUTH_LOCKOUT_THRESHOLD ?? '5', 10),
+    lockoutMinutes: parseInt(process.env.AUTH_LOCKOUT_MINUTES ?? '15', 10),
+    refreshTokenTtlDays: parseInt(process.env.AUTH_REFRESH_TOKEN_TTL_DAYS ?? '30', 10),
+    otpTtlMinutes: parseInt(process.env.AUTH_OTP_TTL_MINUTES ?? '10', 10),
+  },
+});

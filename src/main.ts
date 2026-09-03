@@ -1,1 +1,19 @@
-// Nest application entry point — to be implemented.
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './common/errors/http-exception.filter';
+import { createValidationPipe } from './common/validation/validation.pipe';
+
+async function bootstrap(): Promise<void> {
+  const app = await NestFactory.create(AppModule);
+
+  app.setGlobalPrefix('api/v1');
+  app.useGlobalPipes(createValidationPipe());
+  app.useGlobalFilters(new HttpExceptionFilter());
+  // Mobile and web are separate origins calling this API directly.
+  app.enableCors();
+
+  const port = process.env.PORT ?? 3000;
+  await app.listen(port);
+}
+
+bootstrap();
