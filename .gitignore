@@ -45,5 +45,10 @@ prisma/*.sqlite
 prisma/*.sqlite3
 prisma/dev.db*
 
+# Compiled artifacts of prisma.config.ts -- if any tool ever emits these next to the
+# source again, Prisma's CLI silently prefers the .js and can choke on a stale one.
+prisma.config.js
+prisma.config.js.map
+
 # ---- Package manager ----
 .pnpm-store/
