@@ -1,0 +1,27 @@
+import { Type } from 'class-transformer';
+import { IsIn, IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
+
+export class UpdateVehicleDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  registrationNo?: string;
+
+  @IsOptional()
+  @IsString()
+  model?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  capacity?: number;
+
+  @IsOptional()
+  @IsIn(['OWNED', 'HIRED', 'LEASED'])
+  ownership?: string;
+
+  @IsOptional()
+  @IsIn(['ACTIVE', 'MAINTENANCE', 'GROUNDED', 'RETIRED'])
+  operationalStatus?: string;
+}

@@ -1,0 +1,110 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
+import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
+import { CurrentActor } from '../../common/auth/current-actor.decorator';
+import { Roles } from '../../common/auth/roles.decorator';
+import { VehiclesService } from './vehicles.service';
+import { CreateVehicleDto } from './dto/create-vehicle.dto';
+import { UpdateVehicleDto } from './dto/update-vehicle.dto';
+import { CreateVehicleDocumentDto } from './dto/create-vehicle-document.dto';
+import { UpdateVehicleDocumentDto } from './dto/update-vehicle-document.dto';
+import { CreateVehicleMaintenanceDto } from './dto/create-vehicle-maintenance.dto';
+import { UpdateVehicleMaintenanceDto } from './dto/update-vehicle-maintenance.dto';
+
+@Roles('ADMIN')
+@Controller()
+export class VehiclesController {
+  constructor(private readonly vehiclesService: VehiclesService) {}
+
+  @Get('vehicles')
+  async list() {
+    return { data: await this.vehiclesService.list() };
+  }
+
+  @Get('vehicles/:id')
+  async get(@Param('id') id: string) {
+    return { data: await this.vehiclesService.get(id) };
+  }
+
+  @Post('vehicles')
+  @HttpCode(HttpStatus.CREATED)
+  async create(@Body() dto: CreateVehicleDto, @CurrentActor() actor: AuthenticatedUser) {
+    return { data: await this.vehiclesService.create(dto, actor.personId) };
+  }
+
+  @Patch('vehicles/:id')
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateVehicleDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return { data: await this.vehiclesService.update(id, dto, actor.personId) };
+  }
+
+  @Get('vehicles/:id/documents')
+  async listDocuments(@Param('id') id: string) {
+    return { data: await this.vehiclesService.listDocuments(id) };
+  }
+
+  @Post('vehicles/:id/documents')
+  @HttpCode(HttpStatus.CREATED)
+  async createDocument(
+    @Param('id') id: string,
+    @Body() dto: CreateVehicleDocumentDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return { data: await this.vehiclesService.createDocument(id, dto, actor.personId) };
+  }
+
+  @Patch('vehicle-documents/:documentId')
+  async updateDocument(
+    @Param('documentId') documentId: string,
+    @Body() dto: UpdateVehicleDocumentDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return { data: await this.vehiclesService.updateDocument(documentId, dto, actor.personId) };
+  }
+
+  @Delete('vehicle-documents/:documentId')
+  @HttpCode(HttpStatus.OK)
+  async deleteDocument(
+    @Param('documentId') documentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    await this.vehiclesService.deleteDocument(documentId, actor.personId);
+    return { data: { deleted: true } };
+  }
+
+  @Get('vehicles/:id/maintenance')
+  async listMaintenance(@Param('id') id: string) {
+    return { data: await this.vehiclesService.listMaintenance(id) };
+  }
+
+  @Post('vehicles/:id/maintenance')
+  @HttpCode(HttpStatus.CREATED)
+  async createMaintenance(
+    @Param('id') id: string,
+    @Body() dto: CreateVehicleMaintenanceDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return { data: await this.vehiclesService.createMaintenance(id, dto, actor.personId) };
+  }
+
+  @Patch('vehicle-maintenance/:maintenanceId')
+  async updateMaintenance(
+    @Param('maintenanceId') maintenanceId: string,
+    @Body() dto: UpdateVehicleMaintenanceDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return { data: await this.vehiclesService.updateMaintenance(maintenanceId, dto, actor.personId) };
+  }
+}

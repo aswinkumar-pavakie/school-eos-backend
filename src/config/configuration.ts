@@ -19,6 +19,12 @@ export interface AppConfig {
     paymentWebhookSecret: string;
     refundAutoApproveThresholdPaise: string;
   };
+  storage: {
+    supabaseUrl: string;
+    serviceRoleKey: string;
+    photosBucket: string;
+    documentsBucket: string;
+  };
 }
 
 export default (): AppConfig => ({
@@ -41,5 +47,11 @@ export default (): AppConfig => ({
     // ₹5,000 default — a school's actual threshold is a business decision, not a
     // literal spec value; override via env, never hardcode a second copy elsewhere.
     refundAutoApproveThresholdPaise: process.env.FINANCE_REFUND_AUTO_APPROVE_THRESHOLD_PAISE ?? '500000',
+  },
+  storage: {
+    supabaseUrl: process.env.SUPABASE_URL ?? '',
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
+    photosBucket: process.env.SUPABASE_PHOTOS_BUCKET ?? 'person-photos',
+    documentsBucket: process.env.SUPABASE_DOCUMENTS_BUCKET ?? 'documents',
   },
 });
