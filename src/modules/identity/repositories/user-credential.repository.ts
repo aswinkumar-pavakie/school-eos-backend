@@ -1,7 +1,5 @@
-// NOTE: reset_allowance_used does not exist on user_credential in the live schema yet.
-// See database/migrations/0001_user_credential_reset_allowance.sql — this repository
-// assumes that migration has been applied (per the owner's instruction, applied by
-// them directly in Supabase, not run by this codebase).
+// reset_allowance_used exists on user_credential (confirmed live) -- the migration
+// at database/migrations/0001_user_credential_reset_allowance.sql has been applied.
 
 import { Injectable } from '@nestjs/common';
 import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
@@ -129,6 +127,48 @@ export class UserCredentialRepository {
            updated_at = now()
        WHERE person_id = $1`,
       [personId, passwordHash],
+    );
+  }
+
+  /** First credential row for a newly-created person (Access module's Create User flow). */
+  async createInitial(
+    personId: string,
+    passwordHash: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(
+      `INSERT INTO user_credential (person_id, password_hash, must_change_password)
+       VALUES ($1, $2, true)`,
+      [personId, passwordHash],
+    );
+  }
+
+  /**
+   * General admin-authorized reset for ANY account (Access module). Functionally the
+   * same core action as completeAdminReset, but only clears reset_allowance_used when
+   * the caller says the target is a Parent -- that field means nothing for roles that
+   * never had a self-service reset to begin with, so it's left untouched for them
+   * rather than flipped to a value that's never read.
+   */
+  async generalPasswordReset(
+    personId: string,
+    passwordHash: string,
+    clearResetAllowance: boolean,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE user_credential
+       SET password_hash = $2,
+           password_algo = 'argon2id',
+           password_set_at = now(),
+           password_change_count = password_change_count + 1,
+           must_change_password = true,
+           failed_attempt_count = 0,
+           locked_until = NULL,
+           reset_allowance_used = CASE WHEN $3 THEN false ELSE reset_allowance_used END,
+           updated_at = now()
+       WHERE person_id = $1`,
+      [personId, passwordHash, clearResetAllowance],
     );
   }
 }

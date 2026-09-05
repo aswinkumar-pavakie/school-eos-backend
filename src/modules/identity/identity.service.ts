@@ -4,6 +4,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
+import { AuditService } from '../../common/audit/audit.service';
 import { AUTH_ERRORS } from '../../common/errors/error-codes';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { LoginDto } from './dto/login.dto';
@@ -54,6 +55,7 @@ export class IdentityService {
     private readonly unitOfWork: UnitOfWork,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly auditService: AuditService,
   ) {}
 
   async login(dto: LoginDto, device: DeviceContext): Promise<LoginResult> {
@@ -70,9 +72,28 @@ export class IdentityService {
       throw new UnauthorizedException(AUTH_ERRORS.INVALID_CREDENTIALS);
     }
 
+    // Load the person now (not after password verification) so status can be checked
+    // up front, same reasoning as the lockout check below: don't spend a hash-check on
+    // an account that can't log in regardless of the password.
+    const person = await this.personRepo.findById(identifier.personId);
+    if (!person) {
+      // FK guarantees this can't happen; fail closed rather than trust that.
+      throw new UnauthorizedException(AUTH_ERRORS.INVALID_CREDENTIALS);
+    }
+
+    // Deactivated by Admin (Access module) -- distinct message is an accepted,
+    // pre-existing tradeoff here: the lockout message already reveals "this account
+    // exists and is locked" the same way, so this doesn't introduce a new category of
+    // information leak.
+    if (person.status !== 'ACTIVE') {
+      await this.auditFailure(identifier.personId, device);
+      throw new UnauthorizedException(AUTH_ERRORS.ACCOUNT_DEACTIVATED);
+    }
+
     // 3. Lockout check BEFORE any password hashing — never spend a hash-check on an
     // already-locked account.
     if (credential.lockedUntil && credential.lockedUntil.getTime() > Date.now()) {
+      await this.auditFailure(identifier.personId, device);
       throw new UnauthorizedException(AUTH_ERRORS.ACCOUNT_LOCKED);
     }
 
@@ -90,12 +111,7 @@ export class IdentityService {
         this.configService.get<number>('auth.lockoutThreshold')!,
         this.configService.get<number>('auth.lockoutMinutes')!,
       );
-      throw new UnauthorizedException(AUTH_ERRORS.INVALID_CREDENTIALS);
-    }
-
-    const person = await this.personRepo.findById(identifier.personId);
-    if (!person) {
-      // FK guarantees this can't happen; fail closed rather than trust that.
+      await this.auditFailure(identifier.personId, device);
       throw new UnauthorizedException(AUTH_ERRORS.INVALID_CREDENTIALS);
     }
 
@@ -119,6 +135,20 @@ export class IdentityService {
           ipAddress: device.ipAddress,
           userAgent: device.userAgent,
           expiresAt,
+        },
+        client,
+      );
+
+      await this.auditService.record(
+        {
+          actorPersonId: identifier.personId,
+          actorRoleCode: roles[0]?.roleCode ?? null,
+          action: 'LOGIN_SUCCESS',
+          objectType: 'person',
+          objectId: identifier.personId,
+          outcome: 'SUCCESS',
+          ipAddress: device.ipAddress,
+          userAgent: device.userAgent,
         },
         client,
       );
@@ -216,5 +246,20 @@ export class IdentityService {
 
   private toRoleSummary(role: ActiveRoleAssignment): RoleSummary {
     return { role_code: role.roleCode, scope_type: role.scopeType, scope_id: role.scopeId };
+  }
+
+  /** Only called once the identifier is already confirmed to exist -- never audit-log
+   * a lookup for an identifier that doesn't, or the audit trail itself becomes an
+   * enumeration side-channel. */
+  private async auditFailure(personId: string, device: DeviceContext): Promise<void> {
+    await this.auditService.record({
+      actorPersonId: personId,
+      action: 'LOGIN_FAILURE',
+      objectType: 'person',
+      objectId: personId,
+      outcome: 'DENIED',
+      ipAddress: device.ipAddress,
+      userAgent: device.userAgent,
+    });
   }
 }

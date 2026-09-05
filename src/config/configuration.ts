@@ -15,6 +15,12 @@ export interface AppConfig {
     refreshTokenTtlDays: number;
     otpTtlMinutes: number;
   };
+  storage: {
+    supabaseUrl: string;
+    serviceRoleKey: string;
+    photosBucket: string;
+    documentsBucket: string;
+  };
 }
 
 export default (): AppConfig => ({
@@ -31,5 +37,11 @@ export default (): AppConfig => ({
     lockoutMinutes: parseInt(process.env.AUTH_LOCKOUT_MINUTES ?? '15', 10),
     refreshTokenTtlDays: parseInt(process.env.AUTH_REFRESH_TOKEN_TTL_DAYS ?? '30', 10),
     otpTtlMinutes: parseInt(process.env.AUTH_OTP_TTL_MINUTES ?? '10', 10),
+  },
+  storage: {
+    supabaseUrl: process.env.SUPABASE_URL ?? '',
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
+    photosBucket: process.env.SUPABASE_PHOTOS_BUCKET ?? 'person-photos',
+    documentsBucket: process.env.SUPABASE_DOCUMENTS_BUCKET ?? 'documents',
   },
 });

@@ -12,6 +12,14 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   JWT_ACCESS_SECRET!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  SUPABASE_URL!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  SUPABASE_SERVICE_ROLE_KEY!: string;
 }
 
 export function validate(config: Record<string, unknown>): Record<string, unknown> {

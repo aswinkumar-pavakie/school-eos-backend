@@ -4,7 +4,17 @@
 
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from 'pg';
+import { Pool, types, type PoolClient, type QueryResult, type QueryResultRow } from 'pg';
+
+// pg's default DATE (oid 1082) parser builds a JS Date at LOCAL midnight, then
+// res.json() serializes it with Date#toJSON() -> toISOString(), which converts
+// to UTC -- on a server whose local TZ is ahead of UTC (e.g. IST, +5:30) that
+// silently rolls every plain calendar date back to the previous day (a `date`
+// column has no time-of-day or timezone to begin with, so there's nothing to
+// convert). Registering this once, globally, makes pg hand back the raw
+// 'YYYY-MM-DD' string untouched for every DATE column app-wide, instead of
+// letting each caller discover and route around this one at a time.
+types.setTypeParser(1082, (value) => value);
 
 /** Anything that can run a parameterized query — a Pool, or a PoolClient mid-transaction. */
 export interface Queryable {
