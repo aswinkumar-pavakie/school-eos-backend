@@ -8,6 +8,8 @@ import configuration from './config/configuration';
 import { jwtModuleFactory } from './config/jwt.config';
 import { validate } from './config/validation.schema';
 import { PostgresModule } from './infrastructure/postgres/postgres.module';
+import { ApprovalsModule } from './modules/approvals/approvals.module';
+import { FinanceModule } from './modules/finance/finance.module';
 import { IdentityModule } from './modules/identity/identity.module';
 
 @Module({
@@ -19,6 +21,8 @@ import { IdentityModule } from './modules/identity/identity.module';
     JwtModule.registerAsync(jwtModuleFactory),
     PostgresModule,
     IdentityModule,
+    ApprovalsModule,
+    FinanceModule,
   ],
   providers: [
     // Global guards, in order: AuthGuard resolves identity and sets request.user;
