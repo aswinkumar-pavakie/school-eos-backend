@@ -21,7 +21,7 @@ export class ConcessionsService {
     private readonly unitOfWork: UnitOfWork,
   ) {}
 
-  async list(filter: { studentId?: string; state?: string }, page: PageQuery) {
+  async list(filter: { studentId?: string; state?: string; studentSearch?: string }, page: PageQuery) {
     return this.repo.list(filter, page);
   }
 

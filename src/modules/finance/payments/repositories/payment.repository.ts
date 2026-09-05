@@ -60,12 +60,17 @@ export interface PaymentListRow extends PaymentRow {
 }
 
 function mapListRow(row: any): PaymentListRow {
+  // COUNT(*) comes back from pg as a bigint-typed string even with ::int cast SQL-side
+  // in some drivers' type-parsing config — Number(...) here is the real fix, the ::int
+  // cast above is belt-and-suspenders. A loose `=== 1` against whatever the driver
+  // handed back was the actual bug: it silently never matched a string "1".
+  const receiptCount = Number(row.receipt_count ?? 0);
   return {
     ...mapRow(row),
     studentNames: row.student_names ?? null,
-    receiptId: row.receipt_count === 1 ? row.first_receipt_id : null,
-    receiptNo: row.receipt_count === 1 ? row.first_receipt_no : null,
-    receiptCount: Number(row.receipt_count ?? 0),
+    receiptId: receiptCount === 1 ? row.first_receipt_id : null,
+    receiptNo: receiptCount === 1 ? row.first_receipt_no : null,
+    receiptCount,
   };
 }
 
@@ -222,7 +227,7 @@ export class PaymentRepository {
     const { rows } = await executor.query(
       `SELECT DISTINCT pay.*,
          NULL::text AS student_names,
-         (SELECT COUNT(*) FROM receipt r WHERE r.payment_id = pay.id AND r.student_id = $1 AND r.is_reprint_of IS NULL) AS receipt_count,
+         (SELECT COUNT(*) FROM receipt r WHERE r.payment_id = pay.id AND r.student_id = $1 AND r.is_reprint_of IS NULL)::int AS receipt_count,
          (SELECT r.id FROM receipt r WHERE r.payment_id = pay.id AND r.student_id = $1 AND r.is_reprint_of IS NULL ORDER BY r.issued_on ASC LIMIT 1) AS first_receipt_id,
          (SELECT r.receipt_no FROM receipt r WHERE r.payment_id = pay.id AND r.student_id = $1 AND r.is_reprint_of IS NULL ORDER BY r.issued_on ASC LIMIT 1) AS first_receipt_no
        FROM payment pay
@@ -307,7 +312,7 @@ export class PaymentRepository {
           JOIN student st ON st.id = fd.student_id
           JOIN person per ON per.id = st.person_id
           WHERE pa.payment_id = p.id) AS student_names,
-         (SELECT COUNT(*) FROM receipt r WHERE r.payment_id = p.id AND r.is_reprint_of IS NULL) AS receipt_count,
+         (SELECT COUNT(*) FROM receipt r WHERE r.payment_id = p.id AND r.is_reprint_of IS NULL)::int AS receipt_count,
          (SELECT r.id FROM receipt r WHERE r.payment_id = p.id AND r.is_reprint_of IS NULL ORDER BY r.issued_on ASC LIMIT 1) AS first_receipt_id,
          (SELECT r.receipt_no FROM receipt r WHERE r.payment_id = p.id AND r.is_reprint_of IS NULL ORDER BY r.issued_on ASC LIMIT 1) AS first_receipt_no
        FROM payment p

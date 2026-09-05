@@ -86,21 +86,31 @@ export class ConcessionRepository {
   }
 
   async list(
-    filter: { studentId?: string; state?: string },
+    filter: { studentId?: string; state?: string; studentSearch?: string },
     page: PageQuery,
     executor: Queryable = this.postgres,
   ): Promise<{ rows: ConcessionRow[]; total: number }> {
     const { offset, limit } = toOffsetLimit(page);
+    const search = filter.studentSearch?.trim() ? `%${filter.studentSearch.trim()}%` : null;
+    const params = [filter.studentId ?? null, filter.state ?? null, search];
+    const whereClause = `
+      WHERE ($1::uuid IS NULL OR c.student_id = $1)
+        AND ($2::text IS NULL OR c.state = $2)
+        AND ($3::text IS NULL OR p.display_name ILIKE $3 OR s.admission_no ILIKE $3)
+    `;
     const { rows: countRows } = await executor.query(
-      `SELECT COUNT(*)::int AS total FROM concession
-       WHERE ($1::uuid IS NULL OR student_id = $1) AND ($2::text IS NULL OR state = $2)`,
-      [filter.studentId ?? null, filter.state ?? null],
+      `SELECT COUNT(*)::int AS total
+       FROM concession c
+       LEFT JOIN student s ON s.id = c.student_id
+       LEFT JOIN person p ON p.id = s.person_id
+       ${whereClause}`,
+      params,
     );
     const { rows } = await executor.query(
       `${SELECT_WITH_JOINS}
-       WHERE ($1::uuid IS NULL OR c.student_id = $1) AND ($2::text IS NULL OR c.state = $2)
-       ORDER BY c.created_at DESC LIMIT $3 OFFSET $4`,
-      [filter.studentId ?? null, filter.state ?? null, limit, offset],
+       ${whereClause}
+       ORDER BY c.created_at DESC LIMIT $4 OFFSET $5`,
+      [...params, limit, offset],
     );
     return { rows: rows.map(mapRow), total: countRows[0].total };
   }

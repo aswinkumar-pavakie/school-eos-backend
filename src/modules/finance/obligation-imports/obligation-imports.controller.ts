@@ -6,17 +6,27 @@ import { CreateImportJobDto } from './dto/create-import-job.dto';
 import { ImportRowsDto } from './dto/import-rows.dto';
 import { ListImportJobsQueryDto } from './dto/list-import-jobs.query.dto';
 import { ObligationImportsService } from './obligation-imports.service';
+import { StudentFeeAssignmentLookupRepository } from './repositories/student-fee-assignment-lookup.repository';
 
 @Controller('finance/obligation-imports')
 @Roles('FINANCE', 'ADMIN')
 export class ObligationImportsController {
-  constructor(private readonly service: ObligationImportsService) {}
+  constructor(
+    private readonly service: ObligationImportsService,
+    private readonly assignmentLookup: StudentFeeAssignmentLookupRepository,
+  ) {}
 
   @Get()
   async list(@Query() query: ListImportJobsQueryDto) {
     const { page, pageSize, ...filter } = query;
     const { rows, total } = await this.service.list(filter, { page, pageSize });
     return { data: rows, meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 } };
+  }
+
+  // Registered before ":id" — "assignments" would otherwise be swallowed as an :id param.
+  @Get('assignments')
+  async listAssignments() {
+    return { data: await this.assignmentLookup.list() };
   }
 
   @Post()

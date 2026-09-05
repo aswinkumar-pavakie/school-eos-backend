@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import { CurrentActor } from '../../../common/auth/current-actor.decorator';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
 import { Roles } from '../../../common/auth/roles.decorator';
 import { CreateObligationDto } from './dto/create-obligation.dto';
 import { ListObligationsQueryDto } from './dto/list-obligations.query.dto';
+import { UpdateObligationDto } from './dto/update-obligation.dto';
 import { WaiveObligationDto } from './dto/waive-obligation.dto';
 import { ObligationsService } from './obligations.service';
 
@@ -29,6 +30,12 @@ export class ObligationsController {
   @Get(':id')
   async getById(@Param('id') id: string) {
     const data = await this.service.getById(id);
+    return { data };
+  }
+
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateObligationDto) {
+    const data = await this.service.update(id, dto);
     return { data };
   }
 

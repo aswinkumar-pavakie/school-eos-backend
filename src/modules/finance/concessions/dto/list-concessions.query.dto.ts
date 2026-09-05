@@ -11,6 +11,10 @@ export class ListConcessionsQueryDto {
   state?: string;
 
   @IsOptional()
+  @IsString()
+  studentSearch?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)

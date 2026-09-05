@@ -11,6 +11,18 @@ export class ListObligationsQueryDto {
   state?: string;
 
   @IsOptional()
+  @IsString()
+  studentSearch?: string;
+
+  @IsOptional()
+  @IsString()
+  fromDate?: string;
+
+  @IsOptional()
+  @IsString()
+  toDate?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)

@@ -5,10 +5,11 @@
 // to work end-to-end. grade itself is owned by Academics (no such module exists yet) —
 // read-only here, no write endpoint.
 
-import { Body, Controller, Get, HttpCode, HttpStatus, NotFoundException, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, Post } from '@nestjs/common';
 import { Roles } from '../../../common/auth/roles.decorator';
 import { CreateExpenseCategoryDto } from './dto/create-expense-category.dto';
 import { CreateFeeHeadDto } from './dto/create-fee-head.dto';
+import { UpdateFeeHeadDto } from './dto/update-fee-head.dto';
 import { AcademicYearLookupRepository } from './repositories/academic-year-lookup.repository';
 import { DepartmentLookupRepository } from './repositories/department-lookup.repository';
 import { ExpenseCategoryRepository } from './repositories/expense-category.repository';
@@ -38,6 +39,11 @@ export class FeeHeadsController {
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateFeeHeadDto) {
     return { data: await this.repo.create(dto) };
+  }
+
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateFeeHeadDto) {
+    return { data: await this.repo.update(id, dto) };
   }
 
   @Post(':id/activate')

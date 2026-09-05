@@ -27,7 +27,10 @@ export class ObligationsService {
     private readonly unitOfWork: UnitOfWork,
   ) {}
 
-  async list(filter: { studentId?: string; state?: string }, page: PageQuery) {
+  async list(
+    filter: { studentId?: string; state?: string; studentSearch?: string; fromDate?: string; toDate?: string },
+    page: PageQuery,
+  ) {
     return this.repo.list(filter, page);
   }
 
@@ -54,6 +57,23 @@ export class ObligationsService {
       amountPaise: input.amountPaise,
       lateFeePaise: input.lateFeePaise ?? '0',
       dueDate: input.dueDate,
+    });
+  }
+
+  /** Amount/due date only ever change before anything has been paid against this
+   * obligation — once even one rupee is allocated, the demand it was allocated
+   * against is permanent, same reasoning as delete() below. */
+  async update(
+    id: string,
+    input: { amountPaise?: string; lateFeePaise?: string; dueDate?: string },
+  ): Promise<FeeDemandRow> {
+    return this.unitOfWork.run(async (client) => {
+      const demand = await this.repo.findByIdForUpdate(id, client);
+      if (!demand) throw new NotFoundException(FINANCE_ERRORS.FEE_DEMAND_NOT_FOUND);
+      if (demand.state !== 'PENDING' || demand.paidPaise !== '0') {
+        throw new ConflictException('Only a PENDING obligation with no payments recorded can be edited');
+      }
+      return this.repo.update(id, input, client);
     });
   }
 

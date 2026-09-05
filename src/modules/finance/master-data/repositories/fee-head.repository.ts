@@ -54,4 +54,22 @@ export class FeeHeadRepository {
   async setStatus(id: string, status: string, executor: Queryable = this.postgres): Promise<void> {
     await executor.query(`UPDATE fee_head SET status = $2 WHERE id = $1`, [id, status]);
   }
+
+  async update(
+    id: string,
+    input: { name?: string; code?: string; headType?: string; isRefundable?: boolean },
+    executor: Queryable = this.postgres,
+  ): Promise<FeeHeadRow> {
+    const { rows } = await executor.query(
+      `UPDATE fee_head
+       SET name = COALESCE($2, name),
+           code = COALESCE($3, code),
+           head_type = COALESCE($4, head_type),
+           is_refundable = COALESCE($5, is_refundable)
+       WHERE id = $1
+       RETURNING *`,
+      [id, input.name ?? null, input.code ?? null, input.headType ?? null, input.isRefundable ?? null],
+    );
+    return mapRow(rows[0]);
+  }
 }

@@ -136,24 +136,59 @@ export class FeeDemandRepository {
   }
 
   async list(
-    filter: { studentId?: string; state?: string },
+    filter: { studentId?: string; state?: string; studentSearch?: string; fromDate?: string; toDate?: string },
     page: PageQuery,
     executor: Queryable = this.postgres,
   ): Promise<{ rows: FeeDemandRow[]; total: number }> {
     const { offset, limit } = toOffsetLimit(page);
+    const search = filter.studentSearch?.trim() ? `%${filter.studentSearch.trim()}%` : null;
+    const params = [
+      filter.studentId ?? null,
+      filter.state ?? null,
+      search,
+      filter.fromDate ?? null,
+      filter.toDate ?? null,
+    ];
+    const whereClause = `
+      WHERE ($1::uuid IS NULL OR fd.student_id = $1)
+        AND ($2::text IS NULL OR fd.state = $2)
+        AND ($3::text IS NULL OR p.display_name ILIKE $3 OR s.admission_no ILIKE $3)
+        AND ($4::date IS NULL OR fd.due_date >= $4)
+        AND ($5::date IS NULL OR fd.due_date <= $5)
+    `;
     const { rows: countRows } = await executor.query(
-      `SELECT COUNT(*)::int AS total FROM fee_demand
-       WHERE ($1::uuid IS NULL OR student_id = $1) AND ($2::text IS NULL OR state = $2)`,
-      [filter.studentId ?? null, filter.state ?? null],
+      `SELECT COUNT(*)::int AS total
+       FROM fee_demand fd
+       LEFT JOIN student s ON s.id = fd.student_id
+       LEFT JOIN person p ON p.id = s.person_id
+       ${whereClause}`,
+      params,
     );
     const { rows } = await executor.query(
       `${SELECT_WITH_JOINS}
-       WHERE ($1::uuid IS NULL OR fd.student_id = $1) AND ($2::text IS NULL OR fd.state = $2)
+       ${whereClause}
        ORDER BY fd.due_date ASC
-       LIMIT $3 OFFSET $4`,
-      [filter.studentId ?? null, filter.state ?? null, limit, offset],
+       LIMIT $6 OFFSET $7`,
+      [...params, limit, offset],
     );
     return { rows: rows.map(mapRow), total: countRows[0].total };
+  }
+
+  async update(
+    id: string,
+    input: { amountPaise?: string; lateFeePaise?: string; dueDate?: string },
+    executor: Queryable,
+  ): Promise<FeeDemandRow> {
+    await executor.query(
+      `UPDATE fee_demand
+       SET amount_paise = COALESCE($2, amount_paise),
+           late_fee_paise = COALESCE($3, late_fee_paise),
+           due_date = COALESCE($4, due_date),
+           updated_at = now()
+       WHERE id = $1`,
+      [id, input.amountPaise ?? null, input.lateFeePaise ?? null, input.dueDate ?? null],
+    );
+    return (await this.findById(id, executor))!;
   }
 
   async setState(id: string, state: string, executor: Queryable): Promise<void> {
