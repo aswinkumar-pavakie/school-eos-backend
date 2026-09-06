@@ -6,8 +6,14 @@ export class CreateInventoryItemDto {
   @MinLength(1)
   name!: string;
 
+  // Optional here only so MediaInventoryController can inject its own fixed
+  // category server-side, after this DTO's own validation runs (the client never
+  // sends it there) -- category_id itself stays NOT NULL at the DB level
+  // regardless, so a caller that genuinely omits it (Admin's own real usage always
+  // sends one) still fails at the database, not silently.
+  @IsOptional()
   @IsUUID()
-  categoryId!: string;
+  categoryId?: string;
 
   @IsOptional()
   @IsString()

@@ -19,6 +19,11 @@ export interface AppConfig {
     paymentWebhookSecret: string;
     refundAutoApproveThresholdPaise: string;
   };
+  razorpay: {
+    keyId: string;
+    keySecret: string;
+    webhookSecret: string;
+  };
   storage: {
     supabaseUrl: string;
     serviceRoleKey: string;
@@ -47,6 +52,11 @@ export default (): AppConfig => ({
     // ₹5,000 default — a school's actual threshold is a business decision, not a
     // literal spec value; override via env, never hardcode a second copy elsewhere.
     refundAutoApproveThresholdPaise: process.env.FINANCE_REFUND_AUTO_APPROVE_THRESHOLD_PAISE ?? '500000',
+  },
+  razorpay: {
+    keyId: process.env.RAZORPAY_KEY_ID ?? '',
+    keySecret: process.env.RAZORPAY_KEY_SECRET ?? '',
+    webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET ?? '',
   },
   storage: {
     supabaseUrl: process.env.SUPABASE_URL ?? '',

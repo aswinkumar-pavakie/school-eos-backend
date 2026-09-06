@@ -328,11 +328,16 @@ export class PaymentRepository {
     gateway: string,
     gatewayRef: string,
     executor: Queryable,
+    // Only Razorpay's adapter knows the real method the payer actually used inside
+    // the gateway's own checkout (card/netbanking/upi) — a generic gateway event has
+    // no such field, hence optional, COALESCE'd so the mode set at intent-creation
+    // stands unless a real one is now known.
+    mode: string | null = null,
   ): Promise<void> {
     await executor.query(
-      `UPDATE payment SET state = 'CONFIRMED', confirmed_at = now(), gateway = $2, gateway_ref = $3
+      `UPDATE payment SET state = 'CONFIRMED', confirmed_at = now(), gateway = $2, gateway_ref = $3, mode = COALESCE($4, mode)
        WHERE id = $1`,
-      [id, gateway, gatewayRef],
+      [id, gateway, gatewayRef, mode],
     );
   }
 

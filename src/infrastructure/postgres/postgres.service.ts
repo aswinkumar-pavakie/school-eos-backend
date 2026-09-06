@@ -30,6 +30,20 @@ export class PostgresService implements OnModuleDestroy, Queryable {
 
   constructor(configService: ConfigService) {
     this.pool = new Pool({ connectionString: configService.get<string>('database.url') });
+
+    // pg's own documented gotcha: an IDLE pooled client can have its
+    // connection reset by the server (e.g. Supabase's pooler recycling it) at
+    // any time, completely unrelated to any in-flight query. Node treats an
+    // 'error' event with no listener as fatal and crashes the whole process --
+    // this is exactly what just took the entire backend down over a single
+    // transient ECONNRESET. Logging and swallowing it here is the standard,
+    // correct fix: the dead client is simply removed from the pool and a
+    // fresh one is opened on the next query, no different from any other
+    // brief network hiccup.
+    this.pool.on('error', (err) => {
+      // eslint-disable-next-line no-console
+      console.error('[PostgresService] Idle pool client error (connection recycled, pool continues):', err.message);
+    });
   }
 
   query<R extends QueryResultRow = any>(text: string, params?: unknown[]): Promise<QueryResult<R>> {

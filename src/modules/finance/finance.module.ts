@@ -118,5 +118,22 @@ import { StudentLookupRepository } from './students/repositories/student-lookup.
     PurchaseOrderRepository,
     PurchaseRequestsService,
   ],
+  // Reused as-is by ParentModule (the Parent app's real-time fee payment feature) —
+  // rather than duplicating PaymentsService's transactional create/allocate/webhook
+  // logic, or FeeDemandRepository's real fee_demand queries, a second time there.
+  // PurchaseRequestsService/repositories are reused as-is by MediaModule's own
+  // indent feature too (same purchase_request/purchase_order tables and the same
+  // already-registered approval handler — only the approval_policy requestType and
+  // who's allowed to call create() differ; see MediaIndentsController).
+  exports: [
+    PaymentsService,
+    PaymentRepository,
+    PaymentAllocationRepository,
+    FeeDemandRepository,
+    SchoolProfileRepository,
+    PurchaseRequestsService,
+    PurchaseRequestRepository,
+    PurchaseOrderRepository,
+  ],
 })
 export class FinanceModule {}

@@ -47,7 +47,8 @@ import { StudentsService } from './students.service';
   ],
   // StudentsService also backs the "Student administrative record correction"
   // effect in RequestsApprovalsModule (same cross-module pattern as the rest
-  // of this codebase).
-  exports: [StudentRepository, StudentsService],
+  // of this codebase). StaffRepository/StaffService additionally back the Events
+  // module's "monitoring teacher" picker (a real staff search, not free text).
+  exports: [StudentRepository, StudentsService, StaffRepository, StaffService],
 })
 export class PeopleModule {}

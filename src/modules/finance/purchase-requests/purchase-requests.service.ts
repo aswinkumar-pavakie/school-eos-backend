@@ -24,6 +24,12 @@ export class PurchaseRequestsService {
     private readonly unitOfWork: UnitOfWork,
   ) {}
 
+  /** approvalRequestType/actorRoleCode default to Finance's own original routing
+   * (Principal raises -> Finance approves) so every existing caller's behaviour is
+   * unchanged; MediaIndentsController passes 'MEDIA_INDENT'/'MEDIA_ROOM' instead,
+   * which resolves to the separate policy seeded in 0006_media_room.sql (straight
+   * to Principal, no Finance step) — same requestRepo/approvalsService underneath,
+   * same registered 'purchase_request' approval handler either way. */
   async create(
     input: {
       requestType: 'GOODS' | 'SERVICE';
@@ -36,12 +42,16 @@ export class PurchaseRequestsService {
       departmentId?: string;
     },
     actor: AuthenticatedUser,
+    context: { approvalRequestType: string; actorRoleCode: string } = {
+      approvalRequestType: 'PURCHASE_REQUEST',
+      actorRoleCode: 'PRINCIPAL',
+    },
   ): Promise<PurchaseRequestRow> {
     return this.unitOfWork.run(async (client) => {
       const request = await this.requestRepo.create({ ...input, requestedBy: actor.personId }, client);
       const approvalRequest = await this.approvalsService.createRequest(
         {
-          requestType: 'PURCHASE_REQUEST',
+          requestType: context.approvalRequestType,
           subjectObjectType: 'purchase_request',
           subjectObjectId: request.id,
           requestedBy: actor.personId,
@@ -54,7 +64,7 @@ export class PurchaseRequestsService {
       await this.audit.record(
         {
           actorPersonId: actor.personId,
-          actorRoleCode: 'PRINCIPAL',
+          actorRoleCode: context.actorRoleCode,
           action: 'PURCHASE_REQUEST_CREATED',
           objectType: 'purchase_request',
           objectId: request.id,
@@ -72,10 +82,11 @@ export class PurchaseRequestsService {
     page: PageQuery,
     actor: AuthenticatedUser,
   ) {
-    // Principal sees only their own requests; Finance/Admin see everything.
-    const isFinanceOrAdmin = actor.roles.includes('FINANCE') || actor.roles.includes('ADMIN');
+    // Finance/Admin see everything; every other caller (Principal, Media Room) sees
+    // only what they themselves raised.
+    const seesAll = actor.roles.includes('FINANCE') || actor.roles.includes('ADMIN');
     return this.requestRepo.list(
-      { ...filter, requestedBy: isFinanceOrAdmin ? undefined : actor.personId },
+      { ...filter, requestedBy: seesAll ? undefined : actor.personId },
       page,
     );
   }

@@ -29,6 +29,8 @@ import { InventoryItemRepository } from './repositories/inventory-item.repositor
   // pattern as PeopleModule exporting StudentRepository to HostelModule.
   // InventoryItemsService additionally backs the "Inventory request" effect in
   // RequestsApprovalsModule (issue/transfer, both already row-locked + audited).
-  exports: [InventoryItemRepository, InventoryItemsService],
+  // InventoryCategoryRepository/InventoryCategoriesService are reused as-is by
+  // MediaModule's own scoped inventory view (Media & AV Equipment category only).
+  exports: [InventoryItemRepository, InventoryItemsService, InventoryCategoryRepository, InventoryCategoriesService],
 })
 export class InventoryModule {}
