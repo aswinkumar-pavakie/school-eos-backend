@@ -104,3 +104,11 @@ export const PERMISSION_ERRORS = {
   REQUEST_ALREADY_DECLINED: 'This permission has already been declined and cannot be consented to',
   REQUEST_ALREADY_CONSENTED: 'This permission has already been consented to and cannot be declined',
 } as const;
+
+export const PARENT_ERRORS = {
+  NOT_LINKED_TO_STUDENT: 'You are not linked to this student',
+  VIEW_ONLY_ACCESS: 'Your access to this student is view-only — payments must be made by the primary guardian',
+  FEE_LINES_NOT_FOUND: 'One or more selected fees could not be found for this student',
+  FEE_LINE_NOT_PAYABLE: 'One or more selected fees are not open for payment',
+  AMOUNT_EXCEEDS_OUTSTANDING: 'The amount entered is more than what is actually outstanding on the selected fees',
+} as const;

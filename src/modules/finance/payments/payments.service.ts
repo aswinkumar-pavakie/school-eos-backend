@@ -295,6 +295,9 @@ export class PaymentsService {
     paymentReference: string;
     amountPaise: string;
     status: 'CONFIRMED' | 'FAILED';
+    // Real method the payer used inside the gateway's own checkout, when the
+    // gateway's adapter can report one (see markConfirmedFromWebhook).
+    mode?: string;
   }): Promise<{ acknowledged: true; matched: boolean }> {
     return this.unitOfWork.run(async (client) => {
       let payment = await this.paymentRepo.findByGatewayRef(event.gateway, event.gatewayRef, client);
@@ -325,7 +328,7 @@ export class PaymentsService {
       }
 
       if (event.status === 'CONFIRMED') {
-        await this.paymentRepo.markConfirmedFromWebhook(payment.id, event.gateway, event.gatewayRef, client);
+        await this.paymentRepo.markConfirmedFromWebhook(payment.id, event.gateway, event.gatewayRef, client, event.mode ?? null);
       } else {
         await this.paymentRepo.markFailedFromWebhook(payment.id, 'Gateway reported failure', client);
       }
@@ -377,6 +380,15 @@ export class PaymentsService {
       }
 
       const alreadyAllocated = BigInt(await this.allocationRepo.sumAllocatedForPayment(paymentId, client));
+      // findByIdForUpdate above already holds this payment row's lock for the rest of
+      // this transaction, so this check-then-act is race-free even under a retried/
+      // duplicated gateway webhook calling this twice for the same payment (the
+      // second caller blocks on the row lock until the first commits, then sees a
+      // non-zero alreadyAllocated and stops here instead of double-applying money).
+      if (alreadyAllocated > 0n) {
+        return this.allocationRepo.listDistinctStudentsForPayment(paymentId, client);
+      }
+
       const newTotal = lines.reduce((sum, l) => sum + BigInt(l.amountPaise), 0n);
       if (alreadyAllocated + newTotal > BigInt(payment.amountPaise)) {
         throw new ConflictException(FINANCE_ERRORS.ALLOCATION_EXCEEDS_PAYMENT);

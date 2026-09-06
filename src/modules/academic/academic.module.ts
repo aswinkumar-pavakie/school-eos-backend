@@ -79,5 +79,8 @@ import { SubjectsService } from './subjects.service';
     HouseRepository,
     CalendarEventRepository,
   ],
+  // GradeRepository/SectionRepository additionally back the Events module's
+  // class/section filter (a real grade/section picker, not a free-text field).
+  exports: [GradeRepository, SectionRepository],
 })
 export class AcademicModule {}

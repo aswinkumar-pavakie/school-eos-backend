@@ -134,8 +134,13 @@ export class StudentRepository {
     }
     if (filter.search) {
       params.push(`%${filter.search.toLowerCase()}%`);
+      // Also matches the current-enrolment roll number (cast to text so a
+      // partial digit search works the same as name/admission-no) -- added for
+      // the Events module's "search by name, roll no" student picker; purely
+      // additive (an OR branch), so every existing caller only ever gets the
+      // same-or-more results, never fewer.
       conditions.push(
-        `(lower(p.first_name) LIKE $${params.length} OR lower(coalesce(p.last_name, '')) LIKE $${params.length} OR lower(s.admission_no) LIKE $${params.length})`,
+        `(lower(p.first_name) LIKE $${params.length} OR lower(coalesce(p.last_name, '')) LIKE $${params.length} OR lower(s.admission_no) LIKE $${params.length} OR CAST(se.roll_no AS text) LIKE $${params.length})`,
       );
     }
     if (filter.sectionId) {
