@@ -61,6 +61,8 @@ import { StudentWalletService } from './student-wallet.service';
     StudentWalletRepository,
     StudentWalletService,
   ],
-  exports: [StudentFeesService, StudentWalletService],
+  // FeeOverviewService is additionally consumed by ReportsModule (Admin Reports &
+  // Analytics' Fees section reuses this SAME repository, not a parallel query).
+  exports: [StudentFeesService, StudentWalletService, FeeOverviewService],
 })
 export class AdminFinanceModule {}

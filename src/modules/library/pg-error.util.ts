@@ -1,6 +1,5 @@
-// Shared Postgres error-code checks for the Transport Setup module's repositories.
-// 23505 = unique_violation, 23503 = foreign_key_violation, 23514 = check_violation,
-// 23P01 = exclusion_violation (e.g. vra_no_overlap, the route-level no-double-booking constraint).
+// Shared Postgres error-code checks for the Library module's repositories.
+// 23505 = unique_violation, 23503 = foreign_key_violation, 23514 = check_violation.
 
 interface PgErrorLike {
   code?: string;
@@ -17,8 +16,4 @@ export function isForeignKeyViolation(err: unknown): boolean {
 
 export function isCheckViolation(err: unknown): boolean {
   return typeof err === 'object' && err !== null && (err as PgErrorLike).code === '23514';
-}
-
-export function isExclusionViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as PgErrorLike).code === '23P01';
 }

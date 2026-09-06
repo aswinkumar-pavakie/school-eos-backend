@@ -25,5 +25,9 @@ import { ApprovalStepRepository } from './repositories/approval-step.repository'
   imports: [AdminModule, AttendanceModule, PeopleModule, InventoryModule, MaintenanceModule],
   controllers: [ApprovalRequestsController],
   providers: [ApprovalRequestsService, RequestEffectsService, ApprovalRequestRepository, ApprovalStepRepository],
+  // ApprovalRequestRepository is additionally consumed by ReportsModule (Admin
+  // Reports & Analytics' Requests & Approvals section reuses this SAME
+  // repository's counts, not a parallel query).
+  exports: [ApprovalRequestRepository],
 })
 export class RequestsApprovalsModule {}

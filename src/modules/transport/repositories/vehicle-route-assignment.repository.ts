@@ -78,6 +78,35 @@ export class VehicleRouteAssignmentRepository {
     return rows[0] ?? null;
   }
 
+  /** The DB only has an exclusion constraint preventing two overlapping
+   * assignments on the same *route* -- nothing stops the same vehicle or
+   * driver being double-booked across two different routes at once. This is
+   * the application-level check for that: any other assignment (optionally
+   * excluding one row, for updates) whose date range overlaps the given one
+   * and shares the same vehicle, driver, or attendant. NULL effective_to
+   * means "still active" (open-ended), treated as unbounded via COALESCE. */
+  async findOverlapping(
+    input: { vehicleId: string; driverId?: string | null; attendantId?: string | null; effectiveFrom: string; effectiveTo?: string | null },
+    excludeId: string | null,
+    executor: Queryable = this.postgres,
+  ): Promise<VehicleRouteAssignmentRow[]> {
+    const conditions: string[] = [
+      `(vehicle_id = $1 OR ($2::uuid IS NOT NULL AND driver_id = $2) OR ($3::uuid IS NOT NULL AND attendant_id = $3))`,
+      `effective_from <= COALESCE($5::date, 'infinity'::date)`,
+      `COALESCE(effective_to, 'infinity'::date) >= $4::date`,
+    ];
+    const params: unknown[] = [input.vehicleId, input.driverId ?? null, input.attendantId ?? null, input.effectiveFrom, input.effectiveTo ?? null];
+    if (excludeId) {
+      params.push(excludeId);
+      conditions.push(`id != $${params.length}`);
+    }
+    const { rows } = await executor.query<VehicleRouteAssignmentRow>(
+      `SELECT ${COLUMNS} FROM vehicle_route_assignment WHERE ${conditions.join(' AND ')}`,
+      params,
+    );
+    return rows;
+  }
+
   async create(
     input: CreateVehicleRouteAssignmentInput,
     executor: Queryable = this.postgres,

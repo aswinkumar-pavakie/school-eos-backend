@@ -50,6 +50,9 @@ import { PurchaseOrdersController, PurchaseRequestsController } from './purchase
 import { PurchaseRequestsService } from './purchase-requests/purchase-requests.service';
 import { PurchaseOrderRepository } from './purchase-requests/repositories/purchase-order.repository';
 import { PurchaseRequestRepository } from './purchase-requests/repositories/purchase-request.repository';
+import { MiscReceivablesController } from './misc-receivables/misc-receivables.controller';
+import { MiscReceivablesService } from './misc-receivables/misc-receivables.service';
+import { MiscReceivableRepository } from './misc-receivables/repositories/misc-receivable.repository';
 import { ReconciliationsController } from './reconciliations/reconciliations.controller';
 import { ReconciliationsService } from './reconciliations/reconciliations.service';
 import { ReconciliationRepository } from './reconciliations/repositories/reconciliation.repository';
@@ -81,6 +84,7 @@ import { StudentLookupRepository } from './students/repositories/student-lookup.
     ReconciliationsController,
     PurchaseRequestsController,
     PurchaseOrdersController,
+    MiscReceivablesController,
   ],
   providers: [
     OutboxService,
@@ -117,6 +121,12 @@ import { StudentLookupRepository } from './students/repositories/student-lookup.
     PurchaseRequestRepository,
     PurchaseOrderRepository,
     PurchaseRequestsService,
+    MiscReceivableRepository,
+    MiscReceivablesService,
   ],
+  // MiscReceivablesService is consumed by LibraryModule (a library fine sent to
+  // Finance becomes a receivable here) -- same cross-module pattern as
+  // PeopleModule importing AdminFinanceModule for StudentFeesService.
+  exports: [MiscReceivablesService],
 })
 export class FinanceModule {}

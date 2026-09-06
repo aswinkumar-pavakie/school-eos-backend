@@ -137,6 +137,9 @@ export class ApprovalRequestsService {
       if (!OPEN_STATES.includes(locked.state)) {
         throw new ConflictException(`This request is already ${locked.state.toLowerCase()}.`);
       }
+      if (locked.approverRoleCode !== 'ADMIN') {
+        throw new ForbiddenException("This request isn't Admin's to reject.");
+      }
       await this.stepRepo.decide(id, locked.currentStep, 'REJECTED', actorPersonId, dto.comment ?? null, client);
       await this.requestRepo.setState(id, 'REJECTED', client, new Date());
       const updated = (await this.requestRepo.findById(id, client))!;
