@@ -38,3 +38,69 @@ export const FINANCE_ERRORS = {
   RECONCILIATION_WRONG_STATE: 'Reconciliation is not in the required state for this action',
   INVALID_WEBHOOK_SIGNATURE: 'Invalid payment webhook signature',
 } as const;
+
+// Same message for "doesn't exist" and "isn't yours" (OFFERING_NOT_FOUND, NOT_FOUND) —
+// deliberately indistinguishable, mirroring the HLD's 404-not-403 rule for out-of-scope
+// objects (e.g. a parent gets 404, not 403, on another guardian's child).
+export const ONLINE_CLASS_ERRORS = {
+  NOT_FACULTY: 'Authenticated user is not an active faculty member',
+  OFFERING_NOT_FOUND: 'Subject offering not found',
+  NOT_FOUND: 'Online class not found',
+  INVALID_TIME_RANGE: 'endTime must be after startTime',
+  IN_PAST: 'Cannot schedule an online class in the past',
+  OVERLAPPING_SCHEDULE: 'You already have another online class scheduled in this time range',
+  ALREADY_FINALIZED: 'This online class has already been completed or cancelled',
+  NOT_COMPLETED: 'Recording can only be added once the class is completed',
+  IDEMPOTENCY_KEY_REQUIRED: 'Idempotency-Key header is required',
+  NOT_SCHEDULED: 'Only a SCHEDULED class can be started',
+  NOT_LIVE: 'Only a LIVE class can be marked completed',
+  GOOGLE_EVENT_NOT_FOUND:
+    'The Google Calendar event for this class could not be found — it may have been removed directly in Google Calendar',
+  JOIN_NOT_STARTED: 'Online class has not started yet',
+  JOIN_ALREADY_ENDED: 'Online class has already ended',
+  JOIN_CANCELLED: 'Online class was cancelled',
+  JOIN_LINK_NOT_READY: 'Online class meeting link is not ready',
+} as const;
+
+export const GOOGLE_OAUTH_ERRORS = {
+  NOT_CONFIGURED: 'Google OAuth is not configured on this server',
+  INVALID_STATE: 'Invalid or expired Google sign-in session, please try connecting again',
+  TOKEN_EXCHANGE_FAILED: 'Failed to complete Google sign-in',
+  NO_REFRESH_TOKEN: 'Google did not return a refresh token — reconnect and approve access when prompted',
+  NOT_CONNECTED: 'Connect your Google account before scheduling an online class',
+  NEEDS_REAUTH: 'Google authorization expired — please reconnect your Google account',
+} as const;
+
+// Conversation/message 404s share one message regardless of cause (doesn't exist,
+// belongs to a different parent's ward, or the requester's authorization has since
+// lapsed) — same 404-not-403 rule as ONLINE_CLASS_ERRORS above.
+export const MESSAGING_ERRORS = {
+  NOT_ACTIVE_FACULTY: 'Authenticated user is not an active faculty member',
+  CONVERSATION_NOT_FOUND: 'Conversation not found',
+  MESSAGE_NOT_FOUND: 'Message not found',
+  IDEMPOTENCY_KEY_REQUIRED: 'Idempotency-Key header is required',
+  EMPTY_MESSAGE: 'Message cannot be empty',
+  MESSAGE_TOO_LONG: 'Message exceeds the maximum allowed length',
+  UNSUPPORTED_LANGUAGE: 'Unsupported target language',
+  TRANSLATION_NOT_CONFIGURED: 'Translation is not configured on this server',
+  TRANSLATION_FAILED: 'Translation failed, please try again later',
+} as const;
+
+// Activity/request 404s share one message regardless of cause (doesn't exist,
+// belongs to a different faculty/parent's scope, or authorization has since
+// lapsed) — same 404-not-403 rule as ONLINE_CLASS_ERRORS/MESSAGING_ERRORS above.
+export const PERMISSION_ERRORS = {
+  NOT_ACTIVE_FACULTY: 'Authenticated user is not an active faculty member',
+  ACTIVITY_NOT_FOUND: 'Permission activity not found',
+  REQUEST_NOT_FOUND: 'Permission request not found',
+  SECTION_NOT_FOUND: 'Section not found for the selected academic year',
+  NO_ELIGIBLE_STUDENTS: 'No active students found for this section',
+  STUDENT_NOT_ELIGIBLE: 'One or more selected students are not actively enrolled in this class and academic year',
+  INVALID_TIME_RANGE: 'endTime must be after startTime',
+  INVALID_DEADLINE: 'Response deadline must be on or before the activity date',
+  ACTIVITY_ALREADY_CANCELLED: 'This activity has already been cancelled',
+  REQUEST_ALREADY_CANCELLED: 'This permission request has been cancelled',
+  REQUEST_EXPIRED: 'The response deadline for this permission has passed',
+  REQUEST_ALREADY_DECLINED: 'This permission has already been declined and cannot be consented to',
+  REQUEST_ALREADY_CONSENTED: 'This permission has already been consented to and cannot be declined',
+} as const;

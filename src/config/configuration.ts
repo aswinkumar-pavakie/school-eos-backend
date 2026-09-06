@@ -25,6 +25,23 @@ export interface AppConfig {
     photosBucket: string;
     documentsBucket: string;
   };
+  google: {
+    oauthClientId: string;
+    oauthClientSecret: string;
+    oauthRedirectUri: string;
+    // Keyed by encryption_key_id on google_account_connection — add "v2" etc. here
+    // (and a matching branch in google-token-crypto.util.ts) to rotate without ever
+    // hard-coding a key in source.
+    tokenEncryptionKeys: Record<string, string>;
+  };
+  translation: {
+    // Google Cloud Translation v2 REST API, chosen for consistency with the
+    // Google APIs this project already trusts (Calendar/Meet) rather than
+    // introducing an unrelated vendor with no precedent here. Empty string means
+    // "not configured" — TranslationService reports this explicitly rather than
+    // faking a translated result (see messaging/translation/README notes).
+    apiKey: string;
+  };
 }
 
 export default (): AppConfig => ({
@@ -53,5 +70,16 @@ export default (): AppConfig => ({
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
     photosBucket: process.env.SUPABASE_PHOTOS_BUCKET ?? 'person-photos',
     documentsBucket: process.env.SUPABASE_DOCUMENTS_BUCKET ?? 'documents',
+  },
+  google: {
+    oauthClientId: process.env.GOOGLE_OAUTH_CLIENT_ID ?? '',
+    oauthClientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET ?? '',
+    oauthRedirectUri: process.env.GOOGLE_OAUTH_REDIRECT_URI ?? '',
+    tokenEncryptionKeys: {
+      v1: process.env.GOOGLE_TOKEN_ENCRYPTION_KEY_V1 ?? '',
+    },
+  },
+  translation: {
+    apiKey: process.env.GOOGLE_TRANSLATE_API_KEY ?? '',
   },
 });

@@ -26,7 +26,10 @@ import { HostelModule } from './modules/hostel/hostel.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
+import { MessagingModule } from './modules/messaging/messaging.module';
+import { OnlineClassesModule } from './modules/online-classes/online-classes.module';
 import { PeopleModule } from './modules/people/people.module';
+import { PermissionsModule } from './modules/permissions/permissions.module';
 import { RequestsApprovalsModule } from './modules/requests-approvals/requests-approvals.module';
 import { SportsModule } from './modules/sports/sports.module';
 import { StaffAttendanceModule } from './modules/staff-attendance/staff-attendance.module';
@@ -65,6 +68,9 @@ import { TransportModule } from './modules/transport/transport.module';
     InventoryModule,
     MaintenanceModule,
     RequestsApprovalsModule,
+    OnlineClassesModule,
+    MessagingModule,
+    PermissionsModule,
   ],
   providers: [
     // Global guards, in order: AuthGuard resolves identity and sets request.user;
