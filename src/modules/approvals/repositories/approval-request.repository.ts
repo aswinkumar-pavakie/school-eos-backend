@@ -130,6 +130,19 @@ export class ApprovalRequestRepository {
     );
   }
 
+  /** Not a terminal decision -- approval_decided_ts deliberately leaves decided_at
+   * NULL here (SENT_BACK isn't in that constraint's APPROVED/REJECTED/CANCELLED
+   * list), same as PENDING. current_step and approval_step are untouched: a
+   * send-back doesn't record a step decision, it just returns the whole request to
+   * the requester for revision -- resubmission (re-opening it) is a separate,
+   * not-yet-built workflow, deliberately not invented here. */
+  async markSentBack(id: string, executor: Queryable): Promise<void> {
+    await executor.query(
+      `UPDATE approval_request SET state = 'SENT_BACK', updated_at = now() WHERE id = $1`,
+      [id],
+    );
+  }
+
   /**
    * The caller's inbox. `forHistory=false` returns requests currently awaiting a
    * decision that could be made by one of `callerRoles`, scope-checked against the

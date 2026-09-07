@@ -6,7 +6,10 @@ import { MediumsService } from './mediums.service';
 import { CreateMediumDto } from './dto/create-medium.dto';
 import { UpdateMediumDto } from './dto/update-medium.dto';
 
-@Roles('ADMIN')
+// Class-level @Roles broadened to include PRINCIPAL for read-only oversight
+// (Principal's Academics module) -- write methods below have their own
+// narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('mediums')
 export class MediumsController {
   constructor(private readonly mediumsService: MediumsService) {}
@@ -22,12 +25,14 @@ export class MediumsController {
   }
 
   @Post()
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateMediumDto, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.mediumsService.create(dto, actor.personId) };
   }
 
   @Patch(':id')
+  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateMediumDto,

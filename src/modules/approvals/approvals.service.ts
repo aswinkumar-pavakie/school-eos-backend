@@ -157,6 +157,83 @@ export class ApprovalsService {
     return this.decide(id, actor, 'REJECTED', comment);
   }
 
+  /** Not a final decision -- returns the request to the requester for revision
+   * rather than approving/rejecting it. Same authorization boundary as
+   * approve/reject (must hold the current step's approver role, can't act on your
+   * own request), but doesn't record a step decision or flip the subject to a
+   * terminal state -- see approval-request.repository.ts's markSentBack for why. */
+  async sendBack(
+    id: string,
+    actor: AuthenticatedUser,
+    comment: string,
+  ): Promise<ApprovalRequestWithSteps> {
+    return this.unitOfWork.run(async (client) => {
+      const request = await this.approvalRequestRepo.findByIdForUpdate(id, client);
+      if (!request) throw new NotFoundException(APPROVALS_ERRORS.REQUEST_NOT_FOUND);
+      if (!OPEN_STATES.includes(request.state)) {
+        throw new ConflictException(APPROVALS_ERRORS.NOT_PENDING);
+      }
+
+      const step = await this.approvalStepRepo.findByRequestAndSequence(
+        id,
+        request.currentStep,
+        client,
+      );
+      if (!step || step.decision) {
+        throw new ConflictException(APPROVALS_ERRORS.NOT_PENDING);
+      }
+
+      if (request.requestedBy === actor.personId) {
+        throw new ForbiddenException('You cannot decide a request you raised yourself');
+      }
+
+      const scope = approverScopeFromPayload(request.payload);
+      const authorized = await this.approverAssignmentRepo.personHoldsRole(
+        actor.personId,
+        step.approverRoleCode,
+        scope,
+        client,
+      );
+      if (!authorized) {
+        throw new ForbiddenException(APPROVALS_ERRORS.STEP_NOT_ASSIGNED_TO_CALLER);
+      }
+
+      await this.approvalRequestRepo.markSentBack(id, client);
+
+      const handler = this.subjectStateRegistry.get(request.subjectObjectType);
+      await handler?.onSentBack?.(request.subjectObjectId, client);
+
+      await this.audit.record(
+        {
+          actorPersonId: actor.personId,
+          actorRoleCode: step.approverRoleCode,
+          action: 'APPROVAL_SENT_BACK',
+          objectType: 'approval_request',
+          objectId: id,
+          outcome: 'SUCCESS',
+          afterData: { comment },
+        },
+        client,
+      );
+
+      await this.outbox.enqueue(
+        {
+          personId: request.requestedBy,
+          notificationType: 'APPROVAL_SENT_BACK',
+          title: 'Your request was sent back',
+          body: `${request.requestType.replace(/_/g, ' ')} — sent back: ${comment}`,
+          relatedObjectType: 'approval_request',
+          relatedObjectId: id,
+        },
+        client,
+      );
+
+      const refreshedRequest = await this.approvalRequestRepo.findById(id, client);
+      const steps = await this.approvalStepRepo.listByRequest(id, client);
+      return { request: refreshedRequest!, steps };
+    });
+  }
+
   private async decide(
     id: string,
     actor: AuthenticatedUser,

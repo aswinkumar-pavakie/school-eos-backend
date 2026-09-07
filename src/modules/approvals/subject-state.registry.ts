@@ -18,6 +18,11 @@ export interface SubjectStateHandler {
   onRejected(subjectId: string, executor: Queryable, decidedBy: string): Promise<void>;
   /** Called when the requester withdraws their own still-open request (approval_request -> CANCELLED). Optional — most subjects so far don't need a distinct reaction to a withdrawal versus a rejection. */
   onWithdrawn?(subjectId: string, executor: Queryable): Promise<void>;
+  /** Called when an approver sends the request back for revision (approval_request
+   * -> SENT_BACK). Optional and best-effort, same as onWithdrawn — unlike
+   * onApproved/onRejected this is never required, since a send-back doesn't flip
+   * the subject to a terminal state; most subjects need no reaction at all. */
+  onSentBack?(subjectId: string, executor: Queryable): Promise<void>;
 }
 
 @Injectable()

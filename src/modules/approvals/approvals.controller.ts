@@ -13,6 +13,7 @@ import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
 import { DecideApprovalDto } from './dto/decide-approval.dto';
 import { ListApprovalsQueryDto } from './dto/list-approvals.query.dto';
 import { RejectApprovalDto } from './dto/reject-approval.dto';
+import { SendBackApprovalDto } from './dto/send-back-approval.dto';
 
 @Controller('approvals')
 export class ApprovalsController {
@@ -79,6 +80,17 @@ export class ApprovalsController {
     @CurrentActor() actor: AuthenticatedUser,
   ) {
     const data = await this.approvalsService.reject(id, actor, dto.comment);
+    return { data };
+  }
+
+  @Post(':id/send-back')
+  @HttpCode(HttpStatus.OK)
+  async sendBack(
+    @Param('id') id: string,
+    @Body() dto: SendBackApprovalDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    const data = await this.approvalsService.sendBack(id, actor, dto.comment);
     return { data };
   }
 }
