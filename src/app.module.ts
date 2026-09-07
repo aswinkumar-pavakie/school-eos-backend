@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AuditModule } from './common/audit/audit.module';
 import { AuthGuard } from './common/auth/auth.guard';
 import { RolesGuard } from './common/auth/roles.guard';
@@ -27,18 +28,27 @@ import { IdentityModule } from './modules/identity/identity.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { LibraryModule } from './modules/library/library.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
+import { MediaModule } from './modules/media/media.module';
+import { MessagingModule } from './modules/messaging/messaging.module';
+import { OnlineClassesModule } from './modules/online-classes/online-classes.module';
+import { ParentModule } from './modules/parent/parent.module';
 import { PeopleModule } from './modules/people/people.module';
+import { PermissionsModule } from './modules/permissions/permissions.module';
 import { PrincipalModule } from './modules/principal/principal.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { RequestsApprovalsModule } from './modules/requests-approvals/requests-approvals.module';
 import { SportsModule } from './modules/sports/sports.module';
 import { StaffAttendanceModule } from './modules/staff-attendance/staff-attendance.module';
+import { StudentEventsModule } from './modules/student-events/student-events.module';
 import { TimetableModule } from './modules/timetable/timetable.module';
 import { TransportModule } from './modules/transport/transport.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration], validate }),
+    // Media Room's scheduled-post auto-publish is the one consumer today (see
+    // MediaPostsScheduler) — a single @Cron job, not a queue/worker system.
+    ScheduleModule.forRoot(),
     // Registered here too (independently of IdentityModule's own registration) so
     // AuthGuard, provided as an APP_GUARD below, can inject JwtService from this
     // module's own scope.
@@ -50,6 +60,7 @@ import { TransportModule } from './modules/transport/transport.module';
     ApprovalsModule,
     FinanceModule,
     AdminFinanceModule,
+    ParentModule,
     AdminModule,
     AcademicModule,
     PeopleModule,
@@ -71,6 +82,11 @@ import { TransportModule } from './modules/transport/transport.module';
     LibraryModule,
     ReportsModule,
     PrincipalModule,
+    OnlineClassesModule,
+    MessagingModule,
+    PermissionsModule,
+    MediaModule,
+    StudentEventsModule,
   ],
   providers: [
     // Global guards, in order: AuthGuard resolves identity and sets request.user;

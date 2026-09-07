@@ -82,4 +82,5 @@ export const ROLE_MODULE_ACCESS: Record<string, string[]> = {
   HOSTEL_WARDEN: ['Hostel'],
   BUS_ATTENDANT: ['Transport (device, boarding only)'],
   CANTEEN_VENDOR: ['Finance & Fees (device, wallet sales only)'],
+  MEDIA_ROOM: ['Dashboard', 'Social Media Publishing', 'Shoot Assignments', 'Inventory (Media & AV Equipment)', 'Raise Indent', 'Media Team'],
 };

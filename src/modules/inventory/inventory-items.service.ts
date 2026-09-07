@@ -45,8 +45,9 @@ export class InventoryItemsService {
   }
 
   async create(dto: CreateInventoryItemDto, actorPersonId: string) {
+    if (!dto.categoryId) throw new ConflictException('categoryId is required.');
     try {
-      const created = await this.itemRepo.create({ ...dto, createdBy: actorPersonId });
+      const created = await this.itemRepo.create({ ...dto, categoryId: dto.categoryId, createdBy: actorPersonId });
       await this.auditService.record({
         actorPersonId,
         action: 'INVENTORY_ITEM_CREATED',
