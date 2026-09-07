@@ -19,6 +19,10 @@ import { InventoryItemsService } from '../inventory/inventory-items.service';
 
 const MEDIA_CATEGORY_NAME = 'Media & AV Equipment';
 
+// PRINCIPAL is read-only oversight here, same as everywhere else -- every
+// write method below carries its own narrower @Roles('MEDIA_ROOM', 'ADMIN')
+// override (RolesGuard's Reflector.getAllAndOverride means a method-level
+// @Roles fully replaces the class-level one).
 @Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL')
 @Controller('media/inventory')
 export class MediaInventoryController {
@@ -81,6 +85,7 @@ export class MediaInventoryController {
   }
 
   @Post()
+  @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateInventoryItemDto, @CurrentActor() actor: AuthenticatedUser) {
     const categoryId = await this.mediaCategoryId();
@@ -88,6 +93,7 @@ export class MediaInventoryController {
   }
 
   @Patch(':id')
+  @Roles('MEDIA_ROOM', 'ADMIN')
   async update(@Param('id') id: string, @Body() dto: UpdateInventoryItemDto, @CurrentActor() actor: AuthenticatedUser) {
     const categoryId = await this.mediaCategoryId();
     await this.assertOwnedByMedia(id, categoryId);
@@ -98,6 +104,7 @@ export class MediaInventoryController {
   }
 
   @Post(':id/issue')
+  @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   async issue(@Param('id') id: string, @Body() dto: IssueInventoryItemDto, @CurrentActor() actor: AuthenticatedUser) {
     const categoryId = await this.mediaCategoryId();
@@ -106,6 +113,7 @@ export class MediaInventoryController {
   }
 
   @Post(':id/return')
+  @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   async returnItem(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
     const categoryId = await this.mediaCategoryId();
@@ -114,6 +122,7 @@ export class MediaInventoryController {
   }
 
   @Post(':id/mark-damaged')
+  @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   async markDamaged(@Param('id') id: string, @Body() dto: InventoryItemNoteDto, @CurrentActor() actor: AuthenticatedUser) {
     const categoryId = await this.mediaCategoryId();
@@ -122,6 +131,7 @@ export class MediaInventoryController {
   }
 
   @Post(':id/mark-lost')
+  @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   async markLost(@Param('id') id: string, @Body() dto: InventoryItemNoteDto, @CurrentActor() actor: AuthenticatedUser) {
     const categoryId = await this.mediaCategoryId();
@@ -130,6 +140,7 @@ export class MediaInventoryController {
   }
 
   @Post(':id/retire')
+  @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   async retire(@Param('id') id: string, @Body() dto: InventoryItemNoteDto, @CurrentActor() actor: AuthenticatedUser) {
     const categoryId = await this.mediaCategoryId();

@@ -21,6 +21,7 @@ import { CommunitiesModule } from './modules/communities/communities.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DevicesModule } from './modules/devices/devices.module';
 import { DocumentsModule } from './modules/documents/documents.module';
+import { ExaminationsModule } from './modules/examinations/examinations.module';
 import { AdminFinanceModule } from './modules/finance/admin-finance.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { HostelModule } from './modules/hostel/hostel.module';
@@ -87,6 +88,7 @@ import { TransportModule } from './modules/transport/transport.module';
     PermissionsModule,
     MediaModule,
     StudentEventsModule,
+    ExaminationsModule,
   ],
   providers: [
     // Global guards, in order: AuthGuard resolves identity and sets request.user;

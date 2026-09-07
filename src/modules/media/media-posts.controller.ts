@@ -24,6 +24,10 @@ import { UpdateMediaPostDto } from './dto/update-media-post.dto';
 import { mediaPostMulterOptions } from './media-storage.util';
 import { MediaPostsService } from './media-posts.service';
 
+// PRINCIPAL is read-only oversight here, same as everywhere else -- every
+// write method below carries its own narrower @Roles('MEDIA_ROOM', 'ADMIN')
+// override (RolesGuard's Reflector.getAllAndOverride means a method-level
+// @Roles fully replaces the class-level one).
 @Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL')
 @Controller('media/posts')
 export class MediaPostsController {
@@ -32,6 +36,7 @@ export class MediaPostsController {
   // Registered before ':id' below -- otherwise "comments" would be swallowed as
   // the :id param on the generic get/patch/delete routes.
   @Post('comments/:commentId/reply')
+  @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   async replyToComment(
     @Param('commentId') commentId: string,
@@ -42,6 +47,7 @@ export class MediaPostsController {
   }
 
   @Delete('comments/:commentId')
+  @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   async deleteComment(@Param('commentId') commentId: string, @CurrentActor() actor: AuthenticatedUser) {
     await this.service.deleteComment(commentId, actor.personId);
@@ -54,6 +60,7 @@ export class MediaPostsController {
   }
 
   @Post()
+  @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FilesInterceptor('files', undefined, mediaPostMulterOptions))
   async create(
@@ -76,11 +83,13 @@ export class MediaPostsController {
   }
 
   @Patch(':id')
+  @Roles('MEDIA_ROOM', 'ADMIN')
   async update(@Param('id') id: string, @Body() dto: UpdateMediaPostDto, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.service.update(id, dto, actor.personId) };
   }
 
   @Post(':id/cancel')
+  @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   async cancel(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
     await this.service.cancel(id, actor.personId);
@@ -88,6 +97,7 @@ export class MediaPostsController {
   }
 
   @Delete(':id')
+  @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
   async delete(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
     await this.service.delete(id, actor.personId);

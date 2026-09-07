@@ -7,7 +7,9 @@ import { HostelAllocationQueryDto } from './dto/hostel-allocation-query.dto';
 import { VacateHostelAllocationDto } from './dto/vacate-hostel-allocation.dto';
 import { HostelAllocationsService } from './hostel-allocations.service';
 
-@Roles('ADMIN')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 12);
+// every write method below keeps its own narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('hostel-allocations')
 export class HostelAllocationsController {
   constructor(private readonly hostelAllocationsService: HostelAllocationsService) {}
@@ -30,12 +32,14 @@ export class HostelAllocationsController {
   }
 
   @Post()
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateHostelAllocationDto, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.hostelAllocationsService.create(dto, actor.personId) };
   }
 
   @Post(':id/vacate')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async vacate(
     @Param('id') id: string,

@@ -7,7 +7,9 @@ import { CommunityQueryDto } from './dto/community-query.dto';
 import { CreateCommunityDto } from './dto/create-community.dto';
 import { UpdateCommunityDto } from './dto/update-community.dto';
 
-@Roles('ADMIN')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 17);
+// every write method below keeps its own narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('communities')
 export class CommunitiesController {
   constructor(private readonly communitiesService: CommunitiesService) {}
@@ -23,12 +25,14 @@ export class CommunitiesController {
   }
 
   @Post()
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateCommunityDto, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.communitiesService.create(dto, actor.personId) };
   }
 
   @Patch(':id')
+  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateCommunityDto,
@@ -38,6 +42,7 @@ export class CommunitiesController {
   }
 
   @Post(':id/archive')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async archive(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.communitiesService.archive(id, actor.personId) };

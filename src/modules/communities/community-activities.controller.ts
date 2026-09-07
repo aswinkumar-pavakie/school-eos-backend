@@ -6,7 +6,9 @@ import { CommunityActivitiesService } from './community-activities.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
 
-@Roles('ADMIN')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 17);
+// every write method below keeps its own narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller()
 export class CommunityActivitiesController {
   constructor(private readonly activitiesService: CommunityActivitiesService) {}
@@ -17,6 +19,7 @@ export class CommunityActivitiesController {
   }
 
   @Post('communities/:id/activities')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Param('id') id: string,
@@ -27,6 +30,7 @@ export class CommunityActivitiesController {
   }
 
   @Patch('community-activities/:activityId')
+  @Roles('ADMIN')
   async update(
     @Param('activityId') activityId: string,
     @Body() dto: UpdateActivityDto,

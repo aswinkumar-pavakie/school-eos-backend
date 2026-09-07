@@ -8,7 +8,9 @@ import { UpdateHostelBlockDto } from './dto/update-hostel-block.dto';
 import { UpdateHostelDto } from './dto/update-hostel.dto';
 import { HostelsService } from './hostels.service';
 
-@Roles('ADMIN')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 12);
+// every write method below keeps its own narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller()
 export class HostelsController {
   constructor(private readonly hostelsService: HostelsService) {}
@@ -24,12 +26,14 @@ export class HostelsController {
   }
 
   @Post('hostels')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateHostelDto, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.hostelsService.create(dto, actor.personId) };
   }
 
   @Patch('hostels/:id')
+  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateHostelDto,
@@ -44,6 +48,7 @@ export class HostelsController {
   }
 
   @Post('hostels/:id/blocks')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async createBlock(
     @Param('id') id: string,
@@ -54,6 +59,7 @@ export class HostelsController {
   }
 
   @Patch('hostel-blocks/:blockId')
+  @Roles('ADMIN')
   async updateBlock(
     @Param('blockId') blockId: string,
     @Body() dto: UpdateHostelBlockDto,

@@ -18,7 +18,9 @@ import { UpdateRouteDto } from './dto/update-route.dto';
 import { CreateRouteStopDto } from './dto/create-route-stop.dto';
 import { UpdateRouteStopDto } from './dto/update-route-stop.dto';
 
-@Roles('ADMIN')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 11);
+// every write method below keeps its own narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller()
 export class RoutesController {
   constructor(private readonly routesService: RoutesService) {}
@@ -34,12 +36,14 @@ export class RoutesController {
   }
 
   @Post('routes')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateRouteDto, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.routesService.create(dto, actor.personId) };
   }
 
   @Patch('routes/:id')
+  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateRouteDto,
@@ -59,6 +63,7 @@ export class RoutesController {
   }
 
   @Post('routes/:id/stops')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async createStop(
     @Param('id') id: string,
@@ -69,6 +74,7 @@ export class RoutesController {
   }
 
   @Patch('route-stops/:stopId')
+  @Roles('ADMIN')
   async updateStop(
     @Param('stopId') stopId: string,
     @Body() dto: UpdateRouteStopDto,
@@ -78,6 +84,7 @@ export class RoutesController {
   }
 
   @Delete('route-stops/:stopId')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async deleteStop(@Param('stopId') stopId: string, @CurrentActor() actor: AuthenticatedUser) {
     await this.routesService.deleteStop(stopId, actor.personId);

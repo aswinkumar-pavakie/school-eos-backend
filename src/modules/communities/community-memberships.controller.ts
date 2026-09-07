@@ -5,7 +5,9 @@ import { Roles } from '../../common/auth/roles.decorator';
 import { CommunityMembershipsService } from './community-memberships.service';
 import { CreateMembershipDto } from './dto/create-membership.dto';
 
-@Roles('ADMIN')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 17);
+// every write method below keeps its own narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller()
 export class CommunityMembershipsController {
   constructor(private readonly membershipsService: CommunityMembershipsService) {}
@@ -16,6 +18,7 @@ export class CommunityMembershipsController {
   }
 
   @Post('communities/:id/memberships')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Param('id') id: string,
@@ -26,12 +29,14 @@ export class CommunityMembershipsController {
   }
 
   @Post('community-memberships/:membershipId/record-consent')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async recordConsent(@Param('membershipId') membershipId: string, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.membershipsService.recordConsent(membershipId, actor.personId) };
   }
 
   @Post('community-memberships/:membershipId/remove')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async remove(@Param('membershipId') membershipId: string, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.membershipsService.remove(membershipId, actor.personId) };

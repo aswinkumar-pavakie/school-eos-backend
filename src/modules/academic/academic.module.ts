@@ -35,6 +35,9 @@ import { SchoolController } from './school.controller';
 import { SchoolService } from './school.service';
 import { SectionsController } from './sections.controller';
 import { SectionsService } from './sections.service';
+import { SubjectOfferingRepository } from './repositories/subject-offering.repository';
+import { SubjectOfferingsController } from './subject-offerings.controller';
+import { SubjectOfferingsService } from './subject-offerings.service';
 import { SubjectsController } from './subjects.controller';
 import { SubjectsService } from './subjects.service';
 
@@ -51,6 +54,7 @@ import { SubjectsService } from './subjects.service';
     GradesController,
     SectionsController,
     SubjectsController,
+    SubjectOfferingsController,
     DepartmentsController,
     HousesController,
     CalendarEventsController,
@@ -64,6 +68,7 @@ import { SubjectsService } from './subjects.service';
     GradesService,
     SectionsService,
     SubjectsService,
+    SubjectOfferingsService,
     DepartmentsService,
     HousesService,
     CalendarEventsService,
@@ -75,6 +80,7 @@ import { SubjectsService } from './subjects.service';
     GradeRepository,
     SectionRepository,
     SubjectRepository,
+    SubjectOfferingRepository,
     DepartmentRepository,
     HouseRepository,
     CalendarEventRepository,

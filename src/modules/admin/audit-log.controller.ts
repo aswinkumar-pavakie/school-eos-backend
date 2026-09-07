@@ -1,13 +1,15 @@
 // The real, general audit trail -- Design Architecture v0.1 module 20 (Settings,
 // Master Data & Audit). AuditEventsController stays scoped to login events only
 // (its own header comment says why); this is everything else.
-
+// PRINCIPAL added (Phase 20) -- the approved API doc names "Restricted
+// Admin/leadership/audit role" for the audit trail; nothing to narrow, this
+// controller is a single GET.
 import { Controller, Get, Query } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { Roles } from '../../common/auth/roles.decorator';
 import { AuditLogQueryDto } from './dto/audit-log-query.dto';
 
-@Roles('ADMIN')
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('audit-log')
 export class AuditLogController {
   constructor(private readonly auditService: AuditService) {}

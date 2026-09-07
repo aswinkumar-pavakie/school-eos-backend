@@ -6,7 +6,9 @@ import { CreateHostelRoomDto } from './dto/create-hostel-room.dto';
 import { UpdateHostelRoomDto } from './dto/update-hostel-room.dto';
 import { HostelFloorsService } from './hostel-floors.service';
 
-@Roles('ADMIN')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 12);
+// every write method below keeps its own narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller()
 export class HostelFloorsController {
   constructor(private readonly hostelFloorsService: HostelFloorsService) {}
@@ -17,6 +19,7 @@ export class HostelFloorsController {
   }
 
   @Post('hostel-floors/:id/rooms')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async createRoom(
     @Param('id') id: string,
@@ -27,6 +30,7 @@ export class HostelFloorsController {
   }
 
   @Patch('hostel-rooms/:roomId')
+  @Roles('ADMIN')
   async updateRoom(
     @Param('roomId') roomId: string,
     @Body() dto: UpdateHostelRoomDto,

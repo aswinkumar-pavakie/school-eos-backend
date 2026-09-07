@@ -20,7 +20,11 @@ import { UpdateVehicleDocumentDto } from './dto/update-vehicle-document.dto';
 import { CreateVehicleMaintenanceDto } from './dto/create-vehicle-maintenance.dto';
 import { UpdateVehicleMaintenanceDto } from './dto/update-vehicle-maintenance.dto';
 
-@Roles('ADMIN')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 11);
+// every write method below keeps its own narrower @Roles('ADMIN') override --
+// RolesGuard's Reflector.getAllAndOverride means a method-level @Roles fully
+// replaces, never merges with, the class-level one.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller()
 export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
@@ -36,12 +40,14 @@ export class VehiclesController {
   }
 
   @Post('vehicles')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateVehicleDto, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.vehiclesService.create(dto, actor.personId) };
   }
 
   @Patch('vehicles/:id')
+  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateVehicleDto,
@@ -56,6 +62,7 @@ export class VehiclesController {
   }
 
   @Post('vehicles/:id/documents')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async createDocument(
     @Param('id') id: string,
@@ -66,6 +73,7 @@ export class VehiclesController {
   }
 
   @Patch('vehicle-documents/:documentId')
+  @Roles('ADMIN')
   async updateDocument(
     @Param('documentId') documentId: string,
     @Body() dto: UpdateVehicleDocumentDto,
@@ -75,6 +83,7 @@ export class VehiclesController {
   }
 
   @Delete('vehicle-documents/:documentId')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async deleteDocument(
     @Param('documentId') documentId: string,
@@ -90,6 +99,7 @@ export class VehiclesController {
   }
 
   @Post('vehicles/:id/maintenance')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async createMaintenance(
     @Param('id') id: string,
@@ -100,6 +110,7 @@ export class VehiclesController {
   }
 
   @Patch('vehicle-maintenance/:maintenanceId')
+  @Roles('ADMIN')
   async updateMaintenance(
     @Param('maintenanceId') maintenanceId: string,
     @Body() dto: UpdateVehicleMaintenanceDto,

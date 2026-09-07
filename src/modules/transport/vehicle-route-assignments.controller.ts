@@ -7,7 +7,9 @@ import { CreateVehicleRouteAssignmentDto } from './dto/create-vehicle-route-assi
 import { UpdateVehicleRouteAssignmentDto } from './dto/update-vehicle-route-assignment.dto';
 import { VehicleRouteAssignmentQueryDto } from './dto/vehicle-route-assignment-query.dto';
 
-@Roles('ADMIN')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 11);
+// every write method below keeps its own narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('vehicle-route-assignments')
 export class VehicleRouteAssignmentsController {
   constructor(private readonly assignmentsService: VehicleRouteAssignmentsService) {}
@@ -23,6 +25,7 @@ export class VehicleRouteAssignmentsController {
   }
 
   @Post()
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateVehicleRouteAssignmentDto,
@@ -32,6 +35,7 @@ export class VehicleRouteAssignmentsController {
   }
 
   @Patch(':id')
+  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateVehicleRouteAssignmentDto,

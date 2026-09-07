@@ -9,7 +9,9 @@ import { InventoryCategoriesService } from './inventory-categories.service';
 // Configurable inventory categories (Sports equipment, Lab equipment, IT
 // equipment, Furniture, School supplies, etc.) -- rows in a table, not a
 // hard-coded enum, so Admin can add new ones without a code change.
-@Roles('ADMIN')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 13);
+// every write method below keeps its own narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('inventory-categories')
 export class InventoryCategoriesController {
   constructor(private readonly categoriesService: InventoryCategoriesService) {}
@@ -25,12 +27,14 @@ export class InventoryCategoriesController {
   }
 
   @Post()
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateInventoryCategoryDto, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.categoriesService.create(dto, actor.personId) };
   }
 
   @Patch(':id')
+  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateInventoryCategoryDto,

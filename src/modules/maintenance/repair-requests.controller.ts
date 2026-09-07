@@ -12,7 +12,13 @@ import { RepairRequestsService } from './repair-requests.service';
 
 // General school assets/equipment/facilities only -- vehicle repair/maintenance
 // stays under Transport -> Vehicles (vehicle_maintenance), never duplicated here.
-@Roles('ADMIN')
+// Class-level role broadened to PRINCIPAL, read-only -- minimal, targeted
+// extension so Principal Inventory's item-detail page can show the real repair
+// requests raised against that item (see Phase 13's Inventory -> Maintenance
+// integration requirement) without duplicating this module or building the
+// full Principal Maintenance module yet. Every write method below keeps its
+// own narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('repair-requests')
 export class RepairRequestsController {
   constructor(private readonly repairRequestsService: RepairRequestsService) {}
@@ -36,12 +42,14 @@ export class RepairRequestsController {
   }
 
   @Post()
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateRepairRequestDto, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.repairRequestsService.create(dto, actor.personId) };
   }
 
   @Patch(':id')
+  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateRepairRequestDto,
@@ -51,6 +59,7 @@ export class RepairRequestsController {
   }
 
   @Post(':id/assign')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async assign(
     @Param('id') id: string,
@@ -61,12 +70,14 @@ export class RepairRequestsController {
   }
 
   @Post(':id/start')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async start(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.repairRequestsService.start(id, actor.personId) };
   }
 
   @Post(':id/complete')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async complete(
     @Param('id') id: string,
@@ -77,6 +88,7 @@ export class RepairRequestsController {
   }
 
   @Post(':id/cancel')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async cancel(
     @Param('id') id: string,

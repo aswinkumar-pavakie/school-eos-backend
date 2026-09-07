@@ -6,7 +6,11 @@ import { DriversService } from './drivers.service';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { UpdateDriverDto } from './dto/update-driver.dto';
 
-@Roles('ADMIN')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 11);
+// every write method below keeps its own narrower @Roles('ADMIN') override.
+// Drivers remain plain transport master records, never application users --
+// no driver login/role is introduced here.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('drivers')
 export class DriversController {
   constructor(private readonly driversService: DriversService) {}
@@ -22,12 +26,14 @@ export class DriversController {
   }
 
   @Post()
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateDriverDto, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.driversService.create(dto, actor.personId) };
   }
 
   @Patch(':id')
+  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateDriverDto,

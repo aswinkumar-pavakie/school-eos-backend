@@ -12,7 +12,11 @@ import { TransferInventoryItemDto } from './dto/transfer-inventory-item.dto';
 import { UpdateInventoryItemDto } from './dto/update-inventory-item.dto';
 import { InventoryItemsService } from './inventory-items.service';
 
-@Roles('ADMIN')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 13);
+// every write method below keeps its own narrower @Roles('ADMIN') override --
+// RolesGuard's Reflector.getAllAndOverride means a method-level @Roles fully
+// replaces, never merges with, the class-level one.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('inventory-items')
 export class InventoryItemsController {
   constructor(private readonly itemsService: InventoryItemsService) {}
@@ -36,12 +40,14 @@ export class InventoryItemsController {
   }
 
   @Post()
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateInventoryItemDto, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.itemsService.create(dto, actor.personId) };
   }
 
   @Patch(':id')
+  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateInventoryItemDto,
@@ -51,12 +57,14 @@ export class InventoryItemsController {
   }
 
   @Post(':id/add-stock')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async addStock(@Param('id') id: string, @Body() dto: AddStockDto, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.itemsService.addStock(id, dto, actor.personId) };
   }
 
   @Post(':id/adjust-stock')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async adjustStock(
     @Param('id') id: string,
@@ -67,18 +75,21 @@ export class InventoryItemsController {
   }
 
   @Post(':id/issue')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async issue(@Param('id') id: string, @Body() dto: IssueInventoryItemDto, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.itemsService.issue(id, dto, actor.personId) };
   }
 
   @Post(':id/return')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async returnItem(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.itemsService.returnItem(id, actor.personId) };
   }
 
   @Post(':id/transfer')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async transfer(
     @Param('id') id: string,
@@ -89,6 +100,7 @@ export class InventoryItemsController {
   }
 
   @Post(':id/mark-damaged')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async markDamaged(
     @Param('id') id: string,
@@ -99,6 +111,7 @@ export class InventoryItemsController {
   }
 
   @Post(':id/mark-lost')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async markLost(
     @Param('id') id: string,
@@ -109,6 +122,7 @@ export class InventoryItemsController {
   }
 
   @Post(':id/retire')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async retire(@Param('id') id: string, @Body() dto: InventoryItemNoteDto, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.itemsService.retire(id, dto, actor.personId) };
