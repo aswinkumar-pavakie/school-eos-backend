@@ -18,6 +18,10 @@ import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { CommunitiesModule } from './modules/communities/communities.module';
+import { CommunityLoginModule } from './modules/community-login/community-login.module';
+import { CommunityInitiativesModule } from './modules/community-initiatives/community-initiatives.module';
+import { CommunityMembershipRequestsModule } from './modules/community-membership-requests/community-membership-requests.module';
+import { CommunityProposalsModule } from './modules/community-proposals/community-proposals.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DevicesModule } from './modules/devices/devices.module';
 import { DocumentsModule } from './modules/documents/documents.module';
@@ -89,6 +93,10 @@ import { TransportModule } from './modules/transport/transport.module';
     MediaModule,
     StudentEventsModule,
     ExaminationsModule,
+    CommunityLoginModule,
+    CommunityProposalsModule,
+    CommunityInitiativesModule,
+    CommunityMembershipRequestsModule,
   ],
   providers: [
     // Global guards, in order: AuthGuard resolves identity and sets request.user;

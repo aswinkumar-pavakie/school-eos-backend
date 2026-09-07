@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { Queryable } from '../../infrastructure/postgres/postgres.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
@@ -30,7 +35,11 @@ export class CommunityMembershipsService {
   /** Always created PENDING_CONSENT -- there is no valid create path that starts
    * ACTIVE, matching the membership_consent CHECK (status='ACTIVE' iff
    * parent_consent_at is set). */
-  async create(communityId: string, dto: CreateMembershipDto, actorPersonId: string) {
+  async create(
+    communityId: string,
+    dto: CreateMembershipDto,
+    actorPersonId: string,
+  ) {
     await this.communitiesService.get(communityId);
     try {
       const { id } = await this.membershipRepo.create({
@@ -51,10 +60,14 @@ export class CommunityMembershipsService {
       return created;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('This student is already a member of this community.');
+        throw new ConflictException(
+          'This student is already a member of this community.',
+        );
       }
       if (isForeignKeyViolation(err)) {
-        throw new NotFoundException('studentId does not refer to an existing record.');
+        throw new NotFoundException(
+          'studentId does not refer to an existing record.',
+        );
       }
       throw err;
     }
@@ -64,11 +77,14 @@ export class CommunityMembershipsService {
   async recordConsent(id: string, actorPersonId: string) {
     const existing = await this.getRow(id);
     if (existing.status !== 'PENDING_CONSENT') {
-      throw new BadRequestException('Consent can only be recorded for a membership pending consent.');
+      throw new BadRequestException(
+        'Consent can only be recorded for a membership pending consent.',
+      );
     }
     return this.unitOfWork.run(async (client) => {
       const updated = await this.membershipRepo.recordConsent(id, client);
-      if (!updated) throw new NotFoundException('Community membership not found');
+      if (!updated)
+        throw new NotFoundException('Community membership not found');
       const row = await this.getRow(id, client);
       await this.auditService.record(
         {
@@ -90,11 +106,14 @@ export class CommunityMembershipsService {
   async remove(id: string, actorPersonId: string) {
     const existing = await this.getRow(id);
     if (existing.status === 'REMOVED') {
-      throw new BadRequestException('This membership has already been removed.');
+      throw new BadRequestException(
+        'This membership has already been removed.',
+      );
     }
     return this.unitOfWork.run(async (client) => {
       const updated = await this.membershipRepo.remove(id, client);
-      if (!updated) throw new NotFoundException('Community membership not found');
+      if (!updated)
+        throw new NotFoundException('Community membership not found');
       const row = await this.getRow(id, client);
       await this.auditService.record(
         {

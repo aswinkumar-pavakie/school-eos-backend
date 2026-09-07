@@ -29,5 +29,11 @@ import { CommunityRepository } from './repositories/community.repository';
     CommunityActivityRepository,
     CommunityAnnouncementRepository,
   ],
+  // CommunityMembershipRepository exported so the standalone Community
+  // module's own membership-request approval handler can write the same
+  // community_membership table Admin already owns, without duplicating its
+  // create()/remove() SQL -- same "genuinely share a service" exception the
+  // module-boundary convention already allows.
+  exports: [CommunityMembershipRepository],
 })
 export class CommunitiesModule {}

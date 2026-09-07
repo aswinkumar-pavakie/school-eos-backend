@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface CommunityActivityRow {
   id: string;
@@ -47,7 +50,10 @@ export class CommunityActivityRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<CommunityActivityRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<CommunityActivityRow | null> {
     const { rows } = await executor.query<CommunityActivityRow>(
       `SELECT ${COLUMNS} FROM community_activity WHERE id = $1`,
       [id],

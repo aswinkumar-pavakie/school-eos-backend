@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CommunityQueryDto } from './dto/community-query.dto';
 import { CreateCommunityDto } from './dto/create-community.dto';
@@ -14,7 +19,10 @@ export class CommunitiesService {
   ) {}
 
   list(query: CommunityQueryDto) {
-    return this.communityRepo.findMany({ academicYearId: query.academicYearId, state: query.state });
+    return this.communityRepo.findMany({
+      academicYearId: query.academicYearId,
+      state: query.state,
+    });
   }
 
   async get(id: string) {
@@ -47,10 +55,14 @@ export class CommunitiesService {
       return created;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A community with this name already exists for this academic year.');
+        throw new ConflictException(
+          'A community with this name already exists for this academic year.',
+        );
       }
       if (isForeignKeyViolation(err)) {
-        throw new NotFoundException('academicYearId or inchargeStaffId does not refer to an existing record.');
+        throw new NotFoundException(
+          'academicYearId or inchargeStaffId does not refer to an existing record.',
+        );
       }
       throw err;
     }
@@ -73,10 +85,14 @@ export class CommunitiesService {
       return updated;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A community with this name already exists for this academic year.');
+        throw new ConflictException(
+          'A community with this name already exists for this academic year.',
+        );
       }
       if (isForeignKeyViolation(err)) {
-        throw new NotFoundException('inchargeStaffId does not refer to an existing record.');
+        throw new NotFoundException(
+          'inchargeStaffId does not refer to an existing record.',
+        );
       }
       throw err;
     }
