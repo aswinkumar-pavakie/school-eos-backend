@@ -13,7 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import { AUTH_ERRORS } from '../../common/errors/error-codes';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
-import { AdminPasswordResetDto } from './dto/admin-password-reset.dto';
+import { AdminPasswordResetDto } from '../admin/dto/admin-password-reset.dto';
 import { PasswordResetCompleteDto } from './dto/password-reset-complete.dto';
 import { PasswordResetRequestDto } from './dto/password-reset-request.dto';
 import {

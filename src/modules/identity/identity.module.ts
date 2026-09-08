@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { jwtModuleFactory } from '../../config/jwt.config';
-import { AdminIdentityController } from './admin-identity.controller';
 import { IdentityController } from './identity.controller';
 import { IdentityService } from './identity.service';
 import { PasswordResetController } from './password-reset.controller';
@@ -15,7 +14,7 @@ import { UserCredentialRepository } from './repositories/user-credential.reposit
 
 @Module({
   imports: [JwtModule.registerAsync(jwtModuleFactory)],
-  controllers: [IdentityController, PasswordResetController, AdminIdentityController],
+  controllers: [IdentityController, PasswordResetController],
   providers: [
     IdentityService,
     PasswordResetService,
@@ -25,6 +24,18 @@ import { UserCredentialRepository } from './repositories/user-credential.reposit
     RoleAssignmentRepository,
     SessionRepository,
     OtpChallengeRepository,
+  ],
+  // Shared with the Admin module (Identity, Roles & Assignments) -- one authoritative
+  // repository per table rather than a second set of classes hitting the same rows.
+  // PasswordResetService is exported too, for AdminIdentityController's admin-authorized
+  // parent reset.
+  exports: [
+    LoginIdentifierRepository,
+    UserCredentialRepository,
+    PersonRepository,
+    RoleAssignmentRepository,
+    SessionRepository,
+    PasswordResetService,
   ],
 })
 export class IdentityModule {}

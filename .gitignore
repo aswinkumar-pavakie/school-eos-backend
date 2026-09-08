@@ -52,3 +52,8 @@ prisma.config.js.map
 
 # ---- Package manager ----
 .pnpm-store/
+query.md
+
+# ---- User-uploaded files (local disk storage, see PersonsController photo endpoints) ----
+uploads/*
+!uploads/.gitkeep

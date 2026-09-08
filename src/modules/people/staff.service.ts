@@ -1,0 +1,150 @@
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { AuditService } from '../../common/audit/audit.service';
+import { PersonRepository } from '../identity/repositories/person.repository';
+import { CreateStaffDto } from './dto/create-staff.dto';
+import { StaffExitDto } from './dto/staff-exit.dto';
+import { StaffQueryDto } from './dto/staff-query.dto';
+import { UpdateStaffDto } from './dto/update-staff.dto';
+import { isCheckViolation, isUniqueViolation } from './pg-error.util';
+import { StaffRepository } from './repositories/staff.repository';
+
+@Injectable()
+export class StaffService {
+  constructor(
+    private readonly staffRepo: StaffRepository,
+    private readonly personRepo: PersonRepository,
+    private readonly auditService: AuditService,
+  ) {}
+
+  async list(query: StaffQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 50;
+    const ids = query.ids
+      ? query.ids
+          .split(',')
+          .map((id) => id.trim())
+          .filter(Boolean)
+      : undefined;
+    // An explicit id selection must never be truncated by the default page
+    // size -- it's a hand-picked set (e.g. checkbox selection), not a browse.
+    const effectiveLimit = ids ? Math.max(ids.length, 1) : limit;
+    const { rows, total } = await this.staffRepo.findMany({
+      status: query.status,
+      search: query.search,
+      designation: query.designation,
+      isTeaching: query.isTeaching === undefined ? undefined : query.isTeaching === 'true',
+      gradeId: query.gradeId,
+      sectionId: query.sectionId,
+      subjectId: query.subjectId,
+      ids,
+      limit: effectiveLimit,
+      offset: (page - 1) * effectiveLimit,
+    });
+    return { data: rows, meta: { page, limit: effectiveLimit, total } };
+  }
+
+  async listDesignations(isTeaching?: string) {
+    const rows = await this.staffRepo.findDistinctDesignations(
+      isTeaching === undefined ? undefined : isTeaching === 'true',
+    );
+    return { data: rows };
+  }
+
+  async get(id: string) {
+    const staff = await this.staffRepo.findById(id);
+    if (!staff) throw new NotFoundException('Staff record not found');
+    return staff;
+  }
+
+  async create(dto: CreateStaffDto, actorPersonId: string) {
+    const person = await this.personRepo.findById(dto.personId);
+    if (!person) throw new BadRequestException('personId does not refer to an existing person.');
+    if (person.status !== 'ACTIVE') {
+      throw new BadRequestException('Cannot attach a staff record to a non-active person.');
+    }
+
+    const existing = await this.staffRepo.findByPersonId(dto.personId);
+    if (existing) {
+      throw new ConflictException('This person already has a staff record.');
+    }
+
+    try {
+      const created = await this.staffRepo.create({
+        personId: dto.personId,
+        employeeNo: dto.employeeNo,
+        designation: dto.designation ?? null,
+        teacherCategory: dto.teacherCategory ?? null,
+        postType: dto.postType ?? null,
+        stateTeacherId: dto.stateTeacherId ?? null,
+        isTeaching: dto.isTeaching,
+        dateOfJoining: dto.dateOfJoining,
+      });
+      await this.auditService.record({
+        actorPersonId,
+        action: 'STAFF_CREATED',
+        objectType: 'staff',
+        objectId: created.id,
+        outcome: 'SUCCESS',
+        afterData: created,
+      });
+      return created;
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new ConflictException('employee_no is already in use.');
+      }
+      throw err;
+    }
+  }
+
+  async update(id: string, dto: UpdateStaffDto, actorPersonId: string) {
+    const existing = await this.get(id);
+    try {
+      const updated = await this.staffRepo.update(id, dto);
+      if (!updated) throw new NotFoundException('Staff record not found');
+      await this.auditService.record({
+        actorPersonId,
+        action: 'STAFF_UPDATED',
+        objectType: 'staff',
+        objectId: id,
+        outcome: 'SUCCESS',
+        beforeData: existing,
+        afterData: updated,
+      });
+      return updated;
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new ConflictException('employee_no is already in use.');
+      }
+      throw err;
+    }
+  }
+
+  /** Atomic: status + date_of_exit + exit_reason all change together, matching the DB's
+   * staff_exit_consistent CHECK. There is no path back off EXITED -- out of scope. */
+  async exit(id: string, dto: StaffExitDto, actorPersonId: string) {
+    const staff = await this.get(id);
+    if (staff.status === 'EXITED') {
+      throw new BadRequestException('This staff record is already marked exited.');
+    }
+    const dateOfExit = dto.dateOfExit ?? new Date().toISOString().slice(0, 10);
+    try {
+      const updated = await this.staffRepo.exit(id, dto.exitReason, dateOfExit);
+      if (!updated) throw new NotFoundException('Staff record not found');
+      await this.auditService.record({
+        actorPersonId,
+        action: 'STAFF_EXITED',
+        objectType: 'staff',
+        objectId: id,
+        outcome: 'SUCCESS',
+        beforeData: staff,
+        afterData: updated,
+      });
+      return updated;
+    } catch (err) {
+      if (isCheckViolation(err)) {
+        throw new BadRequestException('date_of_exit must be on or after date_of_joining.');
+      }
+      throw err;
+    }
+  }
+}
