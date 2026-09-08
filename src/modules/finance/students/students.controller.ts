@@ -3,7 +3,16 @@
 // time. See students.service.ts for why this exists in Finance rather than a
 // dedicated People module (none exists yet in this codebase).
 
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CurrentActor } from '../../../common/auth/current-actor.decorator';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
 import { Roles } from '../../../common/auth/roles.decorator';
@@ -24,7 +33,10 @@ export class StudentsController {
       { ...filter, dueStatus: filter.dueStatus as DueStatus | undefined },
       { page, pageSize },
     );
-    return { data: rows, meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 } };
+    return {
+      data: rows,
+      meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 },
+    };
   }
 
   @Get(':id')

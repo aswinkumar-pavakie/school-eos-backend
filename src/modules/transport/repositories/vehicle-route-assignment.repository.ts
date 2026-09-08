@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface VehicleRouteAssignmentRow {
   id: string;
@@ -59,7 +62,8 @@ export class VehicleRouteAssignmentRepository {
       conditions.push(`(effective_to IS NULL OR effective_to >= CURRENT_DATE)`);
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { rows } = await executor.query<VehicleRouteAssignmentRow>(
       `SELECT ${COLUMNS} FROM vehicle_route_assignment ${where} ORDER BY effective_from DESC`,
       params,

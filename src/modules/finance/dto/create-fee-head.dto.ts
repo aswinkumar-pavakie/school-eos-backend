@@ -1,6 +1,16 @@
 import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
 
-const HEAD_TYPES = ['TUITION', 'SPECIAL', 'TRANSPORT', 'HOSTEL', 'EXAM', 'LAB', 'LIBRARY', 'ID_CARD', 'OTHER'];
+const HEAD_TYPES = [
+  'TUITION',
+  'SPECIAL',
+  'TRANSPORT',
+  'HOSTEL',
+  'EXAM',
+  'LAB',
+  'LIBRARY',
+  'ID_CARD',
+  'OTHER',
+];
 
 export class CreateFeeHeadDto {
   @IsString()

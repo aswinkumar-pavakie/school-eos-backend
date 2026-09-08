@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface TimetablePeriodRow {
   id: string;
@@ -50,7 +53,9 @@ const SLOT_JOINS = `FROM timetable_slot ts
 export class TimetableRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findPeriods(executor: Queryable = this.postgres): Promise<TimetablePeriodRow[]> {
+  async findPeriods(
+    executor: Queryable = this.postgres,
+  ): Promise<TimetablePeriodRow[]> {
     const { rows } = await executor.query<TimetablePeriodRow>(
       `SELECT id, period_no AS "periodNo", label, start_time AS "startTime", end_time AS "endTime",
               applies_to_stage AS "appliesToStage", is_break AS "isBreak"
@@ -60,7 +65,10 @@ export class TimetableRepository {
     return rows;
   }
 
-  async findBySection(sectionId: string, executor: Queryable = this.postgres): Promise<TimetableSlotRow[]> {
+  async findBySection(
+    sectionId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<TimetableSlotRow[]> {
     const { rows } = await executor.query<TimetableSlotRow>(
       `SELECT ${SLOT_COLUMNS} ${SLOT_JOINS}
        WHERE so.section_id = $1 AND ts.status = 'ACTIVE'
@@ -70,7 +78,10 @@ export class TimetableRepository {
     return rows;
   }
 
-  async findByTeacher(teacherStaffId: string, executor: Queryable = this.postgres): Promise<TimetableSlotRow[]> {
+  async findByTeacher(
+    teacherStaffId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<TimetableSlotRow[]> {
     const { rows } = await executor.query<TimetableSlotRow>(
       `SELECT ${SLOT_COLUMNS} ${SLOT_JOINS}
        WHERE so.teacher_staff_id = $1 AND ts.status = 'ACTIVE'

@@ -5,13 +5,20 @@
 // service in this codebase yet to read rows back from `sourceObjectKey` (see the
 // Finance README's assumptions section).
 
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { FINANCE_ERRORS } from '../../../common/errors/error-codes';
 import { PageQuery } from '../../../common/pagination/pagination.util';
 import { UnitOfWork } from '../../../common/transactions/unit-of-work';
 import { FeeDemandRepository } from '../obligations/repositories/fee-demand.repository';
 import { ImportRowDto } from './dto/import-rows.dto';
-import { BulkImportJobRepository, BulkImportJobRow } from './repositories/bulk-import-job.repository';
+import {
+  BulkImportJobRepository,
+  BulkImportJobRow,
+} from './repositories/bulk-import-job.repository';
 import { StudentFeeAssignmentLookupRepository } from './repositories/student-fee-assignment-lookup.repository';
 
 export interface RowError {
@@ -38,7 +45,12 @@ export class ObligationImportsService {
     return job;
   }
 
-  async create(input: { fileName: string; sourceObjectKey: string; jobType?: string; createdBy: string }) {
+  async create(input: {
+    fileName: string;
+    sourceObjectKey: string;
+    jobType?: string;
+    createdBy: string;
+  }) {
     return this.jobRepo.create({
       fileName: input.fileName,
       sourceObjectKey: input.sourceObjectKey,
@@ -54,18 +66,30 @@ export class ObligationImportsService {
       const row = rows[i];
       const key = `${row.assignmentId}:${row.feeHeadId ?? ''}:${row.instalmentNo}`;
       if (seen.has(key)) {
-        errors.push({ index: i, message: 'Duplicate row for the same assignment/fee head/instalment' });
+        errors.push({
+          index: i,
+          message: 'Duplicate row for the same assignment/fee head/instalment',
+        });
         continue;
       }
       seen.add(key);
 
       if (BigInt(row.amountPaise) <= 0n) {
-        errors.push({ index: i, message: 'amountPaise must be greater than zero' });
+        errors.push({
+          index: i,
+          message: 'amountPaise must be greater than zero',
+        });
         continue;
       }
-      const assignmentOk = await this.assignmentLookup.exists(row.assignmentId, row.studentId);
+      const assignmentOk = await this.assignmentLookup.exists(
+        row.assignmentId,
+        row.studentId,
+      );
       if (!assignmentOk) {
-        errors.push({ index: i, message: 'No matching student_fee_assignment for this student' });
+        errors.push({
+          index: i,
+          message: 'No matching student_fee_assignment for this student',
+        });
       }
     }
     return errors;
@@ -99,7 +123,8 @@ export class ObligationImportsService {
   async confirm(id: string, rows: ImportRowDto[]): Promise<BulkImportJobRow> {
     return this.unitOfWork.run(async (client) => {
       const job = await this.jobRepo.findByIdForUpdate(id, client);
-      if (!job) throw new NotFoundException(FINANCE_ERRORS.IMPORT_JOB_NOT_FOUND);
+      if (!job)
+        throw new NotFoundException(FINANCE_ERRORS.IMPORT_JOB_NOT_FOUND);
       if (job.state !== 'VALIDATED') {
         throw new ConflictException(FINANCE_ERRORS.IMPORT_JOB_WRONG_STATE);
       }
@@ -108,10 +133,18 @@ export class ObligationImportsService {
       if (errors.length > 0) {
         await this.jobRepo.recordValidation(
           id,
-          { totalRows: rows.length, validRows: rows.length - errors.length, errorRows: errors.length, rowErrors: errors, state: 'VALIDATION_FAILED' },
+          {
+            totalRows: rows.length,
+            validRows: rows.length - errors.length,
+            errorRows: errors.length,
+            rowErrors: errors,
+            state: 'VALIDATION_FAILED',
+          },
           client,
         );
-        throw new ConflictException('Rows changed since validation — re-validate before confirming');
+        throw new ConflictException(
+          'Rows changed since validation — re-validate before confirming',
+        );
       }
 
       for (const row of rows) {
@@ -138,7 +171,8 @@ export class ObligationImportsService {
   async cancel(id: string): Promise<BulkImportJobRow> {
     return this.unitOfWork.run(async (client) => {
       const job = await this.jobRepo.findByIdForUpdate(id, client);
-      if (!job) throw new NotFoundException(FINANCE_ERRORS.IMPORT_JOB_NOT_FOUND);
+      if (!job)
+        throw new NotFoundException(FINANCE_ERRORS.IMPORT_JOB_NOT_FOUND);
       if (!['DRAFT', 'VALIDATED', 'VALIDATION_FAILED'].includes(job.state)) {
         throw new ConflictException(FINANCE_ERRORS.IMPORT_JOB_WRONG_STATE);
       }

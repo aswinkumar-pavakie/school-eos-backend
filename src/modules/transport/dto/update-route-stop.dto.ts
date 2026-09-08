@@ -1,5 +1,13 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsMilitaryTime, IsNumber, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import {
+  IsInt,
+  IsMilitaryTime,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateRouteStopDto {
   @IsOptional()

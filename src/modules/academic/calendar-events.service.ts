@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CalendarEventRepository } from './repositories/calendar-event.repository';
 import { CreateCalendarEventDto } from './dto/create-calendar-event.dto';
@@ -31,7 +36,10 @@ export class CalendarEventsService {
     assertValidCalendarEventScope(dto);
 
     try {
-      const created = await this.calendarEventRepo.create({ ...dto, createdBy });
+      const created = await this.calendarEventRepo.create({
+        ...dto,
+        createdBy,
+      });
       await this.auditService.record({
         actorPersonId: createdBy,
         action: 'CALENDAR_EVENT_CREATED',
@@ -43,7 +51,9 @@ export class CalendarEventsService {
       return created;
     } catch (err) {
       if (isForeignKeyViolation(err)) {
-        throw new ConflictException('academicYearId or scopeId does not exist.');
+        throw new ConflictException(
+          'academicYearId or scopeId does not exist.',
+        );
       }
       throw err;
     }

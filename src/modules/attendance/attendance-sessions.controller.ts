@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -24,13 +33,19 @@ export class AttendanceSessionsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateAttendanceSessionDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateAttendanceSessionDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.sessionsService.create(dto, actor.personId) };
   }
 
   @Post(':id/lock')
   @HttpCode(HttpStatus.OK)
-  async lock(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async lock(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.sessionsService.lock(id, actor.personId) };
   }
 }

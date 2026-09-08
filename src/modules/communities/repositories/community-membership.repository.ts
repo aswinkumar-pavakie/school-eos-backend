@@ -4,7 +4,10 @@
 // have; a bad reference surfaces as a clean foreign-key-violation 409.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface CommunityMembershipRow {
   id: string;
@@ -72,7 +75,12 @@ export class CommunityMembershipRepository {
       `INSERT INTO community_membership (community_id, student_id, role_in_community, added_by)
        VALUES ($1, $2, COALESCE($3, 'MEMBER'), $4)
        RETURNING id`,
-      [input.communityId, input.studentId, input.roleInCommunity ?? null, input.addedBy],
+      [
+        input.communityId,
+        input.studentId,
+        input.roleInCommunity ?? null,
+        input.addedBy,
+      ],
     );
     return rows[0];
   }
@@ -80,7 +88,10 @@ export class CommunityMembershipRepository {
   /** Atomic with the caller's transaction: status -> ACTIVE and parent_consent_at ->
    * now() together, matching the membership_consent CHECK (status='ACTIVE' iff
    * parent_consent_at is set). */
-  async recordConsent(id: string, executor: Queryable): Promise<{ id: string } | null> {
+  async recordConsent(
+    id: string,
+    executor: Queryable,
+  ): Promise<{ id: string } | null> {
     const { rows } = await executor.query<{ id: string }>(
       `UPDATE community_membership SET status = 'ACTIVE', parent_consent_at = now()
        WHERE id = $1 RETURNING id`,
@@ -93,7 +104,10 @@ export class CommunityMembershipRepository {
    * cleared back to null together -- keeps the row consistent with the same
    * consent-iff-ACTIVE modelling even though the DB constraint itself only requires
    * it while ACTIVE. */
-  async remove(id: string, executor: Queryable): Promise<{ id: string } | null> {
+  async remove(
+    id: string,
+    executor: Queryable,
+  ): Promise<{ id: string } | null> {
     const { rows } = await executor.query<{ id: string }>(
       `UPDATE community_membership SET status = 'REMOVED', parent_consent_at = NULL
        WHERE id = $1 RETURNING id`,

@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { StudentWalletRepository } from './repositories/student-wallet.repository';
 
@@ -18,12 +23,19 @@ export class StudentWalletService {
       throw new BadRequestException('A reason is required to freeze a wallet.');
     }
     const wallet = await this.walletRepo.findByStudentId(studentId);
-    if (!wallet) throw new NotFoundException('This student has no wallet on file.');
+    if (!wallet)
+      throw new NotFoundException('This student has no wallet on file.');
     if (wallet.status === 'CLOSED') {
-      throw new BadRequestException('This wallet is closed and cannot be frozen.');
+      throw new BadRequestException(
+        'This wallet is closed and cannot be frozen.',
+      );
     }
 
-    const updated = await this.walletRepo.freeze(wallet.id, reason.trim(), actorPersonId);
+    const updated = await this.walletRepo.freeze(
+      wallet.id,
+      reason.trim(),
+      actorPersonId,
+    );
     if (!updated) {
       throw new ConflictException('This wallet is already frozen.');
     }
@@ -41,7 +53,8 @@ export class StudentWalletService {
 
   async unfreeze(studentId: string, actorPersonId: string) {
     const wallet = await this.walletRepo.findByStudentId(studentId);
-    if (!wallet) throw new NotFoundException('This student has no wallet on file.');
+    if (!wallet)
+      throw new NotFoundException('This student has no wallet on file.');
 
     const updated = await this.walletRepo.unfreeze(wallet.id);
     if (!updated) {

@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -25,7 +34,10 @@ export class HostelsController {
 
   @Post('hostels')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateHostelDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateHostelDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.hostelsService.create(dto, actor.personId) };
   }
 
@@ -50,7 +62,9 @@ export class HostelsController {
     @Body() dto: CreateHostelBlockDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.hostelsService.createBlock(id, dto, actor.personId) };
+    return {
+      data: await this.hostelsService.createBlock(id, dto, actor.personId),
+    };
   }
 
   @Patch('hostel-blocks/:blockId')
@@ -59,6 +73,8 @@ export class HostelsController {
     @Body() dto: UpdateHostelBlockDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.hostelsService.updateBlock(blockId, dto, actor.personId) };
+    return {
+      data: await this.hostelsService.updateBlock(blockId, dto, actor.personId),
+    };
   }
 }

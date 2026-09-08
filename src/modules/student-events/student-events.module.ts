@@ -29,6 +29,10 @@ import { StudentEventsService } from './student-events.service';
   // service for its own parent-facing permission-request endpoints, rather than
   // a second, possibly-drifting implementation (mirrors MediaModule reusing
   // FinanceModule's PurchaseRequestsService).
-  exports: [StudentEventParticipantRepository, StudentEventRepository, PermissionLetterDataService],
+  exports: [
+    StudentEventParticipantRepository,
+    StudentEventRepository,
+    PermissionLetterDataService,
+  ],
 })
 export class StudentEventsModule {}

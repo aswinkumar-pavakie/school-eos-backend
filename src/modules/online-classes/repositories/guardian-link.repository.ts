@@ -10,7 +10,10 @@
 // which re-joins guardian_link itself rather than trusting a list resolved here.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 @Injectable()
 export class GuardianLinkRepository {

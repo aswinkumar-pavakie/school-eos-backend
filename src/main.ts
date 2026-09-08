@@ -12,7 +12,9 @@ async function bootstrap(): Promise<void> {
   // re-serialized parsed body, which is not guaranteed to match byte-for-byte.
   // NestExpressApplication (rather than the bare interface) is what Admin's own
   // static-asset serving needs typed access to.
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+  });
 
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new EmptyQueryValuePipe(), createValidationPipe());

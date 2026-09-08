@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface StaffDailyStatusRow {
   staffId: string;
@@ -38,7 +41,12 @@ export class StaffAttendanceRepository {
    * there, not on staff itself. */
   async findDailyRoster(
     date: string,
-    filter: { isTeaching?: boolean; gradeId?: string; sectionId?: string; subjectId?: string } = {},
+    filter: {
+      isTeaching?: boolean;
+      gradeId?: string;
+      sectionId?: string;
+      subjectId?: string;
+    } = {},
     executor: Queryable = this.postgres,
   ): Promise<StaffDailyStatusRow[]> {
     const conditions = [`s.status = 'ACTIVE'`];
@@ -49,7 +57,10 @@ export class StaffAttendanceRepository {
       conditions.push(`s.is_teaching = $${params.length}`);
     }
     if (filter.gradeId || filter.sectionId || filter.subjectId) {
-      const soConditions = [`so.teacher_staff_id = s.id`, `so.status = 'ACTIVE'`];
+      const soConditions = [
+        `so.teacher_staff_id = s.id`,
+        `so.status = 'ACTIVE'`,
+      ];
       if (filter.sectionId) {
         params.push(filter.sectionId);
         soConditions.push(`so.section_id = $${params.length}`);
@@ -96,7 +107,10 @@ export class StaffAttendanceRepository {
     staffId: string,
     executor: Queryable = this.postgres,
   ): Promise<{ presentCount: number; totalCount: number }> {
-    const { rows } = await executor.query<{ present_count: string; total_count: string }>(
+    const { rows } = await executor.query<{
+      present_count: string;
+      total_count: string;
+    }>(
       `WITH daily AS (
          SELECT DISTINCT ON (e.occurred_at::date) e.occurred_at::date AS day, e.event_type
          FROM staff_attendance_event e
@@ -113,12 +127,21 @@ export class StaffAttendanceRepository {
     };
   }
 
-  async markMany(inputs: MarkEventInput[], executor: Queryable = this.postgres): Promise<void> {
+  async markMany(
+    inputs: MarkEventInput[],
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
     for (const input of inputs) {
       await executor.query(
         `INSERT INTO staff_attendance_event (staff_id, event_type, method, occurred_at, received_at, reason, recorded_by, state)
          VALUES ($1, $2, 'MANUAL', $3, now(), $4, $5, 'CONFIRMED')`,
-        [input.staffId, input.eventType, input.occurredAt, input.reason, input.recordedBy],
+        [
+          input.staffId,
+          input.eventType,
+          input.occurredAt,
+          input.reason,
+          input.recordedBy,
+        ],
       );
     }
   }

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface DocumentRow {
   id: string;
@@ -54,7 +57,10 @@ const COLUMNS = `id, owner_domain AS "ownerDomain", owner_object_type AS "ownerO
 export class DocumentRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findMany(filter: DocumentFilter, executor: Queryable = this.postgres): Promise<DocumentRow[]> {
+  async findMany(
+    filter: DocumentFilter,
+    executor: Queryable = this.postgres,
+  ): Promise<DocumentRow[]> {
     const conditions: string[] = [];
     const params: unknown[] = [];
     if (filter.ownerObjectType) {
@@ -73,7 +79,8 @@ export class DocumentRepository {
       params.push(filter.status);
       conditions.push(`status = $${params.length}`);
     }
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { rows } = await executor.query<DocumentRow>(
       `SELECT ${COLUMNS} FROM document ${where} ORDER BY uploaded_at DESC`,
       params,
@@ -81,14 +88,21 @@ export class DocumentRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<DocumentRow | null> {
-    const { rows } = await executor.query<DocumentRow>(`SELECT ${COLUMNS} FROM document WHERE id = $1`, [
-      id,
-    ]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<DocumentRow | null> {
+    const { rows } = await executor.query<DocumentRow>(
+      `SELECT ${COLUMNS} FROM document WHERE id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
-  async create(input: CreateDocumentInput, executor: Queryable = this.postgres): Promise<DocumentRow> {
+  async create(
+    input: CreateDocumentInput,
+    executor: Queryable = this.postgres,
+  ): Promise<DocumentRow> {
     const { rows } = await executor.query<DocumentRow>(
       `INSERT INTO document
          (owner_domain, owner_object_type, owner_object_id, category, doc_type, object_key,
@@ -114,7 +128,10 @@ export class DocumentRepository {
     return rows[0];
   }
 
-  async purge(id: string, executor: Queryable = this.postgres): Promise<DocumentRow | null> {
+  async purge(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<DocumentRow | null> {
     const { rows } = await executor.query<DocumentRow>(
       `UPDATE document SET status = 'PURGED', purged_at = now() WHERE id = $1 RETURNING ${COLUMNS}`,
       [id],

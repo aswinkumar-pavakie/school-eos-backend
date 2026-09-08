@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -24,12 +34,19 @@ export class ShootAssignmentsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateShootAssignmentDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateShootAssignmentDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.create(dto, actor.personId) };
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdateShootAssignmentDto, @CurrentActor() actor: AuthenticatedUser) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateShootAssignmentDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.update(id, dto, actor.personId) };
   }
 }

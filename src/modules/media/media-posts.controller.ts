@@ -38,12 +38,21 @@ export class MediaPostsController {
     @Body() dto: ReplyMediaPostCommentDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.service.replyToComment(commentId, dto.reply, actor.personId) };
+    return {
+      data: await this.service.replyToComment(
+        commentId,
+        dto.reply,
+        actor.personId,
+      ),
+    };
   }
 
   @Delete('comments/:commentId')
   @HttpCode(HttpStatus.OK)
-  async deleteComment(@Param('commentId') commentId: string, @CurrentActor() actor: AuthenticatedUser) {
+  async deleteComment(
+    @Param('commentId') commentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.service.deleteComment(commentId, actor.personId);
     return { data: { deleted: true } };
   }
@@ -76,20 +85,30 @@ export class MediaPostsController {
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdateMediaPostDto, @CurrentActor() actor: AuthenticatedUser) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateMediaPostDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.update(id, dto, actor.personId) };
   }
 
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
-  async cancel(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async cancel(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.service.cancel(id, actor.personId);
     return { data: { cancelled: true } };
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  async delete(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async delete(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.service.delete(id, actor.personId);
     return { data: { deleted: true } };
   }

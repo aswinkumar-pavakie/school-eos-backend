@@ -1,8 +1,15 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { StorageService } from '../../infrastructure/storage/storage.service';
-import { DOCUMENTS_BUCKET, documentObjectKeyFor } from './document-storage.util';
+import {
+  DOCUMENTS_BUCKET,
+  documentObjectKeyFor,
+} from './document-storage.util';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { DocumentQueryDto } from './dto/document-query.dto';
 import { UploadDocumentDto } from './dto/upload-document.dto';
@@ -27,10 +34,17 @@ export class DocumentsService {
    * unexpected Storage failure (object missing for some other reason, a
    * transient error) shouldn't take down the whole list/detail response over
    * one bad link -- best-effort, null on failure. */
-  private async signedUrlFor(document: { status: string; objectKey: string }): Promise<string | null> {
+  private async signedUrlFor(document: {
+    status: string;
+    objectKey: string;
+  }): Promise<string | null> {
     if (document.status === 'PURGED') return null;
     try {
-      return await this.storageService.createSignedUrl(DOCUMENTS_BUCKET, document.objectKey, SIGNED_URL_TTL_SECONDS);
+      return await this.storageService.createSignedUrl(
+        DOCUMENTS_BUCKET,
+        document.objectKey,
+        SIGNED_URL_TTL_SECONDS,
+      );
     } catch {
       return null;
     }
@@ -38,7 +52,9 @@ export class DocumentsService {
 
   async list(query: DocumentQueryDto) {
     const rows = await this.documentRepo.findMany(query);
-    return Promise.all(rows.map(async (d) => ({ ...d, fileUrl: await this.signedUrlFor(d) })));
+    return Promise.all(
+      rows.map(async (d) => ({ ...d, fileUrl: await this.signedUrlFor(d) })),
+    );
   }
 
   async get(id: string) {
@@ -49,7 +65,10 @@ export class DocumentsService {
 
   async create(dto: CreateDocumentDto, actor: AuthenticatedUser) {
     try {
-      const created = await this.documentRepo.create({ ...dto, uploadedBy: actor.personId });
+      const created = await this.documentRepo.create({
+        ...dto,
+        uploadedBy: actor.personId,
+      });
       await this.auditService.record({
         actorPersonId: actor.personId,
         action: 'DOCUMENT_CREATED',
@@ -61,10 +80,14 @@ export class DocumentsService {
       return created;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A document with this objectKey already exists.');
+        throw new ConflictException(
+          'A document with this objectKey already exists.',
+        );
       }
       if (isForeignKeyViolation(err)) {
-        throw new NotFoundException('category does not refer to an existing retention policy.');
+        throw new NotFoundException(
+          'category does not refer to an existing retention policy.',
+        );
       }
       throw err;
     }
@@ -73,9 +96,18 @@ export class DocumentsService {
   /** Combined "save the file and record it" path -- POST /documents (create,
    * above) stays metadata-only for a file that's already sitting somewhere else,
    * this one owns the actual bytes. */
-  async upload(dto: UploadDocumentDto, file: Express.Multer.File, actor: AuthenticatedUser) {
+  async upload(
+    dto: UploadDocumentDto,
+    file: Express.Multer.File,
+    actor: AuthenticatedUser,
+  ) {
     const objectKey = documentObjectKeyFor(file);
-    await this.storageService.upload(DOCUMENTS_BUCKET, objectKey, file.buffer, file.mimetype);
+    await this.storageService.upload(
+      DOCUMENTS_BUCKET,
+      objectKey,
+      file.buffer,
+      file.mimetype,
+    );
     try {
       const created = await this.documentRepo.create({
         ownerDomain: dto.ownerDomain,
@@ -102,10 +134,14 @@ export class DocumentsService {
     } catch (err) {
       await this.storageService.removeBestEffort(DOCUMENTS_BUCKET, objectKey);
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A document with this objectKey already exists.');
+        throw new ConflictException(
+          'A document with this objectKey already exists.',
+        );
       }
       if (isForeignKeyViolation(err)) {
-        throw new NotFoundException('category does not refer to an existing retention policy.');
+        throw new NotFoundException(
+          'category does not refer to an existing retention policy.',
+        );
       }
       throw err;
     }
@@ -123,7 +159,10 @@ export class DocumentsService {
     }
     const updated = await this.documentRepo.purge(id);
     if (!updated) throw new NotFoundException('Document not found');
-    await this.storageService.removeBestEffort(DOCUMENTS_BUCKET, updated.objectKey);
+    await this.storageService.removeBestEffort(
+      DOCUMENTS_BUCKET,
+      updated.objectKey,
+    );
     await this.auditService.record({
       actorPersonId,
       action: 'DOCUMENT_PURGED',

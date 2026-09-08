@@ -1,4 +1,9 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { ApprovalRequestQueryDto } from './dto/approval-request-query.dto';
@@ -52,7 +57,9 @@ export class ApprovalRequestsService {
   }
 
   async create(dto: CreateApprovalRequestDto, actorPersonId: string) {
-    const approverRoleCode = await this.requestRepo.findFirstStepApproverRole(dto.requestType);
+    const approverRoleCode = await this.requestRepo.findFirstStepApproverRole(
+      dto.requestType,
+    );
     if (approverRoleCode !== 'ADMIN') {
       throw new ForbiddenException(
         `"${dto.requestType}" isn't an Admin approval -- it's routed to ${approverRoleCode ?? 'a role with no active policy'}.`,
@@ -66,7 +73,11 @@ export class ApprovalRequestsService {
           subjectObjectType: dto.subjectObjectType,
           subjectObjectId: dto.subjectObjectId,
           requestedBy: dto.requestedByPersonId ?? actorPersonId,
-          payload: { description: dto.description, reason: dto.reason ?? null, ...dto.actionPayload },
+          payload: {
+            description: dto.description,
+            reason: dto.reason ?? null,
+            ...dto.actionPayload,
+          },
         },
         client,
       );
@@ -98,20 +109,37 @@ export class ApprovalRequestsService {
    * the same instant (unlikely for a single-operator queue) could both pass
    * the initial state check; this is a low-severity, low-likelihood residual
    * race, deliberately not solved with cross-connection locking here. */
-  async approve(id: string, dto: DecideApprovalRequestDto, actorPersonId: string) {
+  async approve(
+    id: string,
+    dto: DecideApprovalRequestDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.get(id);
     if (!OPEN_STATES.includes(existing.state)) {
-      throw new ConflictException(`This request is already ${existing.state.toLowerCase()}.`);
+      throw new ConflictException(
+        `This request is already ${existing.state.toLowerCase()}.`,
+      );
     }
     if (existing.approverRoleCode !== 'ADMIN') {
       throw new ForbiddenException("This request isn't Admin's to approve.");
     }
 
-    const effectResult = await this.requestEffects.apply(existing, actorPersonId);
+    const effectResult = await this.requestEffects.apply(
+      existing,
+      actorPersonId,
+    );
 
     return this.unitOfWork.run(async (client) => {
-      await this.stepRepo.decide(id, existing.currentStep, 'APPROVED', actorPersonId, dto.comment ?? null, client);
-      if (effectResult) await this.requestRepo.mergePayload(id, { effectResult }, client);
+      await this.stepRepo.decide(
+        id,
+        existing.currentStep,
+        'APPROVED',
+        actorPersonId,
+        dto.comment ?? null,
+        client,
+      );
+      if (effectResult)
+        await this.requestRepo.mergePayload(id, { effectResult }, client);
       await this.requestRepo.setState(id, 'APPROVED', client, new Date());
       const updated = (await this.requestRepo.findById(id, client))!;
       await this.auditService.record(
@@ -130,14 +158,27 @@ export class ApprovalRequestsService {
     });
   }
 
-  async reject(id: string, dto: DecideApprovalRequestDto, actorPersonId: string) {
+  async reject(
+    id: string,
+    dto: DecideApprovalRequestDto,
+    actorPersonId: string,
+  ) {
     return this.unitOfWork.run(async (client) => {
       const locked = await this.requestRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Request not found');
       if (!OPEN_STATES.includes(locked.state)) {
-        throw new ConflictException(`This request is already ${locked.state.toLowerCase()}.`);
+        throw new ConflictException(
+          `This request is already ${locked.state.toLowerCase()}.`,
+        );
       }
-      await this.stepRepo.decide(id, locked.currentStep, 'REJECTED', actorPersonId, dto.comment ?? null, client);
+      await this.stepRepo.decide(
+        id,
+        locked.currentStep,
+        'REJECTED',
+        actorPersonId,
+        dto.comment ?? null,
+        client,
+      );
       await this.requestRepo.setState(id, 'REJECTED', client, new Date());
       const updated = (await this.requestRepo.findById(id, client))!;
       await this.auditService.record(
@@ -160,12 +201,18 @@ export class ApprovalRequestsService {
    * APPROVED/REJECTED) -- just a status transition, so the requester knows to
    * fix something and resubmit. Recorded on the audit trail like everything
    * else here. */
-  async sendBack(id: string, dto: SendBackApprovalRequestDto, actorPersonId: string) {
+  async sendBack(
+    id: string,
+    dto: SendBackApprovalRequestDto,
+    actorPersonId: string,
+  ) {
     return this.unitOfWork.run(async (client) => {
       const locked = await this.requestRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Request not found');
       if (!OPEN_STATES.includes(locked.state)) {
-        throw new ConflictException(`This request is already ${locked.state.toLowerCase()}.`);
+        throw new ConflictException(
+          `This request is already ${locked.state.toLowerCase()}.`,
+        );
       }
       await this.requestRepo.setState(id, 'SENT_BACK', client);
       const updated = (await this.requestRepo.findById(id, client))!;
@@ -188,18 +235,25 @@ export class ApprovalRequestsService {
   /** Requester corrects and resubmits -- goes back to RESUBMITTED (a visibly
    * distinct flavour of "pending" so Admin can see it already came back once)
    * and is decidable exactly like a fresh PENDING request. */
-  async resubmit(id: string, dto: ResubmitApprovalRequestDto, actorPersonId: string) {
+  async resubmit(
+    id: string,
+    dto: ResubmitApprovalRequestDto,
+    actorPersonId: string,
+  ) {
     return this.unitOfWork.run(async (client) => {
       const locked = await this.requestRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Request not found');
       if (locked.state !== 'SENT_BACK') {
-        throw new ConflictException('Only a request that was sent back can be resubmitted.');
+        throw new ConflictException(
+          'Only a request that was sent back can be resubmitted.',
+        );
       }
       const patch: Record<string, unknown> = {};
       if (dto.description !== undefined) patch.description = dto.description;
       if (dto.reason !== undefined) patch.reason = dto.reason;
       if (dto.actionPayload) Object.assign(patch, dto.actionPayload);
-      if (Object.keys(patch).length > 0) await this.requestRepo.mergePayload(id, patch, client);
+      if (Object.keys(patch).length > 0)
+        await this.requestRepo.mergePayload(id, patch, client);
       await this.requestRepo.setState(id, 'RESUBMITTED', client);
       const updated = (await this.requestRepo.findById(id, client))!;
       await this.auditService.record(

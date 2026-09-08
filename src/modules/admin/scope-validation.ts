@@ -18,14 +18,18 @@ export function assertValidRoleScope(input: ScopeInput): void {
 
   if (scopeType === 'SCHOOL') {
     if (scopeId || scopeStage) {
-      throw new BadRequestException('scope_type SCHOOL must not have a scope_id or scope_stage.');
+      throw new BadRequestException(
+        'scope_type SCHOOL must not have a scope_id or scope_stage.',
+      );
     }
     return;
   }
 
   if (scopeType === 'STAGE') {
     if (scopeId) {
-      throw new BadRequestException('scope_type STAGE must not have a scope_id.');
+      throw new BadRequestException(
+        'scope_type STAGE must not have a scope_id.',
+      );
     }
     if (!scopeStage) {
       throw new BadRequestException('scope_type STAGE requires scope_stage.');
@@ -34,7 +38,9 @@ export function assertValidRoleScope(input: ScopeInput): void {
   }
 
   if (!scopeId) {
-    throw new BadRequestException(`scope_type ${scopeType} requires a scope_id.`);
+    throw new BadRequestException(
+      `scope_type ${scopeType} requires a scope_id.`,
+    );
   }
 }
 
@@ -43,5 +49,9 @@ interface PgErrorLike {
 }
 
 export function isUniqueViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as PgErrorLike).code === '23505';
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as PgErrorLike).code === '23505'
+  );
 }

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface PaymentRow {
   id: string;
@@ -54,7 +57,10 @@ const FROM = `payment pay
 export class PaymentRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findMany(filter: PaymentFilter, executor: Queryable = this.postgres): Promise<{ rows: PaymentRow[]; total: number }> {
+  async findMany(
+    filter: PaymentFilter,
+    executor: Queryable = this.postgres,
+  ): Promise<{ rows: PaymentRow[]; total: number }> {
     const conditions: string[] = [];
     const params: unknown[] = [];
 
@@ -79,7 +85,8 @@ export class PaymentRepository {
       );
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countResult = await this.postgres.query<{ count: string }>(
       `SELECT count(DISTINCT pay.id) FROM ${FROM} ${where}`,

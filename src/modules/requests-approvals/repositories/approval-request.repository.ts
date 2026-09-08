@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface ApprovalRequestRow {
   id: string;
@@ -59,7 +62,10 @@ const FROM = `approval_request ar
 export class ApprovalRequestRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findMany(filter: ApprovalRequestFilter, executor: Queryable = this.postgres): Promise<{ rows: ApprovalRequestRow[]; total: number }> {
+  async findMany(
+    filter: ApprovalRequestFilter,
+    executor: Queryable = this.postgres,
+  ): Promise<{ rows: ApprovalRequestRow[]; total: number }> {
     const conditions: string[] = [];
     const params: unknown[] = [];
 
@@ -82,9 +88,13 @@ export class ApprovalRequestRepository {
       );
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const countResult = await this.postgres.query<{ count: string }>(`SELECT count(*) FROM ${FROM} ${where}`, params);
+    const countResult = await this.postgres.query<{ count: string }>(
+      `SELECT count(*) FROM ${FROM} ${where}`,
+      params,
+    );
     const rowParams = [...params, filter.limit, filter.offset];
     const { rows } = await executor.query<ApprovalRequestRow>(
       `SELECT ${COLUMNS} FROM ${FROM} ${where}
@@ -95,14 +105,23 @@ export class ApprovalRequestRepository {
     return { rows, total: parseInt(countResult.rows[0].count, 10) };
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<ApprovalRequestRow | null> {
-    const { rows } = await executor.query<ApprovalRequestRow>(`SELECT ${COLUMNS} FROM ${FROM} WHERE ar.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ApprovalRequestRow | null> {
+    const { rows } = await executor.query<ApprovalRequestRow>(
+      `SELECT ${COLUMNS} FROM ${FROM} WHERE ar.id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
   /** Row-locking read, for use inside a transaction right before a status
    * change that must not race with a concurrent decision on the same request. */
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<ApprovalRequestRow | null> {
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<ApprovalRequestRow | null> {
     const { rows } = await executor.query<ApprovalRequestRow>(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE ar.id = $1 FOR UPDATE OF ar`,
       [id],
@@ -110,7 +129,10 @@ export class ApprovalRequestRepository {
     return rows[0] ?? null;
   }
 
-  async create(input: CreateApprovalRequestInput, executor: Queryable): Promise<ApprovalRequestRow> {
+  async create(
+    input: CreateApprovalRequestInput,
+    executor: Queryable,
+  ): Promise<ApprovalRequestRow> {
     const { rows } = await executor.query<{ id: string }>(
       `INSERT INTO approval_request
          (request_type, subject_object_type, subject_object_id, requested_by, payload, current_step, state)
@@ -127,7 +149,12 @@ export class ApprovalRequestRepository {
     return (await this.findById(rows[0].id, executor))!;
   }
 
-  async setState(id: string, state: string, executor: Queryable, decidedAt?: Date | null): Promise<void> {
+  async setState(
+    id: string,
+    state: string,
+    executor: Queryable,
+    decidedAt?: Date | null,
+  ): Promise<void> {
     await executor.query(
       `UPDATE approval_request SET state = $2, decided_at = $3, updated_at = now() WHERE id = $1`,
       [id, state, decidedAt ?? null],
@@ -138,7 +165,10 @@ export class ApprovalRequestRepository {
    * from approval_policy -- never hardcoded, so if that policy is ever
    * repointed to a different role, this workflow stops accepting it instead of
    * silently letting Admin decide something that's no longer Admin's to decide. */
-  async findFirstStepApproverRole(requestType: string, executor: Queryable = this.postgres): Promise<string | null> {
+  async findFirstStepApproverRole(
+    requestType: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string | null> {
     const { rows } = await executor.query<{ approver_role_code: string }>(
       `SELECT approver_role_code FROM approval_policy
        WHERE request_type = $1 AND sequence_no = 1 AND status = 'ACTIVE'`,
@@ -147,10 +177,14 @@ export class ApprovalRequestRepository {
     return rows[0]?.approver_role_code ?? null;
   }
 
-  async mergePayload(id: string, patch: Record<string, unknown>, executor: Queryable): Promise<void> {
-    await executor.query(`UPDATE approval_request SET payload = payload || $2::jsonb, updated_at = now() WHERE id = $1`, [
-      id,
-      JSON.stringify(patch),
-    ]);
+  async mergePayload(
+    id: string,
+    patch: Record<string, unknown>,
+    executor: Queryable,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE approval_request SET payload = payload || $2::jsonb, updated_at = now() WHERE id = $1`,
+      [id, JSON.stringify(patch)],
+    );
   }
 }

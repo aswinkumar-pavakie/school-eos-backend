@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface SubjectRow {
   id: string;
@@ -39,18 +42,27 @@ export class SubjectRepository {
   constructor(private readonly postgres: PostgresService) {}
 
   async findMany(executor: Queryable = this.postgres): Promise<SubjectRow[]> {
-    const { rows } = await executor.query<SubjectRow>(`SELECT ${COLUMNS} FROM subject ORDER BY name`);
+    const { rows } = await executor.query<SubjectRow>(
+      `SELECT ${COLUMNS} FROM subject ORDER BY name`,
+    );
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<SubjectRow | null> {
-    const { rows } = await executor.query<SubjectRow>(`SELECT ${COLUMNS} FROM subject WHERE id = $1`, [
-      id,
-    ]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<SubjectRow | null> {
+    const { rows } = await executor.query<SubjectRow>(
+      `SELECT ${COLUMNS} FROM subject WHERE id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
-  async create(input: CreateSubjectInput, executor: Queryable = this.postgres): Promise<SubjectRow> {
+  async create(
+    input: CreateSubjectInput,
+    executor: Queryable = this.postgres,
+  ): Promise<SubjectRow> {
     const { rows } = await executor.query<SubjectRow>(
       `INSERT INTO subject (name, code, subject_type, applies_to_stage, department_id, status)
        VALUES ($1, $2, $3, $4, $5, COALESCE($6, 'ACTIVE'))

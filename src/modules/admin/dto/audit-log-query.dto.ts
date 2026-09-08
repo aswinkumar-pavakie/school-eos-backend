@@ -1,5 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsDateString, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 // General audit trail query -- unlike AuditEventQueryDto (audit-events.controller.ts,
 // hard-scoped to LOGIN_SUCCESS/LOGIN_FAILURE for the login-activity screen), this

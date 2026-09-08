@@ -35,7 +35,10 @@ export class GradeScalesController {
 
   @Post('grade-scales')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateGradeScaleDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateGradeScaleDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.gradeScalesService.create(dto, actor.personId) };
   }
 
@@ -45,13 +48,20 @@ export class GradeScalesController {
     @Body() dto: UpdateGradeScaleDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.gradeScalesService.update(id, dto, actor.personId) };
+    return {
+      data: await this.gradeScalesService.update(id, dto, actor.personId),
+    };
   }
 
   @Post('grade-scales/:id/set-default')
   @HttpCode(HttpStatus.OK)
-  async setDefault(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.gradeScalesService.setDefault(id, actor.personId) };
+  async setDefault(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.gradeScalesService.setDefault(id, actor.personId),
+    };
   }
 
   @Get('grade-scales/:id/bands')
@@ -66,7 +76,9 @@ export class GradeScalesController {
     @Body() dto: CreateGradeBandDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.gradeScalesService.createBand(id, dto, actor.personId) };
+    return {
+      data: await this.gradeScalesService.createBand(id, dto, actor.personId),
+    };
   }
 
   @Patch('grade-bands/:bandId')
@@ -75,12 +87,21 @@ export class GradeScalesController {
     @Body() dto: UpdateGradeBandDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.gradeScalesService.updateBand(bandId, dto, actor.personId) };
+    return {
+      data: await this.gradeScalesService.updateBand(
+        bandId,
+        dto,
+        actor.personId,
+      ),
+    };
   }
 
   @Delete('grade-bands/:bandId')
   @HttpCode(HttpStatus.OK)
-  async deleteBand(@Param('bandId') bandId: string, @CurrentActor() actor: AuthenticatedUser) {
+  async deleteBand(
+    @Param('bandId') bandId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.gradeScalesService.deleteBand(bandId, actor.personId);
     return { data: { deleted: true } };
   }

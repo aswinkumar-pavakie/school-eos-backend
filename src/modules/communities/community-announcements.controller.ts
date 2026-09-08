@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -9,7 +18,9 @@ import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 @Roles('ADMIN')
 @Controller()
 export class CommunityAnnouncementsController {
-  constructor(private readonly announcementsService: CommunityAnnouncementsService) {}
+  constructor(
+    private readonly announcementsService: CommunityAnnouncementsService,
+  ) {}
 
   @Get('communities/:id/announcements')
   async list(@Param('id') id: string) {
@@ -23,7 +34,9 @@ export class CommunityAnnouncementsController {
     @Body() dto: CreateAnnouncementDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.announcementsService.create(id, dto, actor.personId) };
+    return {
+      data: await this.announcementsService.create(id, dto, actor.personId),
+    };
   }
 
   @Patch('community-announcements/:announcementId')
@@ -32,6 +45,12 @@ export class CommunityAnnouncementsController {
     @Body() dto: UpdateAnnouncementDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.announcementsService.update(announcementId, dto, actor.personId) };
+    return {
+      data: await this.announcementsService.update(
+        announcementId,
+        dto,
+        actor.personId,
+      ),
+    };
   }
 }

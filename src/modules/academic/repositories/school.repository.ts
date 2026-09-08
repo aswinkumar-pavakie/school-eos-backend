@@ -2,7 +2,10 @@
 // only, never create/delete.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface SchoolRow {
   id: number;
@@ -66,7 +69,10 @@ export class SchoolRepository {
     return rows[0] ?? null;
   }
 
-  async update(input: UpdateSchoolInput, executor: Queryable = this.postgres): Promise<SchoolRow> {
+  async update(
+    input: UpdateSchoolInput,
+    executor: Queryable = this.postgres,
+  ): Promise<SchoolRow> {
     const { rows } = await executor.query<SchoolRow>(
       `UPDATE school SET
          name = COALESCE($1, name),

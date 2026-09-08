@@ -3,10 +3,17 @@
 // made anywhere in this file. Phase 7 is responsible for actually using the stored
 // connection to create events.
 
-import { ForbiddenException, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Credentials, OAuth2Client } from 'google-auth-library';
-import { GOOGLE_OAUTH_ERRORS, ONLINE_CLASS_ERRORS } from '../../../common/errors/error-codes';
+import {
+  GOOGLE_OAUTH_ERRORS,
+  ONLINE_CLASS_ERRORS,
+} from '../../../common/errors/error-codes';
 import { GoogleAccountConnectionRepository } from '../repositories/google-account-connection.repository';
 import { StaffRepository } from '../repositories/staff.repository';
 import { encryptRefreshToken } from './google-token-crypto.util';
@@ -75,7 +82,9 @@ export class GoogleOAuthService {
     try {
       ({ tokens } = await client.getToken(code));
     } catch {
-      throw new ServiceUnavailableException(GOOGLE_OAUTH_ERRORS.TOKEN_EXCHANGE_FAILED);
+      throw new ServiceUnavailableException(
+        GOOGLE_OAUTH_ERRORS.TOKEN_EXCHANGE_FAILED,
+      );
     }
 
     if (!tokens.refresh_token) {
@@ -96,13 +105,18 @@ export class GoogleOAuthService {
       googleUserId = payload?.sub ?? null;
     }
     if (!googleAccountEmail) {
-      throw new ServiceUnavailableException(GOOGLE_OAUTH_ERRORS.TOKEN_EXCHANGE_FAILED);
+      throw new ServiceUnavailableException(
+        GOOGLE_OAUTH_ERRORS.TOKEN_EXCHANGE_FAILED,
+      );
     }
 
     const encryptionKeys = this.configService.get<Record<string, string>>(
       'google.tokenEncryptionKeys',
     )!;
-    const { ciphertext, keyId } = encryptRefreshToken(tokens.refresh_token, encryptionKeys);
+    const { ciphertext, keyId } = encryptRefreshToken(
+      tokens.refresh_token,
+      encryptionKeys,
+    );
 
     await this.connectionRepo.upsert({
       staffId: staff.id,
@@ -113,13 +127,21 @@ export class GoogleOAuthService {
       tokenScope: tokens.scope ?? GOOGLE_SCOPES.join(' '),
     });
 
-    return { success: true, message: 'Google account connected', googleAccountEmail };
+    return {
+      success: true,
+      message: 'Google account connected',
+      googleAccountEmail,
+    };
   }
 
   private buildOAuthClient(): OAuth2Client {
     const clientId = this.configService.get<string>('google.oauthClientId');
-    const clientSecret = this.configService.get<string>('google.oauthClientSecret');
-    const redirectUri = this.configService.get<string>('google.oauthRedirectUri');
+    const clientSecret = this.configService.get<string>(
+      'google.oauthClientSecret',
+    );
+    const redirectUri = this.configService.get<string>(
+      'google.oauthRedirectUri',
+    );
     if (!clientId || !clientSecret || !redirectUri) {
       throw new ServiceUnavailableException(GOOGLE_OAUTH_ERRORS.NOT_CONFIGURED);
     }

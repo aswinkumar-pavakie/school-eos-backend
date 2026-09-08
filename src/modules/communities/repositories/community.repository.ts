@@ -4,7 +4,10 @@
 // service layer, not validated against a staff repository this module doesn't have.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface CommunityRow {
   id: string;
@@ -73,7 +76,8 @@ export class CommunityRepository {
       params.push(filter.state);
       conditions.push(`state = $${params.length}`);
     }
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { rows } = await executor.query<CommunityRow>(
       `SELECT ${COLUMNS} FROM community ${where} ORDER BY name`,
       params,
@@ -81,7 +85,10 @@ export class CommunityRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<CommunityRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<CommunityRow | null> {
     const { rows } = await executor.query<CommunityRow>(
       `SELECT ${COLUMNS} FROM community WHERE id = $1`,
       [id],

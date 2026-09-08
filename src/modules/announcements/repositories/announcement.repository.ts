@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface AudienceRow {
   audienceType: string;
@@ -50,9 +53,14 @@ const COLUMNS = `a.id, a.title, a.body, a.category, a.priority, a.is_emergency A
 export class AnnouncementRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  private async attachAudiences(rows: Omit<AnnouncementRow, 'audiences'>[], executor: Queryable) {
+  private async attachAudiences(
+    rows: Omit<AnnouncementRow, 'audiences'>[],
+    executor: Queryable,
+  ) {
     if (rows.length === 0) return [] as AnnouncementRow[];
-    const { rows: audienceRows } = await executor.query<AudienceRow & { announcementId: string }>(
+    const { rows: audienceRows } = await executor.query<
+      AudienceRow & { announcementId: string }
+    >(
       `SELECT announcement_id AS "announcementId", audience_type AS "audienceType",
               target_id AS "targetId", target_stage AS "targetStage", target_role AS "targetRole"
        FROM announcement_audience
@@ -61,11 +69,16 @@ export class AnnouncementRepository {
     );
     return rows.map((r) => ({
       ...r,
-      audiences: audienceRows.filter((a) => a.announcementId === r.id).map(({ announcementId: _a, ...rest }) => rest),
+      audiences: audienceRows
+        .filter((a) => a.announcementId === r.id)
+        .map(({ announcementId: _a, ...rest }) => rest),
     }));
   }
 
-  async findMany(filter: AnnouncementFilter, executor: Queryable = this.postgres): Promise<AnnouncementRow[]> {
+  async findMany(
+    filter: AnnouncementFilter,
+    executor: Queryable = this.postgres,
+  ): Promise<AnnouncementRow[]> {
     const conditions: string[] = [];
     const params: unknown[] = [];
 
@@ -80,7 +93,8 @@ export class AnnouncementRepository {
       );
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { rows } = await executor.query<Omit<AnnouncementRow, 'audiences'>>(
       `SELECT ${COLUMNS} FROM announcement a ${where} ORDER BY a.created_at DESC`,
       params,
@@ -88,7 +102,10 @@ export class AnnouncementRepository {
     return this.attachAudiences(rows, executor);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<AnnouncementRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<AnnouncementRow | null> {
     const { rows } = await executor.query<Omit<AnnouncementRow, 'audiences'>>(
       `SELECT ${COLUMNS} FROM announcement a WHERE a.id = $1`,
       [id],
@@ -98,7 +115,10 @@ export class AnnouncementRepository {
     return withAudiences;
   }
 
-  async create(input: CreateAnnouncementInput, executor: Queryable = this.postgres): Promise<AnnouncementRow> {
+  async create(
+    input: CreateAnnouncementInput,
+    executor: Queryable = this.postgres,
+  ): Promise<AnnouncementRow> {
     const { rows } = await executor.query<{ id: string }>(
       `INSERT INTO announcement (title, body, category, priority, is_emergency, publish_at, expires_at, created_by, approved_by, state)
        VALUES ($1, $2, $3, $4, COALESCE($5, false), now(), $6, $7, $7, 'PUBLISHED')
@@ -119,14 +139,24 @@ export class AnnouncementRepository {
       await executor.query(
         `INSERT INTO announcement_audience (announcement_id, audience_type, target_id, target_stage, target_role)
          VALUES ($1, $2, $3, $4, $5)`,
-        [id, audience.audienceType, audience.targetId ?? null, audience.targetStage ?? null, audience.targetRole ?? null],
+        [
+          id,
+          audience.audienceType,
+          audience.targetId ?? null,
+          audience.targetStage ?? null,
+          audience.targetRole ?? null,
+        ],
       );
     }
 
     return (await this.findById(id, executor))!;
   }
 
-  async setState(id: string, state: string, executor: Queryable = this.postgres): Promise<AnnouncementRow | null> {
+  async setState(
+    id: string,
+    state: string,
+    executor: Queryable = this.postgres,
+  ): Promise<AnnouncementRow | null> {
     const { rows } = await executor.query(
       `UPDATE announcement SET state = $2, updated_at = now() WHERE id = $1 RETURNING id`,
       [id, state],

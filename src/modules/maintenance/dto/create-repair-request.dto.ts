@@ -1,4 +1,11 @@
-import { IsDateString, IsIn, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 export class CreateRepairRequestDto {
   @IsString()
@@ -10,7 +17,14 @@ export class CreateRepairRequestDto {
   inventoryItemId?: string;
 
   @IsOptional()
-  @IsIn(['ELECTRICAL', 'PLUMBING', 'CIVIL', 'IT_EQUIPMENT', 'FURNITURE', 'OTHER'])
+  @IsIn([
+    'ELECTRICAL',
+    'PLUMBING',
+    'CIVIL',
+    'IT_EQUIPMENT',
+    'FURNITURE',
+    'OTHER',
+  ])
   issueType?: string;
 
   @IsOptional()

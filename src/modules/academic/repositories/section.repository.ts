@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface SectionRow {
   id: string;
@@ -64,7 +67,8 @@ export class SectionRepository {
       conditions.push(`status = $${params.length}`);
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { rows } = await executor.query<SectionRow>(
       `SELECT ${COLUMNS} FROM section ${where} ORDER BY name`,
       params,
@@ -72,14 +76,21 @@ export class SectionRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<SectionRow | null> {
-    const { rows } = await executor.query<SectionRow>(`SELECT ${COLUMNS} FROM section WHERE id = $1`, [
-      id,
-    ]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<SectionRow | null> {
+    const { rows } = await executor.query<SectionRow>(
+      `SELECT ${COLUMNS} FROM section WHERE id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
-  async create(input: CreateSectionInput, executor: Queryable = this.postgres): Promise<SectionRow> {
+  async create(
+    input: CreateSectionInput,
+    executor: Queryable = this.postgres,
+  ): Promise<SectionRow> {
     const { rows } = await executor.query<SectionRow>(
       `INSERT INTO section (academic_year_id, grade_id, medium_id, campus_id, name, capacity, status)
        VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'ACTIVE'))
@@ -111,7 +122,13 @@ export class SectionRepository {
          updated_at = now()
        WHERE id = $1
        RETURNING ${COLUMNS}`,
-      [id, input.name ?? null, input.campusId ?? null, input.capacity ?? null, input.status ?? null],
+      [
+        id,
+        input.name ?? null,
+        input.campusId ?? null,
+        input.capacity ?? null,
+        input.status ?? null,
+      ],
     );
     return rows[0] ?? null;
   }

@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -24,7 +34,10 @@ export class CommunitiesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateCommunityDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateCommunityDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.communitiesService.create(dto, actor.personId) };
   }
 
@@ -34,12 +47,17 @@ export class CommunitiesController {
     @Body() dto: UpdateCommunityDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.communitiesService.update(id, dto, actor.personId) };
+    return {
+      data: await this.communitiesService.update(id, dto, actor.personId),
+    };
   }
 
   @Post(':id/archive')
   @HttpCode(HttpStatus.OK)
-  async archive(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async archive(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.communitiesService.archive(id, actor.personId) };
   }
 }

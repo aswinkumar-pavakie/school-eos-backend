@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CalendarEventQueryDto } from './dto/calendar-event-query.dto';
 import { CreateCalendarEventDto } from './dto/create-calendar-event.dto';
@@ -22,15 +26,21 @@ export class CalendarEventsService {
   private assertValidScope(dto: CreateCalendarEventDto): void {
     if (dto.scopeType === 'SCHOOL') {
       if (dto.scopeId || dto.scopeStage) {
-        throw new BadRequestException('scopeType SCHOOL must not have a scopeId or scopeStage.');
+        throw new BadRequestException(
+          'scopeType SCHOOL must not have a scopeId or scopeStage.',
+        );
       }
     } else if (dto.scopeType === 'STAGE') {
       if (dto.scopeId || !dto.scopeStage) {
-        throw new BadRequestException('scopeType STAGE needs a scopeStage and no scopeId.');
+        throw new BadRequestException(
+          'scopeType STAGE needs a scopeStage and no scopeId.',
+        );
       }
     } else {
       if (!dto.scopeId || dto.scopeStage) {
-        throw new BadRequestException(`scopeType ${dto.scopeType} needs a scopeId and no scopeStage.`);
+        throw new BadRequestException(
+          `scopeType ${dto.scopeType} needs a scopeId and no scopeStage.`,
+        );
       }
     }
   }

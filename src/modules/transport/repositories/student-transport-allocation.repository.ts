@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface StudentTransportAllocationRow {
   id: string;
@@ -94,7 +97,8 @@ export class StudentTransportAllocationRepository {
       conditions.push(`status = $${params.length}`);
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { rows } = await executor.query<StudentTransportAllocationRow>(
       `SELECT ${COLUMNS} FROM student_transport_allocation ${where} ORDER BY valid_from DESC`,
       params,
@@ -175,7 +179,9 @@ export class StudentTransportAllocationRepository {
       input.direction,
       input.feeSlab ?? null,
     ];
-    const validFromClause = input.validFrom ? `$${params.length + 1}` : 'CURRENT_DATE';
+    const validFromClause = input.validFrom
+      ? `$${params.length + 1}`
+      : 'CURRENT_DATE';
     if (input.validFrom) params.push(input.validFrom);
 
     const { rows } = await executor.query<StudentTransportAllocationRow>(
@@ -201,7 +207,13 @@ export class StudentTransportAllocationRepository {
          valid_to = COALESCE($5, valid_to)
        WHERE id = $1
        RETURNING ${COLUMNS}`,
-      [id, input.routeStopId ?? null, input.direction ?? null, input.feeSlab ?? null, input.validTo ?? null],
+      [
+        id,
+        input.routeStopId ?? null,
+        input.direction ?? null,
+        input.feeSlab ?? null,
+        input.validTo ?? null,
+      ],
     );
     return rows[0] ?? null;
   }

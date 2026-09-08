@@ -22,19 +22,33 @@ export class MediaDashboardService {
   ) {}
 
   async summary(actor: AuthenticatedUser) {
-    const [shootsToday, postCounts, pendingIndents, todaysShoots, categories] = await Promise.all([
-      this.shootRepo.countToday(),
-      this.postRepo.countByState(),
-      this.purchaseRequestsService.list({ state: 'PENDING' }, { page: 1, pageSize: 1 }, actor),
-      this.shootRepo.list({ from: new Date().toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) }),
-      this.inventoryCategoryRepo.findMany(),
-    ]);
+    const [shootsToday, postCounts, pendingIndents, todaysShoots, categories] =
+      await Promise.all([
+        this.shootRepo.countToday(),
+        this.postRepo.countByState(),
+        this.purchaseRequestsService.list(
+          { state: 'PENDING' },
+          { page: 1, pageSize: 1 },
+          actor,
+        ),
+        this.shootRepo.list({
+          from: new Date().toISOString().slice(0, 10),
+          to: new Date().toISOString().slice(0, 10),
+        }),
+        this.inventoryCategoryRepo.findMany(),
+      ]);
 
-    const mediaCategory = categories.find((c) => c.name === MEDIA_CATEGORY_NAME);
+    const mediaCategory = categories.find(
+      (c) => c.name === MEDIA_CATEGORY_NAME,
+    );
     const lowStock = mediaCategory
-      ? (await this.inventoryItemRepo.findMany({ categoryId: mediaCategory.id, limit: 200, offset: 0 })).rows.filter(
-          (item) => item.quantity <= (item.lowStockThreshold ?? 0),
-        )
+      ? (
+          await this.inventoryItemRepo.findMany({
+            categoryId: mediaCategory.id,
+            limit: 200,
+            offset: 0,
+          })
+        ).rows.filter((item) => item.quantity <= (item.lowStockThreshold ?? 0))
       : [];
 
     return {
@@ -44,7 +58,12 @@ export class MediaDashboardService {
       draftPosts: postCounts.DRAFT ?? 0,
       pendingIndents: pendingIndents.total,
       todaysShoots: todaysShoots.filter((s) => s.status !== 'CANCELLED'),
-      lowStockItems: lowStock.map((item) => ({ id: item.id, name: item.name, quantity: item.quantity, lowStockThreshold: item.lowStockThreshold })),
+      lowStockItems: lowStock.map((item) => ({
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        lowStockThreshold: item.lowStockThreshold,
+      })),
     };
   }
 }

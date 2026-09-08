@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -11,13 +21,22 @@ import { StudentTransportAllocationsService } from './student-transport-allocati
 @Roles('ADMIN')
 @Controller('student-transport-allocations')
 export class StudentTransportAllocationsController {
-  constructor(private readonly allocationsService: StudentTransportAllocationsService) {}
+  constructor(
+    private readonly allocationsService: StudentTransportAllocationsService,
+  ) {}
 
+  // Method-level @Roles OVERRIDES the class-level one (RolesGuard uses
+  // getAllAndOverride, not a merge) -- TRANSPORT_MANAGER gets read-only access
+  // here (monitoring which students are on which route/stop); create/update/
+  // cancel stay ADMIN-only -- student transport allocation is Admin's
+  // configuration, not something Transport Manager changes.
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @Get()
   async list(@Query() query: StudentTransportAllocationQueryDto) {
     return { data: await this.allocationsService.list(query) };
   }
 
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @Get(':id')
   async get(@Param('id') id: string) {
     return { data: await this.allocationsService.get(id) };
@@ -38,7 +57,9 @@ export class StudentTransportAllocationsController {
     @Body() dto: UpdateStudentTransportAllocationDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.allocationsService.update(id, dto, actor.personId) };
+    return {
+      data: await this.allocationsService.update(id, dto, actor.personId),
+    };
   }
 
   @Post(':id/cancel')
@@ -48,6 +69,8 @@ export class StudentTransportAllocationsController {
     @Body() dto: CancelStudentTransportAllocationDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.allocationsService.cancel(id, dto, actor.personId) };
+    return {
+      data: await this.allocationsService.cancel(id, dto, actor.personId),
+    };
   }
 }

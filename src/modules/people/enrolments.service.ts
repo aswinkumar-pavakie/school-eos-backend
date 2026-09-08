@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { CreateEnrolmentDto } from './dto/create-enrolment.dto';
@@ -22,11 +26,17 @@ export class EnrolmentsService {
     return this.enrolmentRepo.findByStudentId(studentId);
   }
 
-  async create(studentId: string, dto: CreateEnrolmentDto, actorPersonId: string) {
+  async create(
+    studentId: string,
+    dto: CreateEnrolmentDto,
+    actorPersonId: string,
+  ) {
     await this.assertStudentExists(studentId);
     // Auto-assign the next free roll number in this section when the admin
     // doesn't type one in -- admission order, not something to track by hand.
-    const rollNo = dto.rollNo ?? (await this.enrolmentRepo.nextRollNo(dto.sectionId, dto.academicYearId));
+    const rollNo =
+      dto.rollNo ??
+      (await this.enrolmentRepo.nextRollNo(dto.sectionId, dto.academicYearId));
     try {
       const created = await this.enrolmentRepo.create({
         studentId,
@@ -76,7 +86,9 @@ export class EnrolmentsService {
       return updated;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('That roll number is already taken in this section.');
+        throw new ConflictException(
+          'That roll number is already taken in this section.',
+        );
       }
       throw err;
     }
@@ -89,21 +101,39 @@ export class EnrolmentsService {
    * uniqueness on (student_id, academic_year_id) is a partial index scoped to
    * status='ACTIVE' -- see query.md for that migration. Locks the old row first
    * so two concurrent transfer attempts on it can't both pass the ACTIVE check. */
-  async transferSection(id: string, dto: TransferEnrolmentDto, actorPersonId: string) {
+  async transferSection(
+    id: string,
+    dto: TransferEnrolmentDto,
+    actorPersonId: string,
+  ) {
     return this.unitOfWork.run(async (client) => {
       const locked = await this.enrolmentRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Enrolment not found');
       if (locked.status !== 'ACTIVE') {
-        throw new ConflictException(`This enrolment is ${locked.status.toLowerCase()}, not active -- it can't be transferred.`);
+        throw new ConflictException(
+          `This enrolment is ${locked.status.toLowerCase()}, not active -- it can't be transferred.`,
+        );
       }
       if (dto.sectionId === locked.sectionId) {
-        throw new ConflictException('That is already this student\'s current section.');
+        throw new ConflictException(
+          "That is already this student's current section.",
+        );
       }
 
-      const rollNo = dto.rollNo ?? (await this.enrolmentRepo.nextRollNo(dto.sectionId, locked.academicYearId, client));
+      const rollNo =
+        dto.rollNo ??
+        (await this.enrolmentRepo.nextRollNo(
+          dto.sectionId,
+          locked.academicYearId,
+          client,
+        ));
 
       try {
-        const superseded = await this.enrolmentRepo.supersede(id, dto.remarks ?? null, client);
+        const superseded = await this.enrolmentRepo.supersede(
+          id,
+          dto.remarks ?? null,
+          client,
+        );
         const created = await this.enrolmentRepo.create(
           {
             studentId: locked.studentId,
@@ -132,7 +162,9 @@ export class EnrolmentsService {
         return created;
       } catch (err) {
         if (isUniqueViolation(err)) {
-          throw new ConflictException('That roll number is already taken in the new section.');
+          throw new ConflictException(
+            'That roll number is already taken in the new section.',
+          );
         }
         throw err;
       }

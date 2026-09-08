@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { CreateFeeStructureDto } from './dto/create-fee-structure.dto';
@@ -49,7 +53,9 @@ export class FeeStructuresService {
         );
       }
       if (isForeignKeyViolation(err)) {
-        throw new NotFoundException('academicYearId, gradeId, or mediumId does not refer to an existing record.');
+        throw new NotFoundException(
+          'academicYearId, gradeId, or mediumId does not refer to an existing record.',
+        );
       }
       throw err;
     }
@@ -59,7 +65,9 @@ export class FeeStructuresService {
     const structure = await this.feeStructureRepo.findById(id);
     if (!structure) throw new NotFoundException('Fee structure not found');
     if (structure.state !== 'DRAFT') {
-      throw new ConflictException('This fee structure can only be edited while in DRAFT state.');
+      throw new ConflictException(
+        'This fee structure can only be edited while in DRAFT state.',
+      );
     }
     return structure;
   }
@@ -87,7 +95,9 @@ export class FeeStructuresService {
         );
       }
       if (isForeignKeyViolation(err)) {
-        throw new NotFoundException('academicYearId, gradeId, or mediumId does not refer to an existing record.');
+        throw new NotFoundException(
+          'academicYearId, gradeId, or mediumId does not refer to an existing record.',
+        );
       }
       throw err;
     }
@@ -97,7 +107,9 @@ export class FeeStructuresService {
     const structure = await this.feeStructureRepo.findById(id);
     if (!structure) throw new NotFoundException('Fee structure not found');
     if (structure.state !== 'DRAFT') {
-      throw new ConflictException('Only a DRAFT fee structure can be published.');
+      throw new ConflictException(
+        'Only a DRAFT fee structure can be published.',
+      );
     }
     const updated = await this.feeStructureRepo.setState(id, 'ACTIVE');
     await this.auditService.record({
@@ -116,7 +128,9 @@ export class FeeStructuresService {
     const structure = await this.feeStructureRepo.findById(id);
     if (!structure) throw new NotFoundException('Fee structure not found');
     if (structure.state !== 'ACTIVE') {
-      throw new ConflictException('Only an ACTIVE fee structure can be superseded.');
+      throw new ConflictException(
+        'Only an ACTIVE fee structure can be superseded.',
+      );
     }
     const updated = await this.feeStructureRepo.setState(id, 'SUPERSEDED');
     await this.auditService.record({
@@ -136,11 +150,19 @@ export class FeeStructuresService {
     return this.feeStructureLineRepo.findByStructureId(feeStructureId);
   }
 
-  async createLine(feeStructureId: string, dto: CreateFeeStructureLineDto, actorPersonId: string) {
+  async createLine(
+    feeStructureId: string,
+    dto: CreateFeeStructureLineDto,
+    actorPersonId: string,
+  ) {
     await this.getDraftOrThrow(feeStructureId);
     try {
       return await this.unitOfWork.run(async (client) => {
-        const line = await this.feeStructureLineRepo.create(feeStructureId, dto, client);
+        const line = await this.feeStructureLineRepo.create(
+          feeStructureId,
+          dto,
+          client,
+        );
         await this.feeStructureRepo.recomputeTotal(feeStructureId, client);
         await this.auditService.record(
           {
@@ -157,10 +179,14 @@ export class FeeStructuresService {
       });
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A line for this fee head and instalment number already exists on this structure.');
+        throw new ConflictException(
+          'A line for this fee head and instalment number already exists on this structure.',
+        );
       }
       if (isForeignKeyViolation(err)) {
-        throw new NotFoundException('feeHeadId does not refer to an existing fee head.');
+        throw new NotFoundException(
+          'feeHeadId does not refer to an existing fee head.',
+        );
       }
       throw err;
     }
@@ -172,11 +198,19 @@ export class FeeStructuresService {
     return line;
   }
 
-  async updateLine(lineId: string, dto: UpdateFeeStructureLineDto, actorPersonId: string) {
+  async updateLine(
+    lineId: string,
+    dto: UpdateFeeStructureLineDto,
+    actorPersonId: string,
+  ) {
     const line = await this.getLineOrThrow(lineId);
     await this.getDraftOrThrow(line.feeStructureId);
     return this.unitOfWork.run(async (client) => {
-      const updated = await this.feeStructureLineRepo.update(lineId, dto, client);
+      const updated = await this.feeStructureLineRepo.update(
+        lineId,
+        dto,
+        client,
+      );
       await this.feeStructureRepo.recomputeTotal(line.feeStructureId, client);
       await this.auditService.record(
         {

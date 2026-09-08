@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface HostelRoomRow {
   id: string;
@@ -31,7 +34,10 @@ const COLUMNS = `id, floor_id AS "floorId", room_no AS "roomNo", room_type AS "r
 export class HostelRoomRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findByFloorId(floorId: string, executor: Queryable = this.postgres): Promise<HostelRoomRow[]> {
+  async findByFloorId(
+    floorId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<HostelRoomRow[]> {
     const { rows } = await executor.query<HostelRoomRow>(
       `SELECT ${COLUMNS} FROM hostel_room WHERE floor_id = $1 ORDER BY room_no`,
       [floorId],
@@ -39,7 +45,10 @@ export class HostelRoomRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<HostelRoomRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<HostelRoomRow | null> {
     const { rows } = await executor.query<HostelRoomRow>(
       `SELECT ${COLUMNS} FROM hostel_room WHERE id = $1`,
       [id],
@@ -56,7 +65,13 @@ export class HostelRoomRepository {
       `INSERT INTO hostel_room (floor_id, room_no, room_type, bed_capacity, status)
        VALUES ($1, $2, $3, $4, COALESCE($5, 'ACTIVE'))
        RETURNING ${COLUMNS}`,
-      [floorId, input.roomNo, input.roomType ?? null, input.bedCapacity, input.status ?? null],
+      [
+        floorId,
+        input.roomNo,
+        input.roomType ?? null,
+        input.bedCapacity,
+        input.status ?? null,
+      ],
     );
     return rows[0];
   }
@@ -74,7 +89,13 @@ export class HostelRoomRepository {
          status = COALESCE($5, status)
        WHERE id = $1
        RETURNING ${COLUMNS}`,
-      [id, input.roomNo ?? null, input.roomType ?? null, input.bedCapacity ?? null, input.status ?? null],
+      [
+        id,
+        input.roomNo ?? null,
+        input.roomType ?? null,
+        input.bedCapacity ?? null,
+        input.status ?? null,
+      ],
     );
     return rows[0] ?? null;
   }

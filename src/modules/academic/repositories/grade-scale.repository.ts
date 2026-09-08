@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface GradeScaleRow {
   id: string;
@@ -57,14 +60,19 @@ const BAND_COLUMNS = `id, grade_scale_id AS "gradeScaleId", label, min_percent A
 export class GradeScaleRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findMany(executor: Queryable = this.postgres): Promise<GradeScaleRow[]> {
+  async findMany(
+    executor: Queryable = this.postgres,
+  ): Promise<GradeScaleRow[]> {
     const { rows } = await executor.query<GradeScaleRow>(
       `SELECT ${SCALE_COLUMNS} FROM grade_scale ORDER BY name`,
     );
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<GradeScaleRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<GradeScaleRow | null> {
     const { rows } = await executor.query<GradeScaleRow>(
       `SELECT ${SCALE_COLUMNS} FROM grade_scale WHERE id = $1`,
       [id],
@@ -105,10 +113,15 @@ export class GradeScaleRepository {
   /** Single-default invariant, same pattern as academic_year.is_current -- run inside a
    * transaction. */
   async clearDefault(executor: Queryable): Promise<void> {
-    await executor.query(`UPDATE grade_scale SET is_default = false WHERE is_default = true`);
+    await executor.query(
+      `UPDATE grade_scale SET is_default = false WHERE is_default = true`,
+    );
   }
 
-  async setDefault(id: string, executor: Queryable): Promise<GradeScaleRow | null> {
+  async setDefault(
+    id: string,
+    executor: Queryable,
+  ): Promise<GradeScaleRow | null> {
     const { rows } = await executor.query<GradeScaleRow>(
       `UPDATE grade_scale SET is_default = true WHERE id = $1 RETURNING ${SCALE_COLUMNS}`,
       [id],
@@ -116,7 +129,10 @@ export class GradeScaleRepository {
     return rows[0] ?? null;
   }
 
-  async findBands(gradeScaleId: string, executor: Queryable = this.postgres): Promise<GradeBandRow[]> {
+  async findBands(
+    gradeScaleId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<GradeBandRow[]> {
     const { rows } = await executor.query<GradeBandRow>(
       `SELECT ${BAND_COLUMNS} FROM grade_band WHERE grade_scale_id = $1 ORDER BY min_percent DESC`,
       [gradeScaleId],
@@ -145,7 +161,10 @@ export class GradeScaleRepository {
     return rows[0];
   }
 
-  async findBandById(id: string, executor: Queryable = this.postgres): Promise<GradeBandRow | null> {
+  async findBandById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<GradeBandRow | null> {
     const { rows } = await executor.query<GradeBandRow>(
       `SELECT ${BAND_COLUMNS} FROM grade_band WHERE id = $1`,
       [id],
@@ -179,8 +198,14 @@ export class GradeScaleRepository {
     return rows[0] ?? null;
   }
 
-  async deleteBand(id: string, executor: Queryable = this.postgres): Promise<boolean> {
-    const { rowCount } = await executor.query(`DELETE FROM grade_band WHERE id = $1`, [id]);
+  async deleteBand(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<boolean> {
+    const { rowCount } = await executor.query(
+      `DELETE FROM grade_band WHERE id = $1`,
+      [id],
+    );
     return (rowCount ?? 0) > 0;
   }
 }

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface InventoryItemRow {
   id: string;
@@ -114,7 +117,8 @@ export class InventoryItemRepository {
       conditions.push(`lower(coalesce(i.location, '')) LIKE $${params.length}`);
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countResult = await this.postgres.query<{ count: string }>(
       `SELECT count(*) FROM ${FROM} ${where}`,
@@ -130,7 +134,9 @@ export class InventoryItemRepository {
     return { rows, total: parseInt(countResult.rows[0].count, 10) };
   }
 
-  async findOverviewCounts(executor: Queryable = this.postgres): Promise<InventoryOverviewCounts> {
+  async findOverviewCounts(
+    executor: Queryable = this.postgres,
+  ): Promise<InventoryOverviewCounts> {
     const { rows } = await executor.query<{
       total: string;
       available: string;
@@ -162,7 +168,10 @@ export class InventoryItemRepository {
     };
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<InventoryItemRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<InventoryItemRow | null> {
     const { rows } = await executor.query<InventoryItemRow>(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE i.id = $1`,
       [id],
@@ -172,7 +181,10 @@ export class InventoryItemRepository {
 
   /** Row-locking read, for use inside a transaction right before a status/quantity
    * change that must not race with a concurrent action on the same item. */
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<InventoryItemRow | null> {
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<InventoryItemRow | null> {
     const { rows } = await executor.query<InventoryItemRow>(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE i.id = $1 FOR UPDATE OF i`,
       [id],
@@ -180,7 +192,10 @@ export class InventoryItemRepository {
     return rows[0] ?? null;
   }
 
-  async create(input: CreateInventoryItemInput, executor: Queryable = this.postgres): Promise<InventoryItemRow> {
+  async create(
+    input: CreateInventoryItemInput,
+    executor: Queryable = this.postgres,
+  ): Promise<InventoryItemRow> {
     const { rows } = await executor.query<{ id: string }>(
       `INSERT INTO inventory_item
          (name, category_id, asset_code, quantity, low_stock_threshold, location, description,
@@ -238,7 +253,11 @@ export class InventoryItemRepository {
     return this.findById(id, executor);
   }
 
-  async addStock(id: string, addQuantity: number, executor: Queryable): Promise<InventoryItemRow | null> {
+  async addStock(
+    id: string,
+    addQuantity: number,
+    executor: Queryable,
+  ): Promise<InventoryItemRow | null> {
     await executor.query(
       `UPDATE inventory_item SET quantity = quantity + $2, updated_at = now() WHERE id = $1`,
       [id, addQuantity],
@@ -246,7 +265,11 @@ export class InventoryItemRepository {
     return this.findById(id, executor);
   }
 
-  async setQuantity(id: string, quantity: number, executor: Queryable): Promise<InventoryItemRow | null> {
+  async setQuantity(
+    id: string,
+    quantity: number,
+    executor: Queryable,
+  ): Promise<InventoryItemRow | null> {
     await executor.query(
       `UPDATE inventory_item SET quantity = $2, updated_at = now() WHERE id = $1`,
       [id, quantity],
@@ -269,7 +292,10 @@ export class InventoryItemRepository {
     return this.findById(id, executor);
   }
 
-  async returnItem(id: string, executor: Queryable): Promise<InventoryItemRow | null> {
+  async returnItem(
+    id: string,
+    executor: Queryable,
+  ): Promise<InventoryItemRow | null> {
     await executor.query(
       `UPDATE inventory_item SET
          status = 'AVAILABLE', assigned_to_person_id = NULL, assigned_on = NULL, updated_at = now()
@@ -279,18 +305,26 @@ export class InventoryItemRepository {
     return this.findById(id, executor);
   }
 
-  async transfer(id: string, location: string, executor: Queryable): Promise<InventoryItemRow | null> {
-    await executor.query(`UPDATE inventory_item SET location = $2, updated_at = now() WHERE id = $1`, [
-      id,
-      location,
-    ]);
+  async transfer(
+    id: string,
+    location: string,
+    executor: Queryable,
+  ): Promise<InventoryItemRow | null> {
+    await executor.query(
+      `UPDATE inventory_item SET location = $2, updated_at = now() WHERE id = $1`,
+      [id, location],
+    );
     return this.findById(id, executor);
   }
 
   /** Shared by markDamaged/markLost/retire (and return, which clears the
    * assignment too) -- every one of these is just "set status, clear
    * assignment if the new status can no longer be assigned out". */
-  async setStatus(id: string, status: string, executor: Queryable): Promise<InventoryItemRow | null> {
+  async setStatus(
+    id: string,
+    status: string,
+    executor: Queryable,
+  ): Promise<InventoryItemRow | null> {
     await executor.query(
       `UPDATE inventory_item SET
          status = $2, assigned_to_person_id = NULL, assigned_on = NULL, updated_at = now()
@@ -302,7 +336,10 @@ export class InventoryItemRepository {
 
   /** Used only by Repair & Maintenance on request completion, to flip a DAMAGED
    * item back to AVAILABLE once it's fixed. */
-  async restoreToAvailable(id: string, executor: Queryable): Promise<InventoryItemRow | null> {
+  async restoreToAvailable(
+    id: string,
+    executor: Queryable,
+  ): Promise<InventoryItemRow | null> {
     await executor.query(
       `UPDATE inventory_item SET status = 'AVAILABLE', updated_at = now() WHERE id = $1`,
       [id],

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface RouteStopRow {
   id: string;
@@ -37,7 +40,10 @@ const COLUMNS = `id, route_id AS "routeId", stop_name AS "stopName", sequence_no
 export class RouteStopRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findByRouteId(routeId: string, executor: Queryable = this.postgres): Promise<RouteStopRow[]> {
+  async findByRouteId(
+    routeId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<RouteStopRow[]> {
     const { rows } = await executor.query<RouteStopRow>(
       `SELECT ${COLUMNS} FROM route_stop WHERE route_id = $1 ORDER BY sequence_no`,
       [routeId],
@@ -45,7 +51,10 @@ export class RouteStopRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<RouteStopRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<RouteStopRow | null> {
     const { rows } = await executor.query<RouteStopRow>(
       `SELECT ${COLUMNS} FROM route_stop WHERE id = $1`,
       [id],
@@ -104,8 +113,14 @@ export class RouteStopRepository {
     return rows[0] ?? null;
   }
 
-  async delete(id: string, executor: Queryable = this.postgres): Promise<boolean> {
-    const { rowCount } = await executor.query(`DELETE FROM route_stop WHERE id = $1`, [id]);
+  async delete(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<boolean> {
+    const { rowCount } = await executor.query(
+      `DELETE FROM route_stop WHERE id = $1`,
+      [id],
+    );
     return (rowCount ?? 0) > 0;
   }
 }

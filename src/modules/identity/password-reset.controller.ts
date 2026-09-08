@@ -15,7 +15,9 @@ export class PasswordResetController {
   @HttpCode(HttpStatus.OK)
   async request(@Body() dto: PasswordResetRequestDto) {
     await this.passwordResetService.requestReset(dto);
-    return { data: { message: 'If the account exists, an OTP has been sent.' } };
+    return {
+      data: { message: 'If the account exists, an OTP has been sent.' },
+    };
   }
 
   @Public()

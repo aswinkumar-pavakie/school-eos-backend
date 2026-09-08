@@ -17,7 +17,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
-import { GOOGLE_OAUTH_ERRORS, ONLINE_CLASS_ERRORS } from '../../common/errors/error-codes';
+import {
+  GOOGLE_OAUTH_ERRORS,
+  ONLINE_CLASS_ERRORS,
+} from '../../common/errors/error-codes';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { AddRecordingDto } from './dto/add-recording.dto';
 import { CancelOnlineClassDto } from './dto/cancel-online-class.dto';
@@ -33,8 +36,14 @@ import {
   VIEW_STATUSES,
 } from './repositories/online-class.repository';
 import { SchoolRepository } from './repositories/school.repository';
-import { StaffIdentityView, StaffRepository } from './repositories/staff.repository';
-import { SubjectOfferingRepository, SubjectOfferingView } from './repositories/subject-offering.repository';
+import {
+  StaffIdentityView,
+  StaffRepository,
+} from './repositories/staff.repository';
+import {
+  SubjectOfferingRepository,
+  SubjectOfferingView,
+} from './repositories/subject-offering.repository';
 
 const IDEMPOTENCY_CONSTRAINT = 'uq_online_class_idempotency';
 
@@ -84,8 +93,14 @@ export class OnlineClassesService {
     // Faculty authorization must use the actual staff.id resolved above — never the
     // client-supplied body — and must match subject_offering.teacher_staff_id exactly.
     // Not found and not-mine are the same 404, never revealing which.
-    const offering = await this.subjectOfferingRepo.findById(dto.subjectOfferingId);
-    if (!offering || offering.status !== 'ACTIVE' || offering.teacherStaffId !== staff.id) {
+    const offering = await this.subjectOfferingRepo.findById(
+      dto.subjectOfferingId,
+    );
+    if (
+      !offering ||
+      offering.status !== 'ACTIVE' ||
+      offering.teacherStaffId !== staff.id
+    ) {
       throw new NotFoundException(ONLINE_CLASS_ERRORS.OFFERING_NOT_FOUND);
     }
 
@@ -134,19 +149,30 @@ export class OnlineClassesService {
     return this.ensureMeetingCreated(id, staff.id);
   }
 
-  async list(actor: AuthenticatedUser, view: OnlineClassView): Promise<OnlineClassDetail[]> {
+  async list(
+    actor: AuthenticatedUser,
+    view: OnlineClassView,
+  ): Promise<OnlineClassDetail[]> {
     const staff = await this.requireActiveFaculty(actor.personId);
-    return this.onlineClassRepo.listByFacultyAndStatuses(staff.id, VIEW_STATUSES[view]);
+    return this.onlineClassRepo.listByFacultyAndStatuses(
+      staff.id,
+      VIEW_STATUSES[view],
+    );
   }
 
   /** Backs the mobile Schedule form's class/section picker — see
    * SubjectOfferingRepository.findAllByTeacherStaffId. */
-  async myTeachingOfferings(actor: AuthenticatedUser): Promise<SubjectOfferingView[]> {
+  async myTeachingOfferings(
+    actor: AuthenticatedUser,
+  ): Promise<SubjectOfferingView[]> {
     const staff = await this.requireActiveFaculty(actor.personId);
     return this.subjectOfferingRepo.findAllByTeacherStaffId(staff.id);
   }
 
-  async detail(actor: AuthenticatedUser, id: string): Promise<OnlineClassDetail> {
+  async detail(
+    actor: AuthenticatedUser,
+    id: string,
+  ): Promise<OnlineClassDetail> {
     const staff = await this.requireActiveFaculty(actor.personId);
     return this.getOwnedDetailOrThrow(id, staff.id);
   }
@@ -235,7 +261,9 @@ export class OnlineClassesService {
         connection?.status === 'NEEDS_REAUTH'
           ? GOOGLE_OAUTH_ERRORS.NEEDS_REAUTH
           : GOOGLE_OAUTH_ERRORS.NOT_CONNECTED;
-      await this.onlineClassRepo.markMeetingFailed(id, { errorMessage: message });
+      await this.onlineClassRepo.markMeetingFailed(id, {
+        errorMessage: message,
+      });
       return;
     }
 
@@ -282,7 +310,9 @@ export class OnlineClassesService {
         });
         return;
       case 'FAILED':
-        await this.onlineClassRepo.markMeetingFailed(id, { errorMessage: outcome.message });
+        await this.onlineClassRepo.markMeetingFailed(id, {
+          errorMessage: outcome.message,
+        });
         return;
     }
   }
@@ -309,7 +339,9 @@ export class OnlineClassesService {
     // than silently claiming success or refusing to cancel.
     let syncErrorMessage: string | null = null;
     if (current.googleCalendarEventId) {
-      const connection = await this.googleConnectionRepo.findByStaffId(staff.id);
+      const connection = await this.googleConnectionRepo.findByStaffId(
+        staff.id,
+      );
       if (!connection || connection.status !== 'ACTIVE') {
         syncErrorMessage =
           connection?.status === 'NEEDS_REAUTH'
@@ -341,7 +373,9 @@ export class OnlineClassesService {
     });
 
     if (syncErrorMessage) {
-      await this.onlineClassRepo.markMeetingFailed(id, { errorMessage: syncErrorMessage });
+      await this.onlineClassRepo.markMeetingFailed(id, {
+        errorMessage: syncErrorMessage,
+      });
     }
 
     return this.getOwnedDetailOrThrow(id, staff.id);
@@ -352,11 +386,16 @@ export class OnlineClassesService {
    * OnlineClassRepository.markLive's WHERE clause, not by the pre-check below (which
    * exists only to give a specific, honest error message rather than a generic one on
    * the — normally rare — race where status changed between the two). */
-  async startClass(actor: AuthenticatedUser, id: string): Promise<OnlineClassDetail> {
+  async startClass(
+    actor: AuthenticatedUser,
+    id: string,
+  ): Promise<OnlineClassDetail> {
     const staff = await this.requireActiveFaculty(actor.personId);
     await this.getOwnedDetailOrThrow(id, staff.id);
 
-    const applied = await this.onlineClassRepo.markLive(id, { updatedBy: actor.personId });
+    const applied = await this.onlineClassRepo.markLive(id, {
+      updatedBy: actor.personId,
+    });
     if (!applied) {
       throw new ConflictException(ONLINE_CLASS_ERRORS.NOT_SCHEDULED);
     }
@@ -366,11 +405,16 @@ export class OnlineClassesService {
 
   /** LIVE -> COMPLETED. Same pattern as startClass. This is what makes the recording
    * endpoint reachable — addRecording already requires status='COMPLETED'. */
-  async completeClass(actor: AuthenticatedUser, id: string): Promise<OnlineClassDetail> {
+  async completeClass(
+    actor: AuthenticatedUser,
+    id: string,
+  ): Promise<OnlineClassDetail> {
     const staff = await this.requireActiveFaculty(actor.personId);
     await this.getOwnedDetailOrThrow(id, staff.id);
 
-    const applied = await this.onlineClassRepo.markCompleted(id, { updatedBy: actor.personId });
+    const applied = await this.onlineClassRepo.markCompleted(id, {
+      updatedBy: actor.personId,
+    });
     if (!applied) {
       throw new ConflictException(ONLINE_CLASS_ERRORS.NOT_LIVE);
     }
@@ -400,7 +444,9 @@ export class OnlineClassesService {
 
   /** Resolves the caller's actual staff.id from their authenticated person_id — never
    * trusts a client-supplied faculty/staff id anywhere in this module. */
-  private async requireActiveFaculty(personId: string): Promise<StaffIdentityView> {
+  private async requireActiveFaculty(
+    personId: string,
+  ): Promise<StaffIdentityView> {
     const staff = await this.staffRepo.findByPersonId(personId);
     if (!staff || staff.status === 'EXITED') {
       throw new ForbiddenException(ONLINE_CLASS_ERRORS.NOT_FACULTY);
@@ -434,7 +480,10 @@ export class OnlineClassesService {
    * Idempotency-Key is exactly how a faculty retries a failed/pending Google creation,
    * with no separate "retry" endpoint needed.
    */
-  private async ensureMeetingCreated(id: string, staffId: string): Promise<OnlineClassDetail> {
+  private async ensureMeetingCreated(
+    id: string,
+    staffId: string,
+  ): Promise<OnlineClassDetail> {
     const current = await this.getOwnedDetailOrThrow(id, staffId);
 
     if (current.meetingCreationStatus === 'SUCCEEDED') {
@@ -457,7 +506,9 @@ export class OnlineClassesService {
         connection?.status === 'NEEDS_REAUTH'
           ? GOOGLE_OAUTH_ERRORS.NEEDS_REAUTH
           : GOOGLE_OAUTH_ERRORS.NOT_CONNECTED;
-      await this.onlineClassRepo.markMeetingFailed(id, { errorMessage: message });
+      await this.onlineClassRepo.markMeetingFailed(id, {
+        errorMessage: message,
+      });
       return this.getOwnedDetailOrThrow(id, staffId);
     }
 
@@ -495,7 +546,9 @@ export class OnlineClassesService {
         });
         break;
       case 'FAILED':
-        await this.onlineClassRepo.markMeetingFailed(id, { errorMessage: outcome.message });
+        await this.onlineClassRepo.markMeetingFailed(id, {
+          errorMessage: outcome.message,
+        });
         break;
     }
 

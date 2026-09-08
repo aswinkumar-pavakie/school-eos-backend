@@ -45,5 +45,16 @@ import { HostelsService } from './hostels.service';
     HostelBedRepository,
     HostelAllocationRepository,
   ],
+  // Repositories exported read-only for the Hostel Warden module's Room & Bed View
+  // (Feature 8) -- reuses the exact same queries Admin's own screens use, rather than
+  // a second copy, and the Warden module never calls any write method on these.
+  exports: [
+    HostelRepository,
+    HostelBlockRepository,
+    HostelFloorRepository,
+    HostelRoomRepository,
+    HostelBedRepository,
+    HostelAllocationRepository,
+  ],
 })
 export class HostelModule {}

@@ -4,7 +4,16 @@
 // (see ApprovalsService.createRequest); this POST exists for the documented contract
 // and any domain service that isn't yet wired to call the engine directly.
 
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
@@ -22,14 +31,20 @@ export class ApprovalsController {
   ) {}
 
   @Get()
-  async list(@Query() query: ListApprovalsQueryDto, @CurrentActor() actor: AuthenticatedUser) {
+  async list(
+    @Query() query: ListApprovalsQueryDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const data = await this.approvalsService.listForCaller(actor, query);
     return { data };
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateApprovalRequestDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateApprovalRequestDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const request = await this.unitOfWork.run((client) =>
       this.approvalsService.createRequest(
         {
@@ -48,14 +63,20 @@ export class ApprovalsController {
   }
 
   @Get(':id')
-  async getById(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async getById(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const data = await this.approvalsService.getById(id, actor);
     return { data };
   }
 
   @Post(':id/withdraw')
   @HttpCode(HttpStatus.OK)
-  async withdraw(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async withdraw(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const data = await this.approvalsService.withdraw(id, actor);
     return { data };
   }

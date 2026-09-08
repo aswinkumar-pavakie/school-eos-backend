@@ -3,7 +3,10 @@
 // scoped to a year, instead of asking the caller to type a UUID from memory.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
 
 export interface AcademicYearRow {
   id: string;
@@ -22,6 +25,10 @@ export class AcademicYearLookupRepository {
     const { rows } = await executor.query(
       `SELECT id, name, is_current FROM academic_year WHERE status IN ('ACTIVE', 'PLANNED') ORDER BY start_date DESC`,
     );
-    return rows.map((r: any) => ({ id: r.id, name: r.name, isCurrent: r.is_current }));
+    return rows.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      isCurrent: r.is_current,
+    }));
   }
 }

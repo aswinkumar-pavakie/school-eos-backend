@@ -1,4 +1,12 @@
-import { ArrayMinSize, IsArray, IsDateString, IsIn, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsDateString,
+  IsIn,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 export class MarkStaffAttendanceDto {
   @IsArray()

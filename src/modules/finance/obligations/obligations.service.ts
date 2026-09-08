@@ -9,13 +9,20 @@
 // due_date (out of scope here, no scheduler exists in this codebase yet); this service
 // covers every state reachable by a direct Finance action.
 
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../../common/audit/audit.service';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
 import { FINANCE_ERRORS } from '../../../common/errors/error-codes';
 import { PageQuery } from '../../../common/pagination/pagination.util';
 import { UnitOfWork } from '../../../common/transactions/unit-of-work';
-import { FeeDemandRepository, FeeDemandRow } from './repositories/fee-demand.repository';
+import {
+  FeeDemandRepository,
+  FeeDemandRow,
+} from './repositories/fee-demand.repository';
 
 const WAIVABLE_STATES = ['PENDING', 'PARTIAL', 'OVERDUE'];
 
@@ -28,7 +35,13 @@ export class ObligationsService {
   ) {}
 
   async list(
-    filter: { studentId?: string; state?: string; studentSearch?: string; fromDate?: string; toDate?: string },
+    filter: {
+      studentId?: string;
+      state?: string;
+      studentSearch?: string;
+      fromDate?: string;
+      toDate?: string;
+    },
     page: PageQuery,
   ) {
     return this.repo.list(filter, page);
@@ -69,9 +82,12 @@ export class ObligationsService {
   ): Promise<FeeDemandRow> {
     return this.unitOfWork.run(async (client) => {
       const demand = await this.repo.findByIdForUpdate(id, client);
-      if (!demand) throw new NotFoundException(FINANCE_ERRORS.FEE_DEMAND_NOT_FOUND);
+      if (!demand)
+        throw new NotFoundException(FINANCE_ERRORS.FEE_DEMAND_NOT_FOUND);
       if (demand.state !== 'PENDING' || demand.paidPaise !== '0') {
-        throw new ConflictException('Only a PENDING obligation with no payments recorded can be edited');
+        throw new ConflictException(
+          'Only a PENDING obligation with no payments recorded can be edited',
+        );
       }
       return this.repo.update(id, input, client);
     });
@@ -83,21 +99,31 @@ export class ObligationsService {
   async delete(id: string): Promise<void> {
     return this.unitOfWork.run(async (client) => {
       const demand = await this.repo.findByIdForUpdate(id, client);
-      if (!demand) throw new NotFoundException(FINANCE_ERRORS.FEE_DEMAND_NOT_FOUND);
+      if (!demand)
+        throw new NotFoundException(FINANCE_ERRORS.FEE_DEMAND_NOT_FOUND);
       if (demand.state !== 'PENDING' || demand.paidPaise !== '0') {
-        throw new ConflictException('Only a PENDING obligation with no payments recorded can be deleted');
+        throw new ConflictException(
+          'Only a PENDING obligation with no payments recorded can be deleted',
+        );
       }
       await this.repo.setState(id, 'CANCELLED', client);
     });
   }
 
   /** Finance writes off the remaining balance (hardship, error correction, etc.) — the obligation is cleared without a payment. */
-  async waive(id: string, actor: AuthenticatedUser, reason: string): Promise<FeeDemandRow> {
+  async waive(
+    id: string,
+    actor: AuthenticatedUser,
+    reason: string,
+  ): Promise<FeeDemandRow> {
     return this.unitOfWork.run(async (client) => {
       const demand = await this.repo.findByIdForUpdate(id, client);
-      if (!demand) throw new NotFoundException(FINANCE_ERRORS.FEE_DEMAND_NOT_FOUND);
+      if (!demand)
+        throw new NotFoundException(FINANCE_ERRORS.FEE_DEMAND_NOT_FOUND);
       if (!WAIVABLE_STATES.includes(demand.state)) {
-        throw new ConflictException('Only a PENDING, PARTIAL or OVERDUE obligation can be waived');
+        throw new ConflictException(
+          'Only a PENDING, PARTIAL or OVERDUE obligation can be waived',
+        );
       }
       await this.repo.setState(id, 'WAIVED', client);
       await this.audit.record(

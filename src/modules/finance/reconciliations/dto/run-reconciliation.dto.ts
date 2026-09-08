@@ -1,12 +1,21 @@
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsNotEmpty, IsString, Matches, ValidateNested } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsNotEmpty,
+  IsString,
+  Matches,
+  ValidateNested,
+} from 'class-validator';
 
 export class SettlementRowDto {
   @IsString()
   @IsNotEmpty()
   gatewayRef!: string;
 
-  @Matches(/^[1-9][0-9]*$/, { message: 'amountPaise must be a positive integer string' })
+  @Matches(/^[1-9][0-9]*$/, {
+    message: 'amountPaise must be a positive integer string',
+  })
   amountPaise!: string;
 }
 

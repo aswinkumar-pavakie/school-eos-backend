@@ -23,11 +23,17 @@ import { UpdateRouteStopDto } from './dto/update-route-stop.dto';
 export class RoutesController {
   constructor(private readonly routesService: RoutesService) {}
 
+  // Method-level @Roles OVERRIDES the class-level one (RolesGuard uses
+  // getAllAndOverride, not a merge) -- these reads are reachable by
+  // TRANSPORT_MANAGER too; create/update/stop-write routes below stay
+  // ADMIN-only exactly as before.
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @Get('routes')
   async list() {
     return { data: await this.routesService.list() };
   }
 
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @Get('routes/:id')
   async get(@Param('id') id: string) {
     return { data: await this.routesService.get(id) };
@@ -35,7 +41,10 @@ export class RoutesController {
 
   @Post('routes')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateRouteDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateRouteDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.routesService.create(dto, actor.personId) };
   }
 
@@ -48,11 +57,13 @@ export class RoutesController {
     return { data: await this.routesService.update(id, dto, actor.personId) };
   }
 
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @Get('routes/:id/stops')
   async listStops(@Param('id') id: string) {
     return { data: await this.routesService.listStops(id) };
   }
 
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @Get('routes/:id/assigned-students')
   async listAssignedStudents(@Param('id') id: string) {
     return { data: await this.routesService.listAssignedStudents(id) };
@@ -65,7 +76,9 @@ export class RoutesController {
     @Body() dto: CreateRouteStopDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.routesService.createStop(id, dto, actor.personId) };
+    return {
+      data: await this.routesService.createStop(id, dto, actor.personId),
+    };
   }
 
   @Patch('route-stops/:stopId')
@@ -74,12 +87,17 @@ export class RoutesController {
     @Body() dto: UpdateRouteStopDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.routesService.updateStop(stopId, dto, actor.personId) };
+    return {
+      data: await this.routesService.updateStop(stopId, dto, actor.personId),
+    };
   }
 
   @Delete('route-stops/:stopId')
   @HttpCode(HttpStatus.OK)
-  async deleteStop(@Param('stopId') stopId: string, @CurrentActor() actor: AuthenticatedUser) {
+  async deleteStop(
+    @Param('stopId') stopId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.routesService.deleteStop(stopId, actor.personId);
     return { data: { deleted: true } };
   }

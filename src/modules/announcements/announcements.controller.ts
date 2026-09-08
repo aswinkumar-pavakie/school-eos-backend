@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -23,13 +32,23 @@ export class AnnouncementsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateAnnouncementDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.announcementsService.create(dto, actor.personId) };
+  async create(
+    @Body() dto: CreateAnnouncementDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.announcementsService.create(dto, actor.personId),
+    };
   }
 
   @Post(':id/archive')
   @HttpCode(HttpStatus.OK)
-  async archive(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.announcementsService.archive(id, actor.personId) };
+  async archive(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.announcementsService.archive(id, actor.personId),
+    };
   }
 }

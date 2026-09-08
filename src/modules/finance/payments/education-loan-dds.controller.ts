@@ -16,7 +16,13 @@ export class EducationLoanDDsController {
   @Get()
   async list(@Query() query: ListEducationLoanDDsQueryDto) {
     const { page, pageSize, ...filter } = query;
-    const { rows, total } = await this.service.listAllEducationLoanDDs(filter, { page, pageSize });
-    return { data: rows, meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 } };
+    const { rows, total } = await this.service.listAllEducationLoanDDs(filter, {
+      page,
+      pageSize,
+    });
+    return {
+      data: rows,
+      meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 },
+    };
   }
 }

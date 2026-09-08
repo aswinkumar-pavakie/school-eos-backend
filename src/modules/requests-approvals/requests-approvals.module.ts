@@ -22,8 +22,19 @@ import { ApprovalStepRepository } from './repositories/approval-step.repository'
   // -- AdminModule (activate/deactivate, role grant/revoke), AttendanceModule
   // (correction), PeopleModule (student record update), InventoryModule
   // (issue/transfer), MaintenanceModule (repair-request creation).
-  imports: [AdminModule, AttendanceModule, PeopleModule, InventoryModule, MaintenanceModule],
+  imports: [
+    AdminModule,
+    AttendanceModule,
+    PeopleModule,
+    InventoryModule,
+    MaintenanceModule,
+  ],
   controllers: [ApprovalRequestsController],
-  providers: [ApprovalRequestsService, RequestEffectsService, ApprovalRequestRepository, ApprovalStepRepository],
+  providers: [
+    ApprovalRequestsService,
+    RequestEffectsService,
+    ApprovalRequestRepository,
+    ApprovalStepRepository,
+  ],
 })
 export class RequestsApprovalsModule {}

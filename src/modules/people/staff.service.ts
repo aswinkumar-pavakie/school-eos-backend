@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { PersonRepository } from '../identity/repositories/person.repository';
 import { CreateStaffDto } from './dto/create-staff.dto';
@@ -32,7 +37,10 @@ export class StaffService {
       status: query.status,
       search: query.search,
       designation: query.designation,
-      isTeaching: query.isTeaching === undefined ? undefined : query.isTeaching === 'true',
+      isTeaching:
+        query.isTeaching === undefined
+          ? undefined
+          : query.isTeaching === 'true',
       gradeId: query.gradeId,
       sectionId: query.sectionId,
       subjectId: query.subjectId,
@@ -58,9 +66,14 @@ export class StaffService {
 
   async create(dto: CreateStaffDto, actorPersonId: string) {
     const person = await this.personRepo.findById(dto.personId);
-    if (!person) throw new BadRequestException('personId does not refer to an existing person.');
+    if (!person)
+      throw new BadRequestException(
+        'personId does not refer to an existing person.',
+      );
     if (person.status !== 'ACTIVE') {
-      throw new BadRequestException('Cannot attach a staff record to a non-active person.');
+      throw new BadRequestException(
+        'Cannot attach a staff record to a non-active person.',
+      );
     }
 
     const existing = await this.staffRepo.findByPersonId(dto.personId);
@@ -124,7 +137,9 @@ export class StaffService {
   async exit(id: string, dto: StaffExitDto, actorPersonId: string) {
     const staff = await this.get(id);
     if (staff.status === 'EXITED') {
-      throw new BadRequestException('This staff record is already marked exited.');
+      throw new BadRequestException(
+        'This staff record is already marked exited.',
+      );
     }
     const dateOfExit = dto.dateOfExit ?? new Date().toISOString().slice(0, 10);
     try {
@@ -142,7 +157,9 @@ export class StaffService {
       return updated;
     } catch (err) {
       if (isCheckViolation(err)) {
-        throw new BadRequestException('date_of_exit must be on or after date_of_joining.');
+        throw new BadRequestException(
+          'date_of_exit must be on or after date_of_joining.',
+        );
       }
       throw err;
     }

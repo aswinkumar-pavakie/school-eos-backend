@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export type DevicePlatform = 'WEB' | 'ANDROID' | 'IOS';
 
@@ -81,7 +84,10 @@ export class SessionRepository {
     };
   }
 
-  async deleteById(id: string, executor: Queryable = this.postgres): Promise<void> {
+  async deleteById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
     await executor.query(`DELETE FROM user_session WHERE id = $1`, [id]);
   }
 
@@ -89,14 +95,20 @@ export class SessionRepository {
     refreshTokenHash: string,
     executor: Queryable = this.postgres,
   ): Promise<void> {
-    await executor.query(`DELETE FROM user_session WHERE refresh_token_hash = $1`, [
-      refreshTokenHash,
-    ]);
+    await executor.query(
+      `DELETE FROM user_session WHERE refresh_token_hash = $1`,
+      [refreshTokenHash],
+    );
   }
 
   /** Revokes every session for a person — used after a password reset (self-service or
    * admin) so a credential compromise can't be ridden out on an already-issued session. */
-  async deleteAllForPerson(personId: string, executor: Queryable = this.postgres): Promise<void> {
-    await executor.query(`DELETE FROM user_session WHERE person_id = $1`, [personId]);
+  async deleteAllForPerson(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(`DELETE FROM user_session WHERE person_id = $1`, [
+      personId,
+    ]);
   }
 }

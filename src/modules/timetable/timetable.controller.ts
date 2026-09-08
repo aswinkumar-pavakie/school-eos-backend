@@ -20,11 +20,17 @@ export class TimetableController {
   @Get()
   async get(@Query() query: TimetableQueryDto) {
     if (query.sectionId) {
-      return { data: await this.timetableService.getForSection(query.sectionId) };
+      return {
+        data: await this.timetableService.getForSection(query.sectionId),
+      };
     }
     if (query.teacherStaffId) {
-      return { data: await this.timetableService.getForTeacher(query.teacherStaffId) };
+      return {
+        data: await this.timetableService.getForTeacher(query.teacherStaffId),
+      };
     }
-    throw new BadRequestException('Provide either sectionId or teacherStaffId.');
+    throw new BadRequestException(
+      'Provide either sectionId or teacherStaffId.',
+    );
   }
 }

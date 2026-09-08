@@ -24,6 +24,8 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { AdminFinanceModule } from './modules/finance/admin-finance.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { HostelModule } from './modules/hostel/hostel.module';
+import { HostelWardenModule } from './modules/hostel-warden/hostel-warden.module';
+import { HostelWardenPendingModule } from './modules/hostel-warden/hostel-warden-pending.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
@@ -62,6 +64,8 @@ import { TransportModule } from './modules/transport/transport.module';
     PeopleModule,
     TransportModule,
     HostelModule,
+    HostelWardenModule,
+    HostelWardenPendingModule,
     SportsModule,
     DevicesModule,
     DocumentsModule,

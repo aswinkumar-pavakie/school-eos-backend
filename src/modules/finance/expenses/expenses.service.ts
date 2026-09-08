@@ -9,7 +9,12 @@
 // immediately clear; above that limit, submit() routes through the generic approvals
 // engine exactly like refunds and fee-structure activation do.
 
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../../common/audit/audit.service';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
 import { FINANCE_ERRORS } from '../../../common/errors/error-codes';
@@ -17,7 +22,10 @@ import { PageQuery } from '../../../common/pagination/pagination.util';
 import { UnitOfWork } from '../../../common/transactions/unit-of-work';
 import { ApprovalsService } from '../../approvals/approvals.service';
 import { ExpenseCategoryRepository } from '../master-data/repositories/expense-category.repository';
-import { ExpenseRepository, ExpenseRow } from './repositories/expense.repository';
+import {
+  ExpenseRepository,
+  ExpenseRow,
+} from './repositories/expense.repository';
 
 const EDITABLE_STATES = ['RECORDED'];
 const DELETABLE_STATES = ['RECORDED'];
@@ -58,11 +66,18 @@ export class ExpensesService {
 
   async update(
     id: string,
-    input: { amountPaise?: string; incurredOn?: string; vendorName?: string; description?: string; billObjectKey?: string },
+    input: {
+      amountPaise?: string;
+      incurredOn?: string;
+      vendorName?: string;
+      description?: string;
+      billObjectKey?: string;
+    },
   ): Promise<ExpenseRow> {
     return this.unitOfWork.run(async (client) => {
       const expense = await this.repo.findByIdForUpdate(id, client);
-      if (!expense) throw new NotFoundException(FINANCE_ERRORS.EXPENSE_NOT_FOUND);
+      if (!expense)
+        throw new NotFoundException(FINANCE_ERRORS.EXPENSE_NOT_FOUND);
       if (!EDITABLE_STATES.includes(expense.state)) {
         throw new ConflictException(FINANCE_ERRORS.EXPENSE_WRONG_STATE);
       }
@@ -74,12 +89,17 @@ export class ExpensesService {
   async delete(id: string, actor: AuthenticatedUser): Promise<void> {
     return this.unitOfWork.run(async (client) => {
       const expense = await this.repo.findByIdForUpdate(id, client);
-      if (!expense) throw new NotFoundException(FINANCE_ERRORS.EXPENSE_NOT_FOUND);
+      if (!expense)
+        throw new NotFoundException(FINANCE_ERRORS.EXPENSE_NOT_FOUND);
       if (!DELETABLE_STATES.includes(expense.state)) {
-        throw new ConflictException('Only a not-yet-submitted expense can be deleted');
+        throw new ConflictException(
+          'Only a not-yet-submitted expense can be deleted',
+        );
       }
       if (expense.recordedBy !== actor.personId) {
-        throw new ForbiddenException('You can only delete an expense you recorded yourself');
+        throw new ForbiddenException(
+          'You can only delete an expense you recorded yourself',
+        );
       }
       await this.repo.delete(id, client);
       await this.audit.record(
@@ -108,12 +128,16 @@ export class ExpensesService {
   async submit(id: string, actor: AuthenticatedUser): Promise<ExpenseRow> {
     return this.unitOfWork.run(async (client) => {
       const expense = await this.repo.findByIdForUpdate(id, client);
-      if (!expense) throw new NotFoundException(FINANCE_ERRORS.EXPENSE_NOT_FOUND);
+      if (!expense)
+        throw new NotFoundException(FINANCE_ERRORS.EXPENSE_NOT_FOUND);
       if (expense.state !== 'RECORDED') {
         throw new ConflictException(FINANCE_ERRORS.EXPENSE_WRONG_STATE);
       }
 
-      const category = await this.categoryRepo.findById(expense.categoryId, client);
+      const category = await this.categoryRepo.findById(
+        expense.categoryId,
+        client,
+      );
       const pettyLimit = BigInt(category?.pettyLimitPaise ?? '0');
       const amount = BigInt(expense.amountPaise);
 
@@ -141,7 +165,10 @@ export class ExpensesService {
           subjectObjectId: id,
           requestedBy: actor.personId,
           amountPaise: expense.amountPaise,
-          payload: { categoryId: expense.categoryId, description: expense.description },
+          payload: {
+            categoryId: expense.categoryId,
+            description: expense.description,
+          },
         },
         client,
       );
@@ -158,7 +185,11 @@ export class ExpensesService {
         },
         client,
       );
-      return { ...expense, state: 'PENDING_APPROVAL', approvalRequestId: approvalRequest.id };
+      return {
+        ...expense,
+        state: 'PENDING_APPROVAL',
+        approvalRequestId: approvalRequest.id,
+      };
     });
   }
 
@@ -166,9 +197,12 @@ export class ExpensesService {
   async pay(id: string, actor: AuthenticatedUser): Promise<ExpenseRow> {
     return this.unitOfWork.run(async (client) => {
       const expense = await this.repo.findByIdForUpdate(id, client);
-      if (!expense) throw new NotFoundException(FINANCE_ERRORS.EXPENSE_NOT_FOUND);
+      if (!expense)
+        throw new NotFoundException(FINANCE_ERRORS.EXPENSE_NOT_FOUND);
       if (expense.state !== 'APPROVED') {
-        throw new ConflictException('Only an APPROVED expense can be marked as paid');
+        throw new ConflictException(
+          'Only an APPROVED expense can be marked as paid',
+        );
       }
       await this.repo.setState(id, 'PAID', client);
       await this.audit.record(

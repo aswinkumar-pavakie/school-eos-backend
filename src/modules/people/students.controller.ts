@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AttendanceRecordsService } from '../attendance/attendance-records.service';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
@@ -43,7 +53,10 @@ export class StudentsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateStudentDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateStudentDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.studentsService.create(dto, actor.personId) };
   }
 
@@ -78,12 +91,16 @@ export class StudentsController {
     @Body() dto: CreateEnrolmentDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.enrolmentsService.create(id, dto, actor.personId) };
+    return {
+      data: await this.enrolmentsService.create(id, dto, actor.personId),
+    };
   }
 
   @Get(':id/transport')
   async listTransport(@Param('id') id: string) {
-    return { data: await this.transportAllocationsService.getSummaryForStudent(id) };
+    return {
+      data: await this.transportAllocationsService.getSummaryForStudent(id),
+    };
   }
 
   @Get(':id/fees')
@@ -103,18 +120,33 @@ export class StudentsController {
     @Body() dto: FreezeWalletDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.studentWalletService.freeze(id, dto.reason, actor.personId) };
+    return {
+      data: await this.studentWalletService.freeze(
+        id,
+        dto.reason,
+        actor.personId,
+      ),
+    };
   }
 
   @Post(':id/wallet/unfreeze')
   @HttpCode(HttpStatus.OK)
-  async unfreezeWallet(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.studentWalletService.unfreeze(id, actor.personId) };
+  async unfreezeWallet(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.studentWalletService.unfreeze(id, actor.personId),
+    };
   }
 
   @Get(':id/attendance-summary')
   async getAttendanceSummary(@Param('id') id: string) {
-    return { data: await this.attendanceRecordsService.getAttendanceSummaryForStudent(id) };
+    return {
+      data: await this.attendanceRecordsService.getAttendanceSummaryForStudent(
+        id,
+      ),
+    };
   }
 
   @Get(':id/guardians')
@@ -129,6 +161,8 @@ export class StudentsController {
     @Body() dto: CreateGuardianLinkDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.guardianLinksService.create(id, dto, actor.personId) };
+    return {
+      data: await this.guardianLinksService.create(id, dto, actor.personId),
+    };
   }
 }

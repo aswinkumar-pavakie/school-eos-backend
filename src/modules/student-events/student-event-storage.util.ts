@@ -29,8 +29,13 @@ export function signatureObjectKeyFor(participantId: string): string {
 // full buffer is decoded (see ParentPermissionsService.sign), so a
 // mislabelled/spoofed/corrupt upload can never reach Storage as if it were a
 // genuine signature.
-const PNG_MAGIC_BYTES = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const PNG_MAGIC_BYTES = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
 
 export function isRealPngBuffer(buffer: Buffer): boolean {
-  return buffer.length >= PNG_MAGIC_BYTES.length && buffer.subarray(0, PNG_MAGIC_BYTES.length).equals(PNG_MAGIC_BYTES);
+  return (
+    buffer.length >= PNG_MAGIC_BYTES.length &&
+    buffer.subarray(0, PNG_MAGIC_BYTES.length).equals(PNG_MAGIC_BYTES)
+  );
 }

@@ -10,7 +10,18 @@ import {
   Queryable,
 } from '../../../infrastructure/postgres/postgres.service';
 
-export type ParticipantRole = 'PARENT' | 'SUBJECT_TEACHER' | 'CLASS_ADVISOR';
+// PRINCIPAL and FACULTY_DIRECT are the two new roles this value can take (see
+// query.md's CHECK-constraint widening): PRINCIPAL labels a principal's own
+// sent messages/read-state on ANY conversation type; FACULTY_DIRECT labels the
+// faculty side of a STAFF_DIRECT thread specifically -- distinct from
+// SUBJECT_TEACHER/CLASS_ADVISOR, which both imply a class-scoping that a direct
+// thread doesn't have.
+export type ParticipantRole =
+  | 'PARENT'
+  | 'SUBJECT_TEACHER'
+  | 'CLASS_ADVISOR'
+  | 'PRINCIPAL'
+  | 'FACULTY_DIRECT';
 
 export interface ParticipantView {
   personId: string;
@@ -118,6 +129,64 @@ export class ConversationParticipantRepository {
        DO UPDATE SET last_read_at = EXCLUDED.last_read_at`,
       [conversationId, personId, role, readAt],
     );
+  }
+
+  /** Every participant with this exact role across the given conversations, in
+   * one query -- used to surface "Principal" in a STUDENT_CONTEXT conversation's
+   * participants list ONLY once they've actually started/engaged with it (a
+   * PRINCIPAL-role row here is written by MessagingService.startStudentConversations/
+   * sendMessage, never auto-synced the way SUBJECT_TEACHER/CLASS_ADVISOR are), so a
+   * thread a Principal has never touched correctly returns nothing for it. */
+  async findByRoleForConversations(
+    conversationIds: string[],
+    role: ParticipantRole,
+    executor: Queryable = this.postgres,
+  ): Promise<
+    Map<
+      string,
+      {
+        personId: string;
+        firstName: string;
+        lastName: string;
+        displayName: string | null;
+      }[]
+    >
+  > {
+    const result = new Map<
+      string,
+      {
+        personId: string;
+        firstName: string;
+        lastName: string;
+        displayName: string | null;
+      }[]
+    >();
+    if (conversationIds.length === 0) return result;
+    const { rows } = await executor.query<{
+      conversation_id: string;
+      person_id: string;
+      first_name: string;
+      last_name: string;
+      display_name: string | null;
+    }>(
+      `SELECT cp.conversation_id, p.id AS person_id, p.first_name, p.last_name, p.display_name
+       FROM conversation_participant cp
+       JOIN person p ON p.id = cp.person_id
+       WHERE cp.conversation_id = ANY($1::uuid[]) AND cp.participant_role = $2`,
+      [conversationIds, role],
+    );
+    for (const row of rows) {
+      const view = {
+        personId: row.person_id,
+        firstName: row.first_name,
+        lastName: row.last_name,
+        displayName: row.display_name,
+      };
+      const existing = result.get(row.conversation_id);
+      if (existing) existing.push(view);
+      else result.set(row.conversation_id, [view]);
+    }
+    return result;
   }
 
   /** For display only — the caller must independently confirm current

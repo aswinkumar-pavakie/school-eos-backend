@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
-import { PageQuery, toOffsetLimit } from '../../../../common/pagination/pagination.util';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PageQuery,
+  toOffsetLimit,
+} from '../../../../common/pagination/pagination.util';
 import { OFFLINE_MODES } from '../dto/create-payment.dto';
 
 export interface PaymentRow {
@@ -44,7 +50,12 @@ export interface EducationLoanDDRow extends PaymentRow {
 }
 
 function mapDDRow(row: any): EducationLoanDDRow {
-  return { ...mapRow(row), studentId: row.student_id, studentDisplayName: row.display_name, studentAdmissionNo: row.admission_no };
+  return {
+    ...mapRow(row),
+    studentId: row.student_id,
+    studentDisplayName: row.display_name,
+    studentAdmissionNo: row.admission_no,
+  };
 }
 
 /** What the Payments list needs beyond the bare payment row: a human-readable "who
@@ -86,9 +97,10 @@ export class PaymentRepository {
     idempotencyKey: string,
     executor: Queryable = this.postgres,
   ): Promise<PaymentRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM payment WHERE idempotency_key = $1`, [
-      idempotencyKey,
-    ]);
+    const { rows } = await executor.query(
+      `SELECT * FROM payment WHERE idempotency_key = $1`,
+      [idempotencyKey],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
@@ -163,7 +175,10 @@ export class PaymentRepository {
 
   /** DD only: bank has cleared it — PENDING -> CONFIRMED. */
   async markCleared(id: string, executor: Queryable): Promise<void> {
-    await executor.query(`UPDATE payment SET state = 'CONFIRMED', confirmed_at = now() WHERE id = $1`, [id]);
+    await executor.query(
+      `UPDATE payment SET state = 'CONFIRMED', confirmed_at = now() WHERE id = $1`,
+      [id],
+    );
   }
 
   async createIntent(
@@ -180,18 +195,36 @@ export class PaymentRepository {
       `INSERT INTO payment (paid_by_person_id, amount_paise, mode, gateway, idempotency_key, state)
        VALUES ($1, $2, $3, $4, $5, 'INITIATED')
        RETURNING *`,
-      [input.paidByPersonId, input.amountPaise, input.mode, input.gateway, input.idempotencyKey],
+      [
+        input.paidByPersonId,
+        input.amountPaise,
+        input.mode,
+        input.gateway,
+        input.idempotencyKey,
+      ],
     );
     return mapRow(rows[0]);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<PaymentRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM payment WHERE id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<PaymentRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM payment WHERE id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<PaymentRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM payment WHERE id = $1 FOR UPDATE`, [id]);
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<PaymentRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM payment WHERE id = $1 FOR UPDATE`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
@@ -270,12 +303,20 @@ export class PaymentRepository {
   }
 
   async list(
-    filter: { state?: string; mode?: string; studentSearch?: string; fromDate?: string; toDate?: string },
+    filter: {
+      state?: string;
+      mode?: string;
+      studentSearch?: string;
+      fromDate?: string;
+      toDate?: string;
+    },
     page: PageQuery,
     executor: Queryable = this.postgres,
   ): Promise<{ rows: PaymentListRow[]; total: number }> {
     const { offset, limit } = toOffsetLimit(page);
-    const search = filter.studentSearch?.trim() ? `%${filter.studentSearch.trim()}%` : null;
+    const search = filter.studentSearch?.trim()
+      ? `%${filter.studentSearch.trim()}%`
+      : null;
     const params = [
       filter.state ?? null,
       filter.mode ?? null,
@@ -341,7 +382,11 @@ export class PaymentRepository {
     );
   }
 
-  async markFailedFromWebhook(id: string, reason: string, executor: Queryable): Promise<void> {
+  async markFailedFromWebhook(
+    id: string,
+    reason: string,
+    executor: Queryable,
+  ): Promise<void> {
     await executor.query(
       `UPDATE payment SET state = 'FAILED', failure_reason = $2 WHERE id = $1`,
       [id, reason],

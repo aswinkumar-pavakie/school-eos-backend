@@ -3,7 +3,10 @@
 // never simply overwrites the old value without a trail.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface CreateRescheduleParams {
   onlineClassId: string;

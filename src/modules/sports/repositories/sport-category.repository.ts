@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface SportCategoryRow {
   id: string;
@@ -27,7 +30,10 @@ const COLUMNS = `id, sport_id AS "sportId", name, age_group AS "ageGroup", gende
 export class SportCategoryRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findBySportId(sportId: string, executor: Queryable = this.postgres): Promise<SportCategoryRow[]> {
+  async findBySportId(
+    sportId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<SportCategoryRow[]> {
     const { rows } = await executor.query<SportCategoryRow>(
       `SELECT ${COLUMNS} FROM sport_category WHERE sport_id = $1 ORDER BY name`,
       [sportId],
@@ -35,7 +41,10 @@ export class SportCategoryRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<SportCategoryRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<SportCategoryRow | null> {
     const { rows } = await executor.query<SportCategoryRow>(
       `SELECT ${COLUMNS} FROM sport_category WHERE id = $1`,
       [id],

@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -11,11 +20,16 @@ import { UpdateDriverDto } from './dto/update-driver.dto';
 export class DriversController {
   constructor(private readonly driversService: DriversService) {}
 
+  // Method-level @Roles OVERRIDES the class-level one (RolesGuard uses
+  // getAllAndOverride, not a merge) -- these reads are reachable by
+  // TRANSPORT_MANAGER too; create/update stay ADMIN-only exactly as before.
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @Get()
   async list() {
     return { data: await this.driversService.list() };
   }
 
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @Get(':id')
   async get(@Param('id') id: string) {
     return { data: await this.driversService.get(id) };
@@ -23,7 +37,10 @@ export class DriversController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateDriverDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateDriverDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.driversService.create(dto, actor.personId) };
   }
 

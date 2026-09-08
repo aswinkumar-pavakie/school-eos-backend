@@ -25,11 +25,17 @@ import { UpdateVehicleMaintenanceDto } from './dto/update-vehicle-maintenance.dt
 export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
 
+  // Method-level @Roles OVERRIDES the class-level one (RolesGuard uses
+  // getAllAndOverride, not a merge) -- so these two reads are reachable by
+  // TRANSPORT_MANAGER too, while every other route on this controller stays
+  // ADMIN-only exactly as before (create/update/documents/maintenance).
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @Get('vehicles')
   async list() {
     return { data: await this.vehiclesService.list() };
   }
 
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @Get('vehicles/:id')
   async get(@Param('id') id: string) {
     return { data: await this.vehiclesService.get(id) };
@@ -37,7 +43,10 @@ export class VehiclesController {
 
   @Post('vehicles')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateVehicleDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateVehicleDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.vehiclesService.create(dto, actor.personId) };
   }
 
@@ -62,7 +71,9 @@ export class VehiclesController {
     @Body() dto: CreateVehicleDocumentDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.vehiclesService.createDocument(id, dto, actor.personId) };
+    return {
+      data: await this.vehiclesService.createDocument(id, dto, actor.personId),
+    };
   }
 
   @Patch('vehicle-documents/:documentId')
@@ -71,7 +82,13 @@ export class VehiclesController {
     @Body() dto: UpdateVehicleDocumentDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.vehiclesService.updateDocument(documentId, dto, actor.personId) };
+    return {
+      data: await this.vehiclesService.updateDocument(
+        documentId,
+        dto,
+        actor.personId,
+      ),
+    };
   }
 
   @Delete('vehicle-documents/:documentId')
@@ -96,7 +113,13 @@ export class VehiclesController {
     @Body() dto: CreateVehicleMaintenanceDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.vehiclesService.createMaintenance(id, dto, actor.personId) };
+    return {
+      data: await this.vehiclesService.createMaintenance(
+        id,
+        dto,
+        actor.personId,
+      ),
+    };
   }
 
   @Patch('vehicle-maintenance/:maintenanceId')
@@ -105,6 +128,12 @@ export class VehiclesController {
     @Body() dto: UpdateVehicleMaintenanceDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.vehiclesService.updateMaintenance(maintenanceId, dto, actor.personId) };
+    return {
+      data: await this.vehiclesService.updateMaintenance(
+        maintenanceId,
+        dto,
+        actor.personId,
+      ),
+    };
   }
 }

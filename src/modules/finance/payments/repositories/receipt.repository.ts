@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
 
 export interface ReceiptRow {
   id: string;
@@ -31,8 +34,14 @@ function mapRow(row: any): ReceiptRow {
 export class ReceiptRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<ReceiptRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM receipt WHERE id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ReceiptRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM receipt WHERE id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
@@ -48,7 +57,10 @@ export class ReceiptRepository {
     return rows.length ? mapRow(rows[0]) : null;
   }
 
-  async listByPayment(paymentId: string, executor: Queryable = this.postgres): Promise<ReceiptRow[]> {
+  async listByPayment(
+    paymentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ReceiptRow[]> {
     const { rows } = await executor.query(
       `SELECT * FROM receipt WHERE payment_id = $1 ORDER BY issued_on ASC`,
       [paymentId],
@@ -56,7 +68,10 @@ export class ReceiptRepository {
     return rows.map(mapRow);
   }
 
-  async countForFinancialYear(financialYear: string, executor: Queryable): Promise<number> {
+  async countForFinancialYear(
+    financialYear: string,
+    executor: Queryable,
+  ): Promise<number> {
     const { rows } = await executor.query(
       `SELECT COUNT(*)::int AS count FROM receipt WHERE financial_year = $1`,
       [financialYear],

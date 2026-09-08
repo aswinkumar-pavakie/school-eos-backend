@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -37,7 +47,10 @@ export class InventoryItemsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateInventoryItemDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateInventoryItemDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.itemsService.create(dto, actor.personId) };
   }
 
@@ -52,7 +65,11 @@ export class InventoryItemsController {
 
   @Post(':id/add-stock')
   @HttpCode(HttpStatus.OK)
-  async addStock(@Param('id') id: string, @Body() dto: AddStockDto, @CurrentActor() actor: AuthenticatedUser) {
+  async addStock(
+    @Param('id') id: string,
+    @Body() dto: AddStockDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.itemsService.addStock(id, dto, actor.personId) };
   }
 
@@ -63,18 +80,27 @@ export class InventoryItemsController {
     @Body() dto: AdjustStockDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.itemsService.adjustStock(id, dto, actor.personId) };
+    return {
+      data: await this.itemsService.adjustStock(id, dto, actor.personId),
+    };
   }
 
   @Post(':id/issue')
   @HttpCode(HttpStatus.OK)
-  async issue(@Param('id') id: string, @Body() dto: IssueInventoryItemDto, @CurrentActor() actor: AuthenticatedUser) {
+  async issue(
+    @Param('id') id: string,
+    @Body() dto: IssueInventoryItemDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.itemsService.issue(id, dto, actor.personId) };
   }
 
   @Post(':id/return')
   @HttpCode(HttpStatus.OK)
-  async returnItem(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async returnItem(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.itemsService.returnItem(id, actor.personId) };
   }
 
@@ -95,7 +121,9 @@ export class InventoryItemsController {
     @Body() dto: InventoryItemNoteDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.itemsService.markDamaged(id, dto, actor.personId) };
+    return {
+      data: await this.itemsService.markDamaged(id, dto, actor.personId),
+    };
   }
 
   @Post(':id/mark-lost')
@@ -110,7 +138,11 @@ export class InventoryItemsController {
 
   @Post(':id/retire')
   @HttpCode(HttpStatus.OK)
-  async retire(@Param('id') id: string, @Body() dto: InventoryItemNoteDto, @CurrentActor() actor: AuthenticatedUser) {
+  async retire(
+    @Param('id') id: string,
+    @Body() dto: InventoryItemNoteDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.itemsService.retire(id, dto, actor.personId) };
   }
 }

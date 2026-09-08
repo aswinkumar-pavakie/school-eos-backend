@@ -1,4 +1,11 @@
-import { IsIn, IsISO8601, IsOptional, IsString, IsUrl, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MinLength,
+} from 'class-validator';
 
 // multipart/form-data alongside the files (see media-posts.controller.ts) --
 // booleans arrive as the strings "true"/"false", same convention

@@ -1,4 +1,12 @@
-import { IsBoolean, IsDateString, IsIn, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 const EVENT_TYPES = [
   'HOLIDAY',
@@ -12,7 +20,13 @@ const EVENT_TYPES = [
   'OTHER',
 ];
 const SCOPE_TYPES = ['SCHOOL', 'CAMPUS', 'STAGE', 'GRADE', 'SECTION'];
-const STAGES = ['PRE_PRIMARY', 'PRIMARY', 'MIDDLE', 'SECONDARY', 'HIGHER_SECONDARY'];
+const STAGES = [
+  'PRE_PRIMARY',
+  'PRIMARY',
+  'MIDDLE',
+  'SECONDARY',
+  'HIGHER_SECONDARY',
+];
 
 export class CreateCalendarEventDto {
   @IsUUID()

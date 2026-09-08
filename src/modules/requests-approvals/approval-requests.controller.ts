@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -17,7 +26,9 @@ import { SendBackApprovalRequestDto } from './dto/send-back-approval-request.dto
 @Roles('ADMIN')
 @Controller('approval-requests')
 export class ApprovalRequestsController {
-  constructor(private readonly approvalRequestsService: ApprovalRequestsService) {}
+  constructor(
+    private readonly approvalRequestsService: ApprovalRequestsService,
+  ) {}
 
   @Get()
   async list(@Query() query: ApprovalRequestQueryDto) {
@@ -32,8 +43,13 @@ export class ApprovalRequestsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateApprovalRequestDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.approvalRequestsService.create(dto, actor.personId) };
+  async create(
+    @Body() dto: CreateApprovalRequestDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.approvalRequestsService.create(dto, actor.personId),
+    };
   }
 
   @Post(':id/approve')
@@ -43,7 +59,9 @@ export class ApprovalRequestsController {
     @Body() dto: DecideApprovalRequestDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.approvalRequestsService.approve(id, dto, actor.personId) };
+    return {
+      data: await this.approvalRequestsService.approve(id, dto, actor.personId),
+    };
   }
 
   @Post(':id/reject')
@@ -53,7 +71,9 @@ export class ApprovalRequestsController {
     @Body() dto: DecideApprovalRequestDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.approvalRequestsService.reject(id, dto, actor.personId) };
+    return {
+      data: await this.approvalRequestsService.reject(id, dto, actor.personId),
+    };
   }
 
   @Post(':id/send-back')
@@ -63,7 +83,13 @@ export class ApprovalRequestsController {
     @Body() dto: SendBackApprovalRequestDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.approvalRequestsService.sendBack(id, dto, actor.personId) };
+    return {
+      data: await this.approvalRequestsService.sendBack(
+        id,
+        dto,
+        actor.personId,
+      ),
+    };
   }
 
   @Post(':id/resubmit')
@@ -73,6 +99,12 @@ export class ApprovalRequestsController {
     @Body() dto: ResubmitApprovalRequestDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.approvalRequestsService.resubmit(id, dto, actor.personId) };
+    return {
+      data: await this.approvalRequestsService.resubmit(
+        id,
+        dto,
+        actor.personId,
+      ),
+    };
   }
 }

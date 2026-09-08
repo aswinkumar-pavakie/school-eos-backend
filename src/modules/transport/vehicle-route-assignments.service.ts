@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { VehicleRouteAssignmentRepository } from './repositories/vehicle-route-assignment.repository';
 import { CreateVehicleRouteAssignmentDto } from './dto/create-vehicle-route-assignment.dto';
@@ -19,7 +23,8 @@ export class VehicleRouteAssignmentsService {
 
   async get(id: string) {
     const assignment = await this.assignmentRepo.findById(id);
-    if (!assignment) throw new NotFoundException('Vehicle route assignment not found');
+    if (!assignment)
+      throw new NotFoundException('Vehicle route assignment not found');
     return assignment;
   }
 
@@ -37,17 +42,24 @@ export class VehicleRouteAssignmentsService {
       return created;
     } catch (err) {
       if (isForeignKeyViolation(err)) {
-        throw new ConflictException('vehicleId, routeId, driverId, or attendantId does not exist.');
+        throw new ConflictException(
+          'vehicleId, routeId, driverId, or attendantId does not exist.',
+        );
       }
       throw err;
     }
   }
 
-  async update(id: string, dto: UpdateVehicleRouteAssignmentDto, actorPersonId: string) {
+  async update(
+    id: string,
+    dto: UpdateVehicleRouteAssignmentDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.get(id);
     try {
       const updated = await this.assignmentRepo.update(id, dto);
-      if (!updated) throw new NotFoundException('Vehicle route assignment not found');
+      if (!updated)
+        throw new NotFoundException('Vehicle route assignment not found');
       await this.auditService.record({
         actorPersonId,
         action: 'VEHICLE_ROUTE_ASSIGNMENT_UPDATED',

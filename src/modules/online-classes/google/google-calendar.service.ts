@@ -16,7 +16,12 @@ const MAX_POLL_ATTEMPTS = 3;
 const POLL_DELAY_MS = 700;
 
 export type CalendarCreationOutcome =
-  | { outcome: 'SUCCEEDED'; googleCalendarEventId: string; googleMeetId: string; meetingUrl: string }
+  | {
+      outcome: 'SUCCEEDED';
+      googleCalendarEventId: string;
+      googleMeetId: string;
+      meetingUrl: string;
+    }
   | { outcome: 'PENDING'; googleCalendarEventId: string }
   | { outcome: 'FAILED'; message: string }
   | { outcome: 'NEEDS_REAUTH' };
@@ -65,10 +70,18 @@ export interface CancelEventParams {
 export class GoogleCalendarService {
   constructor(private readonly configService: ConfigService) {}
 
-  async createOrCheckMeeting(params: CreateOrCheckMeetingParams): Promise<CalendarCreationOutcome> {
-    const built = this.buildCalendarClient(params.refreshTokenEncrypted, params.encryptionKeyId);
+  async createOrCheckMeeting(
+    params: CreateOrCheckMeetingParams,
+  ): Promise<CalendarCreationOutcome> {
+    const built = this.buildCalendarClient(
+      params.refreshTokenEncrypted,
+      params.encryptionKeyId,
+    );
     if ('error' in built) {
-      return { outcome: 'FAILED', message: 'Could not decrypt stored Google credentials' };
+      return {
+        outcome: 'FAILED',
+        message: 'Could not decrypt stored Google credentials',
+      };
     }
     const { calendar } = built;
 
@@ -84,11 +97,17 @@ export class GoogleCalendarService {
             summary: params.topic,
             description: params.description ?? undefined,
             start: {
-              dateTime: toLocalDateTimeString(params.scheduledDate, params.startTime),
+              dateTime: toLocalDateTimeString(
+                params.scheduledDate,
+                params.startTime,
+              ),
               timeZone: params.timezone,
             },
             end: {
-              dateTime: toLocalDateTimeString(params.scheduledDate, params.endTime),
+              dateTime: toLocalDateTimeString(
+                params.scheduledDate,
+                params.endTime,
+              ),
               timeZone: params.timezone,
             },
             conferenceData: {
@@ -105,12 +124,18 @@ export class GoogleCalendarService {
         // Retrying a class whose conference was still pending (or whose status update
         // never got persisted, e.g. a crash right after insert) — never call insert
         // again for an event we already created, only re-check it.
-        const getResponse = await calendar.events.get({ calendarId: 'primary', eventId });
+        const getResponse = await calendar.events.get({
+          calendarId: 'primary',
+          eventId,
+        });
         conferenceData = getResponse.data.conferenceData;
       }
 
       if (!eventId) {
-        return { outcome: 'FAILED', message: 'Google did not return an event id' };
+        return {
+          outcome: 'FAILED',
+          message: 'Google did not return an event id',
+        };
       }
 
       let statusCode = conferenceData?.createRequest?.status?.statusCode;
@@ -119,9 +144,16 @@ export class GoogleCalendarService {
       // assume the Meet URL is available just because the insert call returned. Poll a
       // bounded number of times; if it's still not resolved, we leave it PENDING rather
       // than guessing either way.
-      for (let attempt = 0; statusCode === 'pending' && attempt < MAX_POLL_ATTEMPTS; attempt++) {
+      for (
+        let attempt = 0;
+        statusCode === 'pending' && attempt < MAX_POLL_ATTEMPTS;
+        attempt++
+      ) {
         await sleep(POLL_DELAY_MS * (attempt + 1));
-        const pollResponse = await calendar.events.get({ calendarId: 'primary', eventId });
+        const pollResponse = await calendar.events.get({
+          calendarId: 'primary',
+          eventId,
+        });
         conferenceData = pollResponse.data.conferenceData;
         statusCode = conferenceData?.createRequest?.status?.statusCode;
       }
@@ -138,11 +170,19 @@ export class GoogleCalendarService {
             message: 'Google reported success but did not return a Meet link',
           };
         }
-        return { outcome: 'SUCCEEDED', googleCalendarEventId: eventId, googleMeetId, meetingUrl };
+        return {
+          outcome: 'SUCCEEDED',
+          googleCalendarEventId: eventId,
+          googleMeetId,
+          meetingUrl,
+        };
       }
 
       if (statusCode === 'failure') {
-        return { outcome: 'FAILED', message: 'Google could not create a Meet conference for this event' };
+        return {
+          outcome: 'FAILED',
+          message: 'Google could not create a Meet conference for this event',
+        };
       }
 
       // Exhausted the bounded poll and it's still "pending" — genuinely still in
@@ -162,10 +202,18 @@ export class GoogleCalendarService {
    * conference is preserved untouched. Nothing is called at all if the caller has no
    * eventId yet (see OnlineClassesService.reschedule — a class whose Google creation
    * never succeeded has nothing to sync). */
-  async updateEventTime(params: UpdateEventTimeParams): Promise<CalendarSyncOutcome> {
-    const built = this.buildCalendarClient(params.refreshTokenEncrypted, params.encryptionKeyId);
+  async updateEventTime(
+    params: UpdateEventTimeParams,
+  ): Promise<CalendarSyncOutcome> {
+    const built = this.buildCalendarClient(
+      params.refreshTokenEncrypted,
+      params.encryptionKeyId,
+    );
     if ('error' in built) {
-      return { outcome: 'FAILED', message: 'Could not decrypt stored Google credentials' };
+      return {
+        outcome: 'FAILED',
+        message: 'Could not decrypt stored Google credentials',
+      };
     }
     const { calendar } = built;
 
@@ -175,11 +223,17 @@ export class GoogleCalendarService {
         eventId: params.eventId,
         requestBody: {
           start: {
-            dateTime: toLocalDateTimeString(params.scheduledDate, params.startTime),
+            dateTime: toLocalDateTimeString(
+              params.scheduledDate,
+              params.startTime,
+            ),
             timeZone: params.timezone,
           },
           end: {
-            dateTime: toLocalDateTimeString(params.scheduledDate, params.endTime),
+            dateTime: toLocalDateTimeString(
+              params.scheduledDate,
+              params.endTime,
+            ),
             timeZone: params.timezone,
           },
         },
@@ -202,14 +256,23 @@ export class GoogleCalendarService {
    * confirmed event representing this class") is already true either way, which is
    * what makes this safely idempotent/retryable. */
   async cancelEvent(params: CancelEventParams): Promise<CalendarSyncOutcome> {
-    const built = this.buildCalendarClient(params.refreshTokenEncrypted, params.encryptionKeyId);
+    const built = this.buildCalendarClient(
+      params.refreshTokenEncrypted,
+      params.encryptionKeyId,
+    );
     if ('error' in built) {
-      return { outcome: 'FAILED', message: 'Could not decrypt stored Google credentials' };
+      return {
+        outcome: 'FAILED',
+        message: 'Could not decrypt stored Google credentials',
+      };
     }
     const { calendar } = built;
 
     try {
-      await calendar.events.delete({ calendarId: 'primary', eventId: params.eventId });
+      await calendar.events.delete({
+        calendarId: 'primary',
+        eventId: params.eventId,
+      });
       return { outcome: 'SUCCEEDED' };
     } catch (err) {
       if (isInvalidGrantError(err)) {
@@ -232,7 +295,11 @@ export class GoogleCalendarService {
 
     let refreshToken: string;
     try {
-      refreshToken = decryptRefreshToken(refreshTokenEncrypted, encryptionKeyId, encryptionKeys);
+      refreshToken = decryptRefreshToken(
+        refreshTokenEncrypted,
+        encryptionKeyId,
+        encryptionKeys,
+      );
     } catch {
       return { error: 'DECRYPT_FAILED' };
     }
@@ -264,7 +331,10 @@ function sleep(ms: number): Promise<void> {
  * faculty chose. Combined with a separate IANA timeZone field, Google interprets
  * the result as that wall-clock time in that zone — no manual UTC offset math
  * needed. */
-export function toLocalDateTimeString(scheduledDate: string, time: string): string {
+export function toLocalDateTimeString(
+  scheduledDate: string,
+  time: string,
+): string {
   // `time` is startTime/endTime as read back from a Postgres `time` column, which pg
   // always returns as "HH:mm:ss" (seconds included) — do not append ":00" again here,
   // that previously produced a malformed "...T10:00:00:00" string Google rejected
@@ -273,15 +343,17 @@ export function toLocalDateTimeString(scheduledDate: string, time: string): stri
 }
 
 function isInvalidGrantError(err: unknown): boolean {
-  const data = (err as { response?: { data?: { error?: string } } })?.response?.data;
+  const data = (err as { response?: { data?: { error?: string } } })?.response
+    ?.data;
   return data?.error === 'invalid_grant';
 }
 
 /** 404 (Not Found) or 410 (Gone, which Google uses for an already-deleted event) —
  * either way, "no such event", handled the same way by both call sites. */
 export function isNotFoundError(err: unknown): boolean {
-  const status = (err as { response?: { status?: number }; code?: number | string })?.response
-    ?.status;
+  const status = (
+    err as { response?: { status?: number }; code?: number | string }
+  )?.response?.status;
   return status === 404 || status === 410;
 }
 
@@ -289,7 +361,10 @@ export function isNotFoundError(err: unknown): boolean {
  * error/request/config object, which for an authenticated request can carry the
  * Authorization header. */
 function extractSafeErrorMessage(err: unknown): string {
-  const message = (err as { response?: { data?: { error?: { message?: string } } } })?.response
-    ?.data?.error?.message;
-  return typeof message === 'string' && message.length > 0 ? message : 'Could not reach Google Calendar';
+  const message = (
+    err as { response?: { data?: { error?: { message?: string } } } }
+  )?.response?.data?.error?.message;
+  return typeof message === 'string' && message.length > 0
+    ? message
+    : 'Could not reach Google Calendar';
 }

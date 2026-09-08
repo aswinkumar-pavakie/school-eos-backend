@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface RepairRequestRow {
   id: string;
@@ -99,7 +102,9 @@ export class RepairRequestRepository {
 
     if (filter.search) {
       params.push(`%${filter.search.toLowerCase()}%`);
-      conditions.push(`(lower(r.title) LIKE $${params.length} OR lower(r.description) LIKE $${params.length})`);
+      conditions.push(
+        `(lower(r.title) LIKE $${params.length} OR lower(r.description) LIKE $${params.length})`,
+      );
     }
     if (filter.status) {
       params.push(filter.status);
@@ -122,7 +127,8 @@ export class RepairRequestRepository {
       conditions.push(`lower(coalesce(r.location, '')) LIKE $${params.length}`);
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countResult = await this.postgres.query<{ count: string }>(
       `SELECT count(*) FROM ${FROM} ${where}`,
@@ -138,7 +144,9 @@ export class RepairRequestRepository {
     return { rows, total: parseInt(countResult.rows[0].count, 10) };
   }
 
-  async findOverviewCounts(executor: Queryable = this.postgres): Promise<RepairRequestOverviewCounts> {
+  async findOverviewCounts(
+    executor: Queryable = this.postgres,
+  ): Promise<RepairRequestOverviewCounts> {
     const { rows } = await executor.query<{
       total: string;
       requested: string;
@@ -166,14 +174,23 @@ export class RepairRequestRepository {
     };
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<RepairRequestRow | null> {
-    const { rows } = await executor.query<RepairRequestRow>(`SELECT ${COLUMNS} FROM ${FROM} WHERE r.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<RepairRequestRow | null> {
+    const { rows } = await executor.query<RepairRequestRow>(
+      `SELECT ${COLUMNS} FROM ${FROM} WHERE r.id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
   /** Row-locking read, for use inside a transaction right before a status change
    * that must not race with a concurrent action on the same request. */
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<RepairRequestRow | null> {
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<RepairRequestRow | null> {
     const { rows } = await executor.query<RepairRequestRow>(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE r.id = $1 FOR UPDATE OF r`,
       [id],
@@ -181,7 +198,10 @@ export class RepairRequestRepository {
     return rows[0] ?? null;
   }
 
-  async create(input: CreateRepairRequestInput, executor: Queryable = this.postgres): Promise<RepairRequestRow> {
+  async create(
+    input: CreateRepairRequestInput,
+    executor: Queryable = this.postgres,
+  ): Promise<RepairRequestRow> {
     const { rows } = await executor.query<{ id: string }>(
       `INSERT INTO repair_request
          (title, inventory_item_id, issue_type, location, priority, description, requested_on, requested_by)
@@ -245,14 +265,26 @@ export class RepairRequestRepository {
     return this.findById(id, executor);
   }
 
-  async setStatus(id: string, status: string, executor: Queryable): Promise<RepairRequestRow | null> {
-    await executor.query(`UPDATE repair_request SET status = $2, updated_at = now() WHERE id = $1`, [id, status]);
+  async setStatus(
+    id: string,
+    status: string,
+    executor: Queryable,
+  ): Promise<RepairRequestRow | null> {
+    await executor.query(
+      `UPDATE repair_request SET status = $2, updated_at = now() WHERE id = $1`,
+      [id, status],
+    );
     return this.findById(id, executor);
   }
 
   async complete(
     id: string,
-    input: { completedOn: string; repairAction?: string | null; completionNotes?: string | null; costPaise?: number | null },
+    input: {
+      completedOn: string;
+      repairAction?: string | null;
+      completionNotes?: string | null;
+      costPaise?: number | null;
+    },
     executor: Queryable,
   ): Promise<RepairRequestRow | null> {
     await executor.query(
@@ -261,7 +293,13 @@ export class RepairRequestRepository {
          completion_notes = COALESCE($4, completion_notes), cost_paise = COALESCE($5, cost_paise),
          updated_at = now()
        WHERE id = $1`,
-      [id, input.completedOn, input.repairAction ?? null, input.completionNotes ?? null, input.costPaise ?? null],
+      [
+        id,
+        input.completedOn,
+        input.repairAction ?? null,
+        input.completionNotes ?? null,
+        input.costPaise ?? null,
+      ],
     );
     return this.findById(id, executor);
   }

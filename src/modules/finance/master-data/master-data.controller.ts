@@ -5,7 +5,17 @@
 // to work end-to-end. grade itself is owned by Academics (no such module exists yet) —
 // read-only here, no write endpoint.
 
-import { Body, Controller, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { Roles } from '../../../common/auth/roles.decorator';
 import { CreateExpenseCategoryDto } from './dto/create-expense-category.dto';
 import { CreateFeeHeadDto } from './dto/create-fee-head.dto';

@@ -1,4 +1,11 @@
-import { IsHexColor, IsIn, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  IsHexColor,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateHouseDto {
   @IsOptional()

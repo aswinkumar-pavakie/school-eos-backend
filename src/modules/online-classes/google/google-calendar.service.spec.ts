@@ -13,11 +13,16 @@
 // object at all — removing the whole class of bug at its source. scheduledDate is
 // now always already the right string; toLocalDateTimeString is just concatenation.
 
-import { isNotFoundError, toLocalDateTimeString } from './google-calendar.service';
+import {
+  isNotFoundError,
+  toLocalDateTimeString,
+} from './google-calendar.service';
 
 describe('toLocalDateTimeString', () => {
   it('does not append extra seconds to a time that already has them (Postgres `time` shape)', () => {
-    expect(toLocalDateTimeString('2026-09-25', '10:00:00')).toBe('2026-09-25T10:00:00');
+    expect(toLocalDateTimeString('2026-09-25', '10:00:00')).toBe(
+      '2026-09-25T10:00:00',
+    );
   });
 
   it('preserves the exact date string it was given, untouched', () => {

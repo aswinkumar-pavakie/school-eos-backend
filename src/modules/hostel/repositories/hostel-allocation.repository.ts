@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
+import { personPhotoPublicUrlSql } from '../../../infrastructure/storage/public-photo-url.util';
 
 export interface HostelAllocationRow {
   id: string;
@@ -7,10 +11,18 @@ export interface HostelAllocationRow {
   studentFirstName: string;
   studentLastName: string | null;
   admissionNo: string;
+  stateStudentId: string | null;
+  photoUrl: string | null;
   bedId: string;
   bedNo: string;
+  roomId: string;
   roomNo: string;
+  floorNo: number;
+  blockId: string;
+  blockName: string;
   hostelName: string;
+  gradeName: string | null;
+  sectionName: string | null;
   academicYearId: string;
   allocatedFrom: string;
   allocatedTo: string | null;
@@ -31,6 +43,9 @@ export interface HostelAllocationFilter {
   bedId?: string;
   academicYearId?: string;
   status?: string;
+  // Read-only filter added for the Hostel Warden module's Room & Bed View --
+  // restricts the result to allocations within one of these hostels.
+  hostelIds?: string[];
 }
 
 export interface UnallocatedHostelStudentRow {
@@ -45,7 +60,10 @@ export interface UnallocatedHostelStudentRow {
 
 const COLUMNS = `a.id, a.student_id AS "studentId", p.first_name AS "studentFirstName",
   p.last_name AS "studentLastName", s.admission_no AS "admissionNo",
-  a.bed_id AS "bedId", bed.bed_no AS "bedNo", r.room_no AS "roomNo", h.name AS "hostelName",
+  s.state_student_id AS "stateStudentId",
+  ${personPhotoPublicUrlSql('p.photo_object_key')} AS "photoUrl",
+  a.bed_id AS "bedId", bed.bed_no AS "bedNo", r.id AS "roomId", r.room_no AS "roomNo", f.floor_no AS "floorNo",
+  bl.id AS "blockId", bl.name AS "blockName", h.name AS "hostelName", g.name AS "gradeName", sec.name AS "sectionName",
   a.academic_year_id AS "academicYearId",
   a.allocated_from AS "allocatedFrom", a.allocated_to AS "allocatedTo",
   a.allocated_by AS "allocatedBy", a.status`;
@@ -57,7 +75,11 @@ const FROM = `hostel_allocation a
   JOIN hostel_room r ON r.id = bed.room_id
   JOIN hostel_floor f ON f.id = r.floor_id
   JOIN hostel_block bl ON bl.id = f.block_id
-  JOIN hostel h ON h.id = bl.hostel_id`;
+  JOIN hostel h ON h.id = bl.hostel_id
+  LEFT JOIN student_enrolment se
+    ON se.student_id = a.student_id AND se.academic_year_id = a.academic_year_id AND se.status = 'ACTIVE'
+  LEFT JOIN section sec ON sec.id = se.section_id
+  LEFT JOIN grade g ON g.id = sec.grade_id`;
 
 @Injectable()
 export class HostelAllocationRepository {
@@ -85,7 +107,12 @@ export class HostelAllocationRepository {
       params.push(filter.status);
       conditions.push(`a.status = $${params.length}`);
     }
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    if (filter.hostelIds) {
+      params.push(filter.hostelIds);
+      conditions.push(`h.id = ANY($${params.length})`);
+    }
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { rows } = await executor.query<HostelAllocationRow>(
       `SELECT ${COLUMNS} FROM ${FROM} ${where} ORDER BY a.allocated_from DESC`,
       params,
@@ -121,7 +148,10 @@ export class HostelAllocationRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<HostelAllocationRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<HostelAllocationRow | null> {
     const { rows } = await executor.query<HostelAllocationRow>(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE a.id = $1`,
       [id],
@@ -137,7 +167,13 @@ export class HostelAllocationRepository {
       `INSERT INTO hostel_allocation (student_id, bed_id, academic_year_id, allocated_from, allocated_by)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
-      [input.studentId, input.bedId, input.academicYearId, input.allocatedFrom, input.allocatedBy ?? null],
+      [
+        input.studentId,
+        input.bedId,
+        input.academicYearId,
+        input.allocatedFrom,
+        input.allocatedBy ?? null,
+      ],
     );
     return (await this.findById(rows[0].id, executor))!;
   }

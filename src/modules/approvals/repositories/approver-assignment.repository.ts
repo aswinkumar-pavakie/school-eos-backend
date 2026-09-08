@@ -4,7 +4,10 @@
 // matching section, not by anyone whose JWT merely lists CLASS_ADVISOR among their roles.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface ApproverScope {
   scopeType: string;

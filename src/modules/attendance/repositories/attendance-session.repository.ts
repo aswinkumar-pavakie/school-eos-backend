@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface AttendanceSessionRow {
   id: string;
@@ -37,7 +40,10 @@ export class AttendanceSessionRepository {
     return (await this.findById(rows[0].id, executor))!;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<AttendanceSessionRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<AttendanceSessionRow | null> {
     const { rows } = await executor.query<AttendanceSessionRow>(
       `SELECT ${COLUMNS} FROM attendance_session WHERE id = $1`,
       [id],
@@ -46,7 +52,13 @@ export class AttendanceSessionRepository {
   }
 
   async findMany(
-    filter: { sectionId?: string; dateFrom?: string; dateTo?: string; limit: number; offset: number },
+    filter: {
+      sectionId?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      limit: number;
+      offset: number;
+    },
     executor: Queryable = this.postgres,
   ): Promise<{ rows: AttendanceSessionRow[]; total: number }> {
     const conditions: string[] = [];
@@ -63,7 +75,8 @@ export class AttendanceSessionRepository {
       params.push(filter.dateTo);
       conditions.push(`session_date <= $${params.length}`);
     }
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countResult = await this.postgres.query<{ count: string }>(
       `SELECT count(*) FROM attendance_session ${where}`,

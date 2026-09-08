@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface RouteRow {
   id: string;
@@ -33,18 +36,27 @@ export class RouteRepository {
   constructor(private readonly postgres: PostgresService) {}
 
   async findMany(executor: Queryable = this.postgres): Promise<RouteRow[]> {
-    const { rows } = await executor.query<RouteRow>(`SELECT ${COLUMNS} FROM route ORDER BY name`);
+    const { rows } = await executor.query<RouteRow>(
+      `SELECT ${COLUMNS} FROM route ORDER BY name`,
+    );
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<RouteRow | null> {
-    const { rows } = await executor.query<RouteRow>(`SELECT ${COLUMNS} FROM route WHERE id = $1`, [
-      id,
-    ]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<RouteRow | null> {
+    const { rows } = await executor.query<RouteRow>(
+      `SELECT ${COLUMNS} FROM route WHERE id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
-  async create(input: CreateRouteInput, executor: Queryable = this.postgres): Promise<RouteRow> {
+  async create(
+    input: CreateRouteInput,
+    executor: Queryable = this.postgres,
+  ): Promise<RouteRow> {
     const { rows } = await executor.query<RouteRow>(
       `INSERT INTO route (name, code, direction, distance_km, status)
        VALUES ($1, $2, COALESCE($3, 'BOTH'), $4, COALESCE($5, 'ACTIVE'))

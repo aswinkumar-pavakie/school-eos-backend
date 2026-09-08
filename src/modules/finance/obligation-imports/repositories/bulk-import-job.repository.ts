@@ -2,8 +2,14 @@
 // existed anywhere in the schema before that migration; see its header comment for why.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
-import { PageQuery, toOffsetLimit } from '../../../../common/pagination/pagination.util';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PageQuery,
+  toOffsetLimit,
+} from '../../../../common/pagination/pagination.util';
 
 export interface BulkImportJobRow {
   id: string;
@@ -48,7 +54,12 @@ export class BulkImportJobRepository {
   constructor(private readonly postgres: PostgresService) {}
 
   async create(
-    input: { jobType: string; sourceObjectKey: string; fileName: string; createdBy: string },
+    input: {
+      jobType: string;
+      sourceObjectKey: string;
+      fileName: string;
+      createdBy: string;
+    },
     executor: Queryable = this.postgres,
   ): Promise<BulkImportJobRow> {
     const { rows } = await executor.query(
@@ -60,13 +71,25 @@ export class BulkImportJobRepository {
     return mapRow(rows[0]);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<BulkImportJobRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM bulk_import_job WHERE id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<BulkImportJobRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM bulk_import_job WHERE id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<BulkImportJobRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM bulk_import_job WHERE id = $1 FOR UPDATE`, [id]);
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<BulkImportJobRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM bulk_import_job WHERE id = $1 FOR UPDATE`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
@@ -90,7 +113,13 @@ export class BulkImportJobRepository {
 
   async recordValidation(
     id: string,
-    result: { totalRows: number; validRows: number; errorRows: number; rowErrors: unknown; state: string },
+    result: {
+      totalRows: number;
+      validRows: number;
+      errorRows: number;
+      rowErrors: unknown;
+      state: string;
+    },
     executor: Queryable,
   ): Promise<void> {
     await executor.query(
@@ -98,7 +127,14 @@ export class BulkImportJobRepository {
        SET total_rows = $2, valid_rows = $3, error_rows = $4, row_errors = $5, state = $6,
            validated_at = now(), updated_at = now()
        WHERE id = $1`,
-      [id, result.totalRows, result.validRows, result.errorRows, JSON.stringify(result.rowErrors), result.state],
+      [
+        id,
+        result.totalRows,
+        result.validRows,
+        result.errorRows,
+        JSON.stringify(result.rowErrors),
+        result.state,
+      ],
     );
   }
 

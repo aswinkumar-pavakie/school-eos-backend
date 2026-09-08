@@ -26,7 +26,14 @@ import { StudentsController } from './students.controller';
 import { StudentsService } from './students.service';
 
 @Module({
-  imports: [IdentityModule, TransportModule, TimetableModule, AdminFinanceModule, AttendanceModule, StaffAttendanceModule],
+  imports: [
+    IdentityModule,
+    TransportModule,
+    TimetableModule,
+    AdminFinanceModule,
+    AttendanceModule,
+    StaffAttendanceModule,
+  ],
   controllers: [
     StaffController,
     StudentsController,

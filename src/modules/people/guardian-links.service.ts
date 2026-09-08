@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { PersonRepository } from '../identity/repositories/person.repository';
@@ -23,11 +28,17 @@ export class GuardianLinksService {
     return this.guardianLinkRepo.findByStudentId(studentId);
   }
 
-  async create(studentId: string, dto: CreateGuardianLinkDto, actorPersonId: string) {
+  async create(
+    studentId: string,
+    dto: CreateGuardianLinkDto,
+    actorPersonId: string,
+  ) {
     await this.assertStudentExists(studentId);
     const guardianPerson = await this.personRepo.findById(dto.personId);
     if (!guardianPerson) {
-      throw new BadRequestException('personId does not refer to an existing person.');
+      throw new BadRequestException(
+        'personId does not refer to an existing person.',
+      );
     }
 
     // A student can have at most one ACTIVE FATHER and one ACTIVE MOTHER --
@@ -36,7 +47,8 @@ export class GuardianLinksService {
     // Other relationships (GUARDIAN, GRANDPARENT, SIBLING, OTHER) aren't
     // restricted this way since a student can genuinely have several of those.
     if (dto.relationship === 'FATHER' || dto.relationship === 'MOTHER') {
-      const existingLinks = await this.guardianLinkRepo.findByStudentId(studentId);
+      const existingLinks =
+        await this.guardianLinkRepo.findByStudentId(studentId);
       const conflicting = existingLinks.find(
         (link) =>
           link.status === 'ACTIVE' &&
@@ -115,7 +127,9 @@ export class GuardianLinksService {
             'This student already has an active guardian with that relationship (father/mother). Revoke the existing link first if this is a correction.',
           );
         }
-        throw new ConflictException('This person is already linked to this student as a guardian.');
+        throw new ConflictException(
+          'This person is already linked to this student as a guardian.',
+        );
       }
       throw err;
     }
@@ -130,9 +144,14 @@ export class GuardianLinksService {
       dto.relationship !== existing.relationship &&
       existing.status === 'ACTIVE'
     ) {
-      const siblingLinks = await this.guardianLinkRepo.findByStudentId(existing.studentId);
+      const siblingLinks = await this.guardianLinkRepo.findByStudentId(
+        existing.studentId,
+      );
       const conflicting = siblingLinks.find(
-        (link) => link.id !== id && link.status === 'ACTIVE' && link.relationship === dto.relationship,
+        (link) =>
+          link.id !== id &&
+          link.status === 'ACTIVE' &&
+          link.relationship === dto.relationship,
       );
       if (conflicting) {
         throw new ConflictException(
@@ -145,7 +164,10 @@ export class GuardianLinksService {
     try {
       updated = await this.guardianLinkRepo.update(id, dto);
     } catch (err) {
-      if (isUniqueViolation(err) && constraintName(err) === 'uq_guardian_single_parent_role') {
+      if (
+        isUniqueViolation(err) &&
+        constraintName(err) === 'uq_guardian_single_parent_role'
+      ) {
         throw new ConflictException(
           'This student already has an active guardian with that relationship (father/mother). Revoke the existing link first if this is a correction.',
         );
@@ -171,10 +193,15 @@ export class GuardianLinksService {
     const existing = await this.guardianLinkRepo.findById(id);
     if (!existing) throw new NotFoundException('Guardian link not found');
     if (existing.status !== 'ACTIVE') {
-      throw new BadRequestException('Cannot make a revoked guardian link the primary contact.');
+      throw new BadRequestException(
+        'Cannot make a revoked guardian link the primary contact.',
+      );
     }
     return this.unitOfWork.run(async (client) => {
-      await this.guardianLinkRepo.clearPrimaryForStudent(existing.studentId, client);
+      await this.guardianLinkRepo.clearPrimaryForStudent(
+        existing.studentId,
+        client,
+      );
       const updated = await this.guardianLinkRepo.setPrimary(id, client);
       await this.auditService.record(
         {

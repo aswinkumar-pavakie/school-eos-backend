@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface CommunityAnnouncementRow {
   id: string;
@@ -64,7 +67,13 @@ export class CommunityAnnouncementRepository {
       `INSERT INTO community_announcement (community_id, title, body, published_by, state)
        VALUES ($1, $2, $3, $4, COALESCE($5, 'PUBLISHED'))
        RETURNING ${COLUMNS}`,
-      [input.communityId, input.title, input.body, input.publishedBy, input.state ?? null],
+      [
+        input.communityId,
+        input.title,
+        input.body,
+        input.publishedBy,
+        input.state ?? null,
+      ],
     );
     return rows[0];
   }

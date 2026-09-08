@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CurrentActor } from '../../../common/auth/current-actor.decorator';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
 import { Roles } from '../../../common/auth/roles.decorator';
@@ -17,12 +27,18 @@ export class ReconciliationsController {
   async list(@Query() query: ListReconciliationsQueryDto) {
     const { page, pageSize, ...filter } = query;
     const { rows, total } = await this.service.list(filter, { page, pageSize });
-    return { data: rows, meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 } };
+    return {
+      data: rows,
+      meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 },
+    };
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateReconciliationDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateReconciliationDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const data = await this.service.create(dto, actor);
     return { data };
   }
@@ -59,7 +75,10 @@ export class ReconciliationsController {
 
   @Post(':id/close')
   @HttpCode(HttpStatus.OK)
-  async close(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async close(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const data = await this.service.close(id, actor);
     return { data };
   }

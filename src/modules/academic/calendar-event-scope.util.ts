@@ -18,14 +18,18 @@ export function assertValidCalendarEventScope(input: CalendarScopeInput): void {
 
   if (scopeType === 'SCHOOL') {
     if (input.scopeId || input.scopeStage) {
-      throw new BadRequestException('scope_type SCHOOL must not have a scope_id or scope_stage.');
+      throw new BadRequestException(
+        'scope_type SCHOOL must not have a scope_id or scope_stage.',
+      );
     }
     return;
   }
 
   if (scopeType === 'STAGE') {
     if (input.scopeId) {
-      throw new BadRequestException('scope_type STAGE must not have a scope_id.');
+      throw new BadRequestException(
+        'scope_type STAGE must not have a scope_id.',
+      );
     }
     if (!input.scopeStage) {
       throw new BadRequestException('scope_type STAGE requires scope_stage.');
@@ -35,9 +39,13 @@ export function assertValidCalendarEventScope(input: CalendarScopeInput): void {
 
   // CAMPUS, GRADE, SECTION
   if (!input.scopeId) {
-    throw new BadRequestException(`scope_type ${scopeType} requires a scope_id.`);
+    throw new BadRequestException(
+      `scope_type ${scopeType} requires a scope_id.`,
+    );
   }
   if (input.scopeStage) {
-    throw new BadRequestException(`scope_type ${scopeType} must not have a scope_stage.`);
+    throw new BadRequestException(
+      `scope_type ${scopeType} must not have a scope_stage.`,
+    );
   }
 }

@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { HouseRepository } from './repositories/house.repository';
 import { CreateHouseDto } from './dto/create-house.dto';
@@ -35,8 +39,10 @@ export class HousesService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A house with this name already exists.');
-      if (isForeignKeyViolation(err)) throw new ConflictException('captainStudentId does not exist.');
+      if (isUniqueViolation(err))
+        throw new ConflictException('A house with this name already exists.');
+      if (isForeignKeyViolation(err))
+        throw new ConflictException('captainStudentId does not exist.');
       throw err;
     }
   }
@@ -57,8 +63,10 @@ export class HousesService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A house with this name already exists.');
-      if (isForeignKeyViolation(err)) throw new ConflictException('captainStudentId does not exist.');
+      if (isUniqueViolation(err))
+        throw new ConflictException('A house with this name already exists.');
+      if (isForeignKeyViolation(err))
+        throw new ConflictException('captainStudentId does not exist.');
       throw err;
     }
   }

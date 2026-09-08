@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { CreateShootAssignmentDto } from './dto/create-shoot-assignment.dto';
@@ -53,12 +57,19 @@ export class ShootAssignmentsService {
       });
       return created;
     } catch (err) {
-      if (isForeignKeyViolation(err)) throw new BadRequestException('One of the crew members or gear items named does not exist.');
+      if (isForeignKeyViolation(err))
+        throw new BadRequestException(
+          'One of the crew members or gear items named does not exist.',
+        );
       throw err;
     }
   }
 
-  async update(id: string, dto: UpdateShootAssignmentDto, actorPersonId: string) {
+  async update(
+    id: string,
+    dto: UpdateShootAssignmentDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.get(id);
     try {
       await this.unitOfWork.run((client) => this.repo.update(id, dto, client));
@@ -75,7 +86,10 @@ export class ShootAssignmentsService {
       });
       return updated;
     } catch (err) {
-      if (isForeignKeyViolation(err)) throw new BadRequestException('One of the crew members or gear items named does not exist.');
+      if (isForeignKeyViolation(err))
+        throw new BadRequestException(
+          'One of the crew members or gear items named does not exist.',
+        );
       throw err;
     }
   }

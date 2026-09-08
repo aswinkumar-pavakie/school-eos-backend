@@ -22,8 +22,14 @@ import {
   ApprovalRequestRow,
   CreateApprovalRequestInput,
 } from './repositories/approval-request.repository';
-import { ApprovalStepRepository, ApprovalStepRow } from './repositories/approval-step.repository';
-import { ApproverAssignmentRepository, ApproverScope } from './repositories/approver-assignment.repository';
+import {
+  ApprovalStepRepository,
+  ApprovalStepRow,
+} from './repositories/approval-step.repository';
+import {
+  ApproverAssignmentRepository,
+  ApproverScope,
+} from './repositories/approver-assignment.repository';
 import { SubjectStateRegistry } from './subject-state.registry';
 
 const OPEN_STATES = ['PENDING', 'RETROSPECTIVE_PENDING'];
@@ -34,8 +40,11 @@ export interface ApprovalRequestWithSteps {
   steps: ApprovalStepRow[];
 }
 
-function approverScopeFromPayload(payload: Record<string, unknown>): ApproverScope | null {
-  const scope = payload.approverScope as { scopeType?: string; scopeId?: string } | undefined;
+function approverScopeFromPayload(
+  payload: Record<string, unknown>,
+): ApproverScope | null {
+  const scope = payload.approverScope as
+    { scopeType?: string; scopeId?: string } | undefined;
   if (!scope || !scope.scopeType || !scope.scopeId) return null;
   return { scopeType: scope.scopeType, scopeId: scope.scopeId };
 }
@@ -59,7 +68,9 @@ export class ApprovalsService {
    * own `executor` so the subject write and the approval request are one commit.
    */
   async createRequest(
-    input: Omit<CreateApprovalRequestInput, 'initialState'> & { isRetrospective?: boolean },
+    input: Omit<CreateApprovalRequestInput, 'initialState'> & {
+      isRetrospective?: boolean;
+    },
     executor: Queryable,
   ): Promise<ApprovalRequestRow> {
     const steps = await this.approvalPolicyRepo.resolveStepChain(
@@ -80,16 +91,20 @@ export class ApprovalsService {
       {
         ...input,
         dueAt,
-        initialState: input.isRetrospective || firstStep.isRetrospective
-          ? 'RETROSPECTIVE_PENDING'
-          : 'PENDING',
+        initialState:
+          input.isRetrospective || firstStep.isRetrospective
+            ? 'RETROSPECTIVE_PENDING'
+            : 'PENDING',
       },
       executor,
     );
 
     await this.approvalStepRepo.createMany(
       request.id,
-      steps.map((s) => ({ sequenceNo: s.sequenceNo, approverRoleCode: s.approverRoleCode })),
+      steps.map((s) => ({
+        sequenceNo: s.sequenceNo,
+        approverRoleCode: s.approverRoleCode,
+      })),
       executor,
     );
 
@@ -102,9 +117,13 @@ export class ApprovalsService {
     return request?.state ?? null;
   }
 
-  async getById(id: string, actor: AuthenticatedUser): Promise<ApprovalRequestWithSteps> {
+  async getById(
+    id: string,
+    actor: AuthenticatedUser,
+  ): Promise<ApprovalRequestWithSteps> {
     const request = await this.approvalRequestRepo.findById(id);
-    if (!request) throw new NotFoundException(APPROVALS_ERRORS.REQUEST_NOT_FOUND);
+    if (!request)
+      throw new NotFoundException(APPROVALS_ERRORS.REQUEST_NOT_FOUND);
     await this.assertCallerMayView(request, actor);
     const steps = await this.approvalStepRepo.listByRequest(id);
     return { request, steps };
@@ -112,27 +131,44 @@ export class ApprovalsService {
 
   async listForCaller(
     actor: AuthenticatedUser,
-    filter: { requestType?: string; status?: 'PENDING' | 'APPROVED' | 'REJECTED' },
+    filter: {
+      requestType?: string;
+      status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+    },
   ): Promise<ApprovalRequestRow[]> {
     const status = filter.status ?? 'PENDING';
     const forHistory = status !== 'PENDING';
     const states = status === 'PENDING' ? OPEN_STATES : [status];
-    return this.approvalRequestRepo.listForCaller(actor.personId, actor.roles, forHistory, {
-      requestType: filter.requestType,
-      states,
-    });
+    return this.approvalRequestRepo.listForCaller(
+      actor.personId,
+      actor.roles,
+      forHistory,
+      {
+        requestType: filter.requestType,
+        states,
+      },
+    );
   }
 
   /** The requester withdraws their own still-open request — a real, distinct terminal state (CANCELLED), not a REJECTED decision by an approver. */
-  async withdraw(id: string, actor: AuthenticatedUser): Promise<ApprovalRequestRow> {
+  async withdraw(
+    id: string,
+    actor: AuthenticatedUser,
+  ): Promise<ApprovalRequestRow> {
     return this.unitOfWork.run(async (client) => {
-      const request = await this.approvalRequestRepo.findByIdForUpdate(id, client);
-      if (!request) throw new NotFoundException(APPROVALS_ERRORS.REQUEST_NOT_FOUND);
+      const request = await this.approvalRequestRepo.findByIdForUpdate(
+        id,
+        client,
+      );
+      if (!request)
+        throw new NotFoundException(APPROVALS_ERRORS.REQUEST_NOT_FOUND);
       if (!OPEN_STATES.includes(request.state)) {
         throw new ConflictException(APPROVALS_ERRORS.NOT_PENDING);
       }
       if (request.requestedBy !== actor.personId) {
-        throw new ForbiddenException('Only the person who raised this request can withdraw it');
+        throw new ForbiddenException(
+          'Only the person who raised this request can withdraw it',
+        );
       }
       await this.approvalRequestRepo.markCancelled(id, client);
       const handler = this.subjectStateRegistry.get(request.subjectObjectType);
@@ -164,8 +200,12 @@ export class ApprovalsService {
     comment: string | null,
   ): Promise<ApprovalRequestWithSteps> {
     return this.unitOfWork.run(async (client) => {
-      const request = await this.approvalRequestRepo.findByIdForUpdate(id, client);
-      if (!request) throw new NotFoundException(APPROVALS_ERRORS.REQUEST_NOT_FOUND);
+      const request = await this.approvalRequestRepo.findByIdForUpdate(
+        id,
+        client,
+      );
+      if (!request)
+        throw new NotFoundException(APPROVALS_ERRORS.REQUEST_NOT_FOUND);
       if (!OPEN_STATES.includes(request.state)) {
         throw new ConflictException(APPROVALS_ERRORS.NOT_PENDING);
       }
@@ -183,7 +223,9 @@ export class ApprovalsService {
       // their own request — checked here, once, for every request type, rather than
       // trusted to each feature's own policy rows to get right.
       if (request.requestedBy === actor.personId) {
-        throw new ForbiddenException('You cannot decide a request you raised yourself');
+        throw new ForbiddenException(
+          'You cannot decide a request you raised yourself',
+        );
       }
 
       const scope = approverScopeFromPayload(request.payload);
@@ -194,19 +236,41 @@ export class ApprovalsService {
         client,
       );
       if (!authorized) {
-        throw new ForbiddenException(APPROVALS_ERRORS.STEP_NOT_ASSIGNED_TO_CALLER);
+        throw new ForbiddenException(
+          APPROVALS_ERRORS.STEP_NOT_ASSIGNED_TO_CALLER,
+        );
       }
 
-      await this.approvalStepRepo.recordDecision(step.id, actor.personId, decision, comment, client);
+      await this.approvalStepRepo.recordDecision(
+        step.id,
+        actor.personId,
+        decision,
+        comment,
+        client,
+      );
 
       if (decision === 'REJECTED') {
         await this.approvalRequestRepo.markDecided(id, 'REJECTED', client);
-        await this.applySubjectTransition(request, 'REJECTED', client, actor.personId);
+        await this.applySubjectTransition(
+          request,
+          'REJECTED',
+          client,
+          actor.personId,
+        );
       } else {
-        const isFinal = !(await this.approvalStepRepo.hasNextStep(id, request.currentStep, client));
+        const isFinal = !(await this.approvalStepRepo.hasNextStep(
+          id,
+          request.currentStep,
+          client,
+        ));
         if (isFinal) {
           await this.approvalRequestRepo.markDecided(id, 'APPROVED', client);
-          await this.applySubjectTransition(request, 'APPROVED', client, actor.personId);
+          await this.applySubjectTransition(
+            request,
+            'APPROVED',
+            client,
+            actor.personId,
+          );
         } else {
           await this.approvalRequestRepo.advanceToNextStep(id, client);
         }
@@ -231,7 +295,10 @@ export class ApprovalsService {
         {
           personId: request.requestedBy,
           notificationType: `APPROVAL_${decision}`,
-          title: decision === 'APPROVED' ? 'Your request was approved' : 'Your request was rejected',
+          title:
+            decision === 'APPROVED'
+              ? 'Your request was approved'
+              : 'Your request was rejected',
           body: `${request.requestType.replace(/_/g, ' ')} — ${decision.toLowerCase()}${comment ? `: ${comment}` : ''}`,
           relatedObjectType: 'approval_request',
           relatedObjectId: id,
@@ -239,7 +306,10 @@ export class ApprovalsService {
         client,
       );
 
-      const refreshedRequest = await this.approvalRequestRepo.findById(id, client);
+      const refreshedRequest = await this.approvalRequestRepo.findById(
+        id,
+        client,
+      );
       const steps = await this.approvalStepRepo.listByRequest(id, client);
       return { request: refreshedRequest!, steps };
     });
@@ -278,9 +348,12 @@ export class ApprovalsService {
     actor: AuthenticatedUser,
   ): Promise<void> {
     if (request.requestedBy === actor.personId) return;
-    if (actor.roles.some((r) => ApprovalsService.ALWAYS_VISIBLE_TO.includes(r))) return;
+    if (actor.roles.some((r) => ApprovalsService.ALWAYS_VISIBLE_TO.includes(r)))
+      return;
     const steps = await this.approvalStepRepo.listByRequest(request.id);
-    const relevant = steps.some((s) => s.approverRoleCode && actor.roles.includes(s.approverRoleCode));
+    const relevant = steps.some(
+      (s) => s.approverRoleCode && actor.roles.includes(s.approverRoleCode),
+    );
     if (!relevant) throw new ForbiddenException();
   }
 }

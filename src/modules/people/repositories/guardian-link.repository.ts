@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 import { personPhotoPublicUrlSql } from '../../../infrastructure/storage/public-photo-url.util';
 
 export interface GuardianLinkRow {
@@ -115,7 +118,10 @@ export class GuardianLinkRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<GuardianLinkRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<GuardianLinkRow | null> {
     const { rows } = await executor.query<GuardianLinkRow>(
       `SELECT ${COLUMNS} FROM guardian_link g JOIN person p ON p.id = g.person_id WHERE g.id = $1`,
       [id],
@@ -177,7 +183,10 @@ export class GuardianLinkRepository {
   /** Unsets any other ACTIVE primary contact for this student -- must run inside a
    * transaction alongside setPrimary, so the partial-unique index on
    * (student_id WHERE is_primary_contact AND status='ACTIVE') never sees two true rows. */
-  async clearPrimaryForStudent(studentId: string, executor: Queryable): Promise<void> {
+  async clearPrimaryForStudent(
+    studentId: string,
+    executor: Queryable,
+  ): Promise<void> {
     await executor.query(
       `UPDATE guardian_link SET is_primary_contact = false
        WHERE student_id = $1 AND is_primary_contact = true`,
@@ -185,7 +194,10 @@ export class GuardianLinkRepository {
     );
   }
 
-  async setPrimary(id: string, executor: Queryable): Promise<GuardianLinkRow | null> {
+  async setPrimary(
+    id: string,
+    executor: Queryable,
+  ): Promise<GuardianLinkRow | null> {
     const { rows } = await executor.query<{ id: string }>(
       `UPDATE guardian_link SET is_primary_contact = true, updated_at = now() WHERE id = $1 RETURNING id`,
       [id],
@@ -194,7 +206,10 @@ export class GuardianLinkRepository {
     return this.findById(id, executor);
   }
 
-  async revoke(id: string, executor: Queryable = this.postgres): Promise<GuardianLinkRow | null> {
+  async revoke(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<GuardianLinkRow | null> {
     const { rows } = await executor.query<{ id: string }>(
       `UPDATE guardian_link SET status = 'REVOKED', is_primary_contact = false, updated_at = now()
        WHERE id = $1
@@ -205,8 +220,14 @@ export class GuardianLinkRepository {
     return this.findById(id, executor);
   }
 
-  async delete(id: string, executor: Queryable = this.postgres): Promise<boolean> {
-    const { rowCount } = await executor.query(`DELETE FROM guardian_link WHERE id = $1`, [id]);
+  async delete(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<boolean> {
+    const { rowCount } = await executor.query(
+      `DELETE FROM guardian_link WHERE id = $1`,
+      [id],
+    );
     return (rowCount ?? 0) > 0;
   }
 }

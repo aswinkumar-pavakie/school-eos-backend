@@ -1,4 +1,12 @@
-import { Body, Controller, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -17,7 +25,9 @@ export class EnrolmentsController {
     @Body() dto: UpdateEnrolmentDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.enrolmentsService.update(id, dto, actor.personId) };
+    return {
+      data: await this.enrolmentsService.update(id, dto, actor.personId),
+    };
   }
 
   @Post(':id/transfer')
@@ -27,6 +37,12 @@ export class EnrolmentsController {
     @Body() dto: TransferEnrolmentDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.enrolmentsService.transferSection(id, dto, actor.personId) };
+    return {
+      data: await this.enrolmentsService.transferSection(
+        id,
+        dto,
+        actor.personId,
+      ),
+    };
   }
 }

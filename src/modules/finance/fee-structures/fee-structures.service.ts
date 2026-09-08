@@ -11,7 +11,11 @@
 // finance-approval-handlers.service.ts) moves it to ACTIVE/back to DRAFT once
 // Principal decides.
 
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
 import { FINANCE_ERRORS } from '../../../common/errors/error-codes';
 import { PageQuery } from '../../../common/pagination/pagination.util';
@@ -24,7 +28,11 @@ import {
 } from './repositories/fee-structure.repository';
 
 function isUniqueViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as { code?: string }).code === '23505';
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as { code?: string }).code === '23505'
+  );
 }
 
 function sumLines(lines: FeeStructureLineInput[]): string {
@@ -39,14 +47,21 @@ export class FeeStructuresService {
     private readonly unitOfWork: UnitOfWork,
   ) {}
 
-  async list(filter: { academicYearId?: string; gradeId?: string; state?: string }, page: PageQuery) {
+  async list(
+    filter: { academicYearId?: string; gradeId?: string; state?: string },
+    page: PageQuery,
+  ) {
     const { rows, total } = await this.repo.list(filter, page);
     return { rows, total };
   }
 
-  async getById(id: string): Promise<{ structure: FeeStructureRow; lines: Awaited<ReturnType<FeeStructureRepository['listLines']>> }> {
+  async getById(id: string): Promise<{
+    structure: FeeStructureRow;
+    lines: Awaited<ReturnType<FeeStructureRepository['listLines']>>;
+  }> {
     const structure = await this.repo.findById(id);
-    if (!structure) throw new NotFoundException(FINANCE_ERRORS.FEE_STRUCTURE_NOT_FOUND);
+    if (!structure)
+      throw new NotFoundException(FINANCE_ERRORS.FEE_STRUCTURE_NOT_FOUND);
     const lines = await this.repo.listLines(id);
     return { structure, lines };
   }
@@ -89,7 +104,8 @@ export class FeeStructuresService {
   ): Promise<FeeStructureRow> {
     return this.unitOfWork.run(async (client) => {
       const structure = await this.repo.findByIdForUpdate(id, client);
-      if (!structure) throw new NotFoundException(FINANCE_ERRORS.FEE_STRUCTURE_NOT_FOUND);
+      if (!structure)
+        throw new NotFoundException(FINANCE_ERRORS.FEE_STRUCTURE_NOT_FOUND);
       if (structure.state !== 'DRAFT') {
         throw new ConflictException(FINANCE_ERRORS.FEE_STRUCTURE_LOCKED);
       }
@@ -108,22 +124,31 @@ export class FeeStructuresService {
   async delete(id: string): Promise<void> {
     return this.unitOfWork.run(async (client) => {
       const structure = await this.repo.findByIdForUpdate(id, client);
-      if (!structure) throw new NotFoundException(FINANCE_ERRORS.FEE_STRUCTURE_NOT_FOUND);
+      if (!structure)
+        throw new NotFoundException(FINANCE_ERRORS.FEE_STRUCTURE_NOT_FOUND);
       if (structure.state !== 'DRAFT') {
-        throw new ConflictException('Only a draft, never-activated fee structure can be deleted');
+        throw new ConflictException(
+          'Only a draft, never-activated fee structure can be deleted',
+        );
       }
       await this.repo.delete(id, client);
     });
   }
 
   /** Submits the structure for Principal's activation approval — does not activate it directly. */
-  async activate(id: string, actor: AuthenticatedUser): Promise<FeeStructureRow> {
+  async activate(
+    id: string,
+    actor: AuthenticatedUser,
+  ): Promise<FeeStructureRow> {
     return this.unitOfWork.run(async (client) => {
       const structure = await this.repo.findByIdForUpdate(id, client);
-      if (!structure) throw new NotFoundException(FINANCE_ERRORS.FEE_STRUCTURE_NOT_FOUND);
+      if (!structure)
+        throw new NotFoundException(FINANCE_ERRORS.FEE_STRUCTURE_NOT_FOUND);
       if (structure.state !== 'DRAFT') {
         throw new ConflictException(
-          structure.state === 'ACTIVE' ? FINANCE_ERRORS.FEE_STRUCTURE_ALREADY_ACTIVE : FINANCE_ERRORS.FEE_STRUCTURE_LOCKED,
+          structure.state === 'ACTIVE'
+            ? FINANCE_ERRORS.FEE_STRUCTURE_ALREADY_ACTIVE
+            : FINANCE_ERRORS.FEE_STRUCTURE_LOCKED,
         );
       }
 
@@ -139,7 +164,11 @@ export class FeeStructuresService {
       );
       await this.repo.linkApprovalRequest(id, approvalRequest.id, client);
       await this.repo.setState(id, 'PENDING_APPROVAL', client);
-      return { ...structure, state: 'PENDING_APPROVAL', approvalRequestId: approvalRequest.id };
+      return {
+        ...structure,
+        state: 'PENDING_APPROVAL',
+        approvalRequestId: approvalRequest.id,
+      };
     });
   }
 
@@ -147,9 +176,12 @@ export class FeeStructuresService {
   async deactivate(id: string): Promise<FeeStructureRow> {
     return this.unitOfWork.run(async (client) => {
       const structure = await this.repo.findByIdForUpdate(id, client);
-      if (!structure) throw new NotFoundException(FINANCE_ERRORS.FEE_STRUCTURE_NOT_FOUND);
+      if (!structure)
+        throw new NotFoundException(FINANCE_ERRORS.FEE_STRUCTURE_NOT_FOUND);
       if (structure.state !== 'ACTIVE') {
-        throw new ConflictException('Only an ACTIVE fee structure can be superseded');
+        throw new ConflictException(
+          'Only an ACTIVE fee structure can be superseded',
+        );
       }
       await this.repo.setState(id, 'SUPERSEDED', client);
       return { ...structure, state: 'SUPERSEDED' };

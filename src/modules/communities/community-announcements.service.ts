@@ -18,7 +18,11 @@ export class CommunityAnnouncementsService {
     return this.announcementRepo.findByCommunityId(communityId);
   }
 
-  async create(communityId: string, dto: CreateAnnouncementDto, actorPersonId: string) {
+  async create(
+    communityId: string,
+    dto: CreateAnnouncementDto,
+    actorPersonId: string,
+  ) {
     await this.communitiesService.get(communityId);
     const created = await this.announcementRepo.create({
       communityId,
@@ -40,9 +44,11 @@ export class CommunityAnnouncementsService {
 
   async update(id: string, dto: UpdateAnnouncementDto, actorPersonId: string) {
     const existing = await this.announcementRepo.findById(id);
-    if (!existing) throw new NotFoundException('Community announcement not found');
+    if (!existing)
+      throw new NotFoundException('Community announcement not found');
     const updated = await this.announcementRepo.update(id, dto);
-    if (!updated) throw new NotFoundException('Community announcement not found');
+    if (!updated)
+      throw new NotFoundException('Community announcement not found');
     await this.auditService.record({
       actorPersonId,
       action: 'COMMUNITY_ANNOUNCEMENT_UPDATED',

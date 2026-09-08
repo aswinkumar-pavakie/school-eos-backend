@@ -5,7 +5,10 @@
 // to the fields Identity/Access actually own.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface PersonAuthView {
   id: string;
@@ -268,7 +271,8 @@ export class PersonRepository {
       );
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countResult = await this.postgres.query<{ count: string }>(
       `SELECT count(*) FROM person p ${where}`,
@@ -281,7 +285,9 @@ export class PersonRepository {
     const limitIdx = params.length + 1;
     const offsetIdx = params.length + 2;
 
-    const rowsResult = await executor.query<RawPersonRow & { created_at: Date; role_codes: string[] }>(
+    const rowsResult = await executor.query<
+      RawPersonRow & { created_at: Date; role_codes: string[] }
+    >(
       `SELECT p.id, p.first_name, p.last_name, p.email, p.mobile, p.date_of_birth, p.gender,
               p.status, p.photo_object_key, p.address_line1, p.address_line2, p.city, p.state,
               p.pincode, p.created_at,

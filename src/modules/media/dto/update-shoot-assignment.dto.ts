@@ -1,4 +1,13 @@
-import { ArrayUnique, IsArray, IsIn, IsISO8601, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  ArrayUnique,
+  IsArray,
+  IsIn,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateShootAssignmentDto {
   @IsOptional()

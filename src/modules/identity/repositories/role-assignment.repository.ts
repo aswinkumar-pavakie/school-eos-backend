@@ -8,7 +8,10 @@
 // so a revoked assignment's history stays visible).
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface ActiveRoleAssignment {
   roleCode: string;
@@ -205,7 +208,8 @@ export class RoleAssignmentRepository {
       conditions.push(`ra.status = $${params.length}`);
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { rows } = await executor.query(
       `SELECT ra.id, ra.person_id, ra.role_code, ra.scope_type, ra.scope_id, ra.scope_stage,
               ra.academic_year_id, ra.valid_from, ra.valid_to, ra.status, ra.assigned_by,

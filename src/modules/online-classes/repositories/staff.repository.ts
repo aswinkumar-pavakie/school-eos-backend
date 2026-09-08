@@ -4,7 +4,10 @@
 // couple on an unimplemented one (mirrors identity's PersonRepository).
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface StaffIdentityView {
   id: string;
@@ -20,7 +23,11 @@ export class StaffRepository {
     personId: string,
     executor: Queryable = this.postgres,
   ): Promise<StaffIdentityView | null> {
-    const { rows } = await executor.query<{ id: string; person_id: string; status: string }>(
+    const { rows } = await executor.query<{
+      id: string;
+      person_id: string;
+      status: string;
+    }>(
       `SELECT id, person_id, status
        FROM staff
        WHERE person_id = $1`,

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface IdCardRow {
   id: string;
@@ -56,7 +59,10 @@ const FROM = `id_card c
 export class IdCardRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findMany(filter: IdCardFilter, executor: Queryable = this.postgres): Promise<IdCardRow[]> {
+  async findMany(
+    filter: IdCardFilter,
+    executor: Queryable = this.postgres,
+  ): Promise<IdCardRow[]> {
     const conditions: string[] = [];
     const params: unknown[] = [];
     if (filter.studentId) {
@@ -71,7 +77,8 @@ export class IdCardRepository {
       params.push(filter.status);
       conditions.push(`c.status = $${params.length}`);
     }
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { rows } = await executor.query<IdCardRow>(
       `SELECT ${COLUMNS} FROM ${FROM} ${where} ORDER BY c.created_at DESC`,
       params,
@@ -79,17 +86,26 @@ export class IdCardRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<IdCardRow | null> {
-    const { rows } = await executor.query<IdCardRow>(`SELECT ${COLUMNS} FROM ${FROM} WHERE c.id = $1`, [
-      id,
-    ]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<IdCardRow | null> {
+    const { rows } = await executor.query<IdCardRow>(
+      `SELECT ${COLUMNS} FROM ${FROM} WHERE c.id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
   async findByIdForUpdate(
     id: string,
     executor: Queryable,
-  ): Promise<{ status: string; holderType: string; studentId: string | null; staffId: string | null } | null> {
+  ): Promise<{
+    status: string;
+    holderType: string;
+    studentId: string | null;
+    staffId: string | null;
+  } | null> {
     const { rows } = await executor.query<{
       status: string;
       holderType: string;
@@ -116,7 +132,10 @@ export class IdCardRepository {
     return rows[0] ?? null;
   }
 
-  async create(input: CreateIdCardInput, executor: Queryable = this.postgres): Promise<IdCardRow> {
+  async create(
+    input: CreateIdCardInput,
+    executor: Queryable = this.postgres,
+  ): Promise<IdCardRow> {
     const { rows } = await executor.query<{ id: string }>(
       `INSERT INTO id_card
          (card_uid, card_tech, holder_type, student_id, staff_id, issued_on, issued_by,
@@ -172,7 +191,10 @@ export class IdCardRepository {
    * itself is still fine) goes back to ACTIVE. Must clear blocked_at/blocked_by/
    * blocked_reason together, or the `card_blocked_ts` CHECK (status IN (LOST,
    * DAMAGED, BLOCKED) = (blocked_at IS NOT NULL)) rejects the update. */
-  async unblock(id: string, executor: Queryable = this.postgres): Promise<IdCardRow | null> {
+  async unblock(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<IdCardRow | null> {
     const { rows } = await executor.query<{ id: string }>(
       `UPDATE id_card
        SET status = 'ACTIVE', blocked_at = NULL, blocked_by = NULL, blocked_reason = NULL, updated_at = now()

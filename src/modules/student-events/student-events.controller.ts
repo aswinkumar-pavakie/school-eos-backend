@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -45,19 +56,28 @@ export class StudentEventsController {
   }
 
   @Get(':id')
-  async get(@Param('id', ParseUUIDPipe) id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async get(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.get(id, actor.personId) };
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateStudentEventDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateStudentEventDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.create(dto, actor.personId) };
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  async delete(@Param('id', ParseUUIDPipe) id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async delete(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.service.delete(id, actor.personId);
     return { data: { deleted: true } };
   }
@@ -89,6 +109,12 @@ export class StudentEventsController {
     @Param('participantId', ParseUUIDPipe) participantId: string,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.service.getPermissionLetter(id, participantId, actor.personId) };
+    return {
+      data: await this.service.getPermissionLetter(
+        id,
+        participantId,
+        actor.personId,
+      ),
+    };
   }
 }

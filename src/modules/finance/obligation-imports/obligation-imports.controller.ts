@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { Roles } from '../../../common/auth/roles.decorator';
 import { CurrentActor } from '../../../common/auth/current-actor.decorator';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
@@ -20,7 +29,10 @@ export class ObligationImportsController {
   async list(@Query() query: ListImportJobsQueryDto) {
     const { page, pageSize, ...filter } = query;
     const { rows, total } = await this.service.list(filter, { page, pageSize });
-    return { data: rows, meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 } };
+    return {
+      data: rows,
+      meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 },
+    };
   }
 
   // Registered before ":id" — "assignments" would otherwise be swallowed as an :id param.
@@ -31,8 +43,14 @@ export class ObligationImportsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateImportJobDto, @CurrentActor() actor: AuthenticatedUser) {
-    const data = await this.service.create({ ...dto, createdBy: actor.personId });
+  async create(
+    @Body() dto: CreateImportJobDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    const data = await this.service.create({
+      ...dto,
+      createdBy: actor.personId,
+    });
     return { data };
   }
 

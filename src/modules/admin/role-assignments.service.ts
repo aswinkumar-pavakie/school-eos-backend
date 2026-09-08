@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { PersonRepository } from '../identity/repositories/person.repository';
 import { RoleAssignmentRepository } from '../identity/repositories/role-assignment.repository';
@@ -23,14 +28,17 @@ export class RoleAssignmentsService {
   async grant(dto: GrantRoleAssignmentDto, actorPersonId: string) {
     // Same rule as Create User: Admin grants every role except Admin itself.
     if (dto.roleCode === 'ADMIN') {
-      throw new BadRequestException('The Admin role cannot be granted through this screen.');
+      throw new BadRequestException(
+        'The Admin role cannot be granted through this screen.',
+      );
     }
 
     const person = await this.personRepo.findById(dto.personId);
     if (!person) throw new NotFoundException('Person not found');
 
     const roleExists = await this.roleRepo.exists(dto.roleCode);
-    if (!roleExists) throw new BadRequestException(`Unknown role_code: ${dto.roleCode}`);
+    if (!roleExists)
+      throw new BadRequestException(`Unknown role_code: ${dto.roleCode}`);
 
     assertValidRoleScope(dto);
 
@@ -69,7 +77,9 @@ export class RoleAssignmentsService {
   async revoke(id: string, actorPersonId: string) {
     const revoked = await this.roleAssignmentRepo.revoke(id, actorPersonId);
     if (!revoked) {
-      throw new NotFoundException('Active role assignment not found (already revoked, or does not exist).');
+      throw new NotFoundException(
+        'Active role assignment not found (already revoked, or does not exist).',
+      );
     }
     await this.auditService.record({
       actorPersonId,

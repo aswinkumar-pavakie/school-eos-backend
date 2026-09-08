@@ -1,4 +1,12 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -8,7 +16,9 @@ import { CreateMembershipDto } from './dto/create-membership.dto';
 @Roles('ADMIN')
 @Controller()
 export class CommunityMembershipsController {
-  constructor(private readonly membershipsService: CommunityMembershipsService) {}
+  constructor(
+    private readonly membershipsService: CommunityMembershipsService,
+  ) {}
 
   @Get('communities/:id/memberships')
   async list(@Param('id') id: string) {
@@ -22,18 +32,33 @@ export class CommunityMembershipsController {
     @Body() dto: CreateMembershipDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.membershipsService.create(id, dto, actor.personId) };
+    return {
+      data: await this.membershipsService.create(id, dto, actor.personId),
+    };
   }
 
   @Post('community-memberships/:membershipId/record-consent')
   @HttpCode(HttpStatus.OK)
-  async recordConsent(@Param('membershipId') membershipId: string, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.membershipsService.recordConsent(membershipId, actor.personId) };
+  async recordConsent(
+    @Param('membershipId') membershipId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.membershipsService.recordConsent(
+        membershipId,
+        actor.personId,
+      ),
+    };
   }
 
   @Post('community-memberships/:membershipId/remove')
   @HttpCode(HttpStatus.OK)
-  async remove(@Param('membershipId') membershipId: string, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.membershipsService.remove(membershipId, actor.personId) };
+  async remove(
+    @Param('membershipId') membershipId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.membershipsService.remove(membershipId, actor.personId),
+    };
   }
 }

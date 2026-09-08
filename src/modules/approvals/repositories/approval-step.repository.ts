@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface ApprovalStepRow {
   id: string;
@@ -72,7 +75,11 @@ export class ApprovalStepRepository {
     return rows.map(mapRow);
   }
 
-  async hasNextStep(requestId: string, sequenceNo: number, executor: Queryable): Promise<boolean> {
+  async hasNextStep(
+    requestId: string,
+    sequenceNo: number,
+    executor: Queryable,
+  ): Promise<boolean> {
     const { rows } = await executor.query(
       `SELECT 1 FROM approval_step WHERE request_id = $1 AND sequence_no = $2 LIMIT 1`,
       [requestId, sequenceNo + 1],

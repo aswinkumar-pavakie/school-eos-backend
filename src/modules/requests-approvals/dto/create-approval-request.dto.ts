@@ -1,4 +1,11 @@
-import { IsIn, IsObject, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 import { ADMIN_REQUEST_TYPES } from '../admin-request-types';
 
 export class CreateApprovalRequestDto {

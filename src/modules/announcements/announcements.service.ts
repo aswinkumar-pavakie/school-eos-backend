@@ -1,9 +1,16 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { AnnouncementQueryDto } from './dto/announcement-query.dto';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 import { isForeignKeyViolation } from './pg-error.util';
-import { AnnouncementRepository, type AudienceRow } from './repositories/announcement.repository';
+import {
+  AnnouncementRepository,
+  type AudienceRow,
+} from './repositories/announcement.repository';
 
 @Injectable()
 export class AnnouncementsService {
@@ -22,10 +29,19 @@ export class AnnouncementsService {
   async create(dto: CreateAnnouncementDto, actorPersonId: string) {
     let audiences: AudienceRow[];
     if (dto.audienceType === 'SCHOOL') {
-      audiences = [{ audienceType: 'SCHOOL', targetId: null, targetStage: null, targetRole: null }];
+      audiences = [
+        {
+          audienceType: 'SCHOOL',
+          targetId: null,
+          targetStage: null,
+          targetRole: null,
+        },
+      ];
     } else {
       if (!dto.targetRoles || dto.targetRoles.length === 0) {
-        throw new BadRequestException('targetRoles is required when audienceType is ROLE.');
+        throw new BadRequestException(
+          'targetRoles is required when audienceType is ROLE.',
+        );
       }
       audiences = dto.targetRoles.map((role) => ({
         audienceType: 'ROLE',
@@ -57,7 +73,9 @@ export class AnnouncementsService {
       return created;
     } catch (err) {
       if (isForeignKeyViolation(err)) {
-        throw new BadRequestException('One of the target roles is not a real role_code.');
+        throw new BadRequestException(
+          'One of the target roles is not a real role_code.',
+        );
       }
       throw err;
     }

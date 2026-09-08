@@ -4,7 +4,13 @@
 
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Pool, types, type PoolClient, type QueryResult, type QueryResultRow } from 'pg';
+import {
+  Pool,
+  types,
+  type PoolClient,
+  type QueryResult,
+  type QueryResultRow,
+} from 'pg';
 
 // pg's default DATE (oid 1082) parser builds a JS Date at LOCAL midnight, then
 // res.json() serializes it with Date#toJSON() -> toISOString(), which converts
@@ -29,7 +35,9 @@ export class PostgresService implements OnModuleDestroy, Queryable {
   readonly pool: Pool;
 
   constructor(configService: ConfigService) {
-    this.pool = new Pool({ connectionString: configService.get<string>('database.url') });
+    this.pool = new Pool({
+      connectionString: configService.get<string>('database.url'),
+    });
 
     // pg's own documented gotcha: an IDLE pooled client can have its
     // connection reset by the server (e.g. Supabase's pooler recycling it) at
@@ -41,12 +49,17 @@ export class PostgresService implements OnModuleDestroy, Queryable {
     // fresh one is opened on the next query, no different from any other
     // brief network hiccup.
     this.pool.on('error', (err) => {
-      // eslint-disable-next-line no-console
-      console.error('[PostgresService] Idle pool client error (connection recycled, pool continues):', err.message);
+      console.error(
+        '[PostgresService] Idle pool client error (connection recycled, pool continues):',
+        err.message,
+      );
     });
   }
 
-  query<R extends QueryResultRow = any>(text: string, params?: unknown[]): Promise<QueryResult<R>> {
+  query<R extends QueryResultRow = any>(
+    text: string,
+    params?: unknown[],
+  ): Promise<QueryResult<R>> {
     return this.pool.query<R>(text, params);
   }
 

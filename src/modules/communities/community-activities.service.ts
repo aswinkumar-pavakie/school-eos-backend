@@ -18,7 +18,11 @@ export class CommunityActivitiesService {
     return this.activityRepo.findByCommunityId(communityId);
   }
 
-  async create(communityId: string, dto: CreateActivityDto, actorPersonId: string) {
+  async create(
+    communityId: string,
+    dto: CreateActivityDto,
+    actorPersonId: string,
+  ) {
     await this.communitiesService.get(communityId);
     const created = await this.activityRepo.create({
       communityId,

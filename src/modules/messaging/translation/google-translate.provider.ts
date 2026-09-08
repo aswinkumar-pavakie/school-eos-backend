@@ -5,9 +5,13 @@
 
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { TranslationProvider, TranslationResult } from './translation-provider.interface';
+import type {
+  TranslationProvider,
+  TranslationResult,
+} from './translation-provider.interface';
 
-const TRANSLATE_ENDPOINT = 'https://translation.googleapis.com/language/translate/v2';
+const TRANSLATE_ENDPOINT =
+  'https://translation.googleapis.com/language/translate/v2';
 
 @Injectable()
 export class GoogleTranslateProvider implements TranslationProvider {
@@ -23,25 +27,44 @@ export class GoogleTranslateProvider implements TranslationProvider {
     return this.apiKey.length > 0;
   }
 
-  async translate(text: string, targetLanguage: string): Promise<TranslationResult> {
+  async translate(
+    text: string,
+    targetLanguage: string,
+  ): Promise<TranslationResult> {
     if (!this.isConfigured()) {
-      throw new Error('GoogleTranslateProvider.translate called while not configured');
+      throw new Error(
+        'GoogleTranslateProvider.translate called while not configured',
+      );
     }
 
-    const res = await fetch(`${TRANSLATE_ENDPOINT}?key=${encodeURIComponent(this.apiKey)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: text, target: targetLanguage, format: 'text' }),
-    });
+    const res = await fetch(
+      `${TRANSLATE_ENDPOINT}?key=${encodeURIComponent(this.apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          q: text,
+          target: targetLanguage,
+          format: 'text',
+        }),
+      },
+    );
 
     if (!res.ok) {
       // Never include response body verbatim — it could echo the request, and in
       // some provider error shapes has included query parameters.
-      throw new Error(`Google Translate request failed with status ${res.status}`);
+      throw new Error(
+        `Google Translate request failed with status ${res.status}`,
+      );
     }
 
     const body = (await res.json()) as {
-      data?: { translations?: { translatedText: string; detectedSourceLanguage?: string }[] };
+      data?: {
+        translations?: {
+          translatedText: string;
+          detectedSourceLanguage?: string;
+        }[];
+      };
     };
     const translation = body.data?.translations?.[0];
     if (!translation) {

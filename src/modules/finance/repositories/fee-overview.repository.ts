@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface FeeOverviewCounts {
   totalFeesPaise: string;
@@ -21,7 +24,10 @@ export interface FeeOverviewCounts {
 export class FeeOverviewRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findOverviewCounts(academicYearId: string | undefined, executor: Queryable = this.postgres): Promise<FeeOverviewCounts> {
+  async findOverviewCounts(
+    academicYearId: string | undefined,
+    executor: Queryable = this.postgres,
+  ): Promise<FeeOverviewCounts> {
     const params: unknown[] = [];
     let yearJoin = '';
     let yearWhere = '';

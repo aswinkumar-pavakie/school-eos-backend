@@ -1,6 +1,13 @@
 // POST /admin/parents/:personId/password-reset — ADMIN-only, clears reset_allowance_used.
 
-import { Body, Controller, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+} from '@nestjs/common';
 import { Roles } from '../../common/auth/roles.decorator';
 import { PasswordResetService } from '../identity/password-reset.service';
 import { AdminPasswordResetDto } from './dto/admin-password-reset.dto';
