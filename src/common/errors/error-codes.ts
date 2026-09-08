@@ -86,25 +86,6 @@ export const MESSAGING_ERRORS = {
   TRANSLATION_FAILED: 'Translation failed, please try again later',
 } as const;
 
-// Activity/request 404s share one message regardless of cause (doesn't exist,
-// belongs to a different faculty/parent's scope, or authorization has since
-// lapsed) — same 404-not-403 rule as ONLINE_CLASS_ERRORS/MESSAGING_ERRORS above.
-export const PERMISSION_ERRORS = {
-  NOT_ACTIVE_FACULTY: 'Authenticated user is not an active faculty member',
-  ACTIVITY_NOT_FOUND: 'Permission activity not found',
-  REQUEST_NOT_FOUND: 'Permission request not found',
-  SECTION_NOT_FOUND: 'Section not found for the selected academic year',
-  NO_ELIGIBLE_STUDENTS: 'No active students found for this section',
-  STUDENT_NOT_ELIGIBLE: 'One or more selected students are not actively enrolled in this class and academic year',
-  INVALID_TIME_RANGE: 'endTime must be after startTime',
-  INVALID_DEADLINE: 'Response deadline must be on or before the activity date',
-  ACTIVITY_ALREADY_CANCELLED: 'This activity has already been cancelled',
-  REQUEST_ALREADY_CANCELLED: 'This permission request has been cancelled',
-  REQUEST_EXPIRED: 'The response deadline for this permission has passed',
-  REQUEST_ALREADY_DECLINED: 'This permission has already been declined and cannot be consented to',
-  REQUEST_ALREADY_CONSENTED: 'This permission has already been consented to and cannot be declined',
-} as const;
-
 export const PARENT_ERRORS = {
   NOT_LINKED_TO_STUDENT: 'You are not linked to this student',
   VIEW_ONLY_ACCESS: 'Your access to this student is view-only — payments must be made by the primary guardian',

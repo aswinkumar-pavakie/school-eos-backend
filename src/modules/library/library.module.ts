@@ -88,6 +88,9 @@ import { LibraryReservationRepository } from './repositories/library-reservation
     LibraryLostDamagedReportRepository,
     LibraryAuditLogRepository,
   ],
-  exports: [LibraryOverviewService],
+  // BooksService/CategoriesService/CirculationService/LibraryMemberRepository
+  // additionally back Faculty's own read-only catalog-search + "my issues"
+  // view (faculty/library) -- same real tables, no rebuild, no new writes.
+  exports: [LibraryOverviewService, BooksService, CategoriesService, CirculationService, LibraryMemberRepository],
 })
 export class LibraryModule {}

@@ -1,10 +1,11 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
 import { AnnouncementsService } from './announcements.service';
 import { AnnouncementQueryDto } from './dto/announcement-query.dto';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
+import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 
 // School-wide, role-targeted announcements -- distinct from community_announcement
 // (scoped to a single community). Only ADMIN can send one today, same as every
@@ -31,5 +32,16 @@ export class AnnouncementsController {
   @HttpCode(HttpStatus.OK)
   async archive(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.announcementsService.archive(id, actor.personId) };
+  }
+
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateAnnouncementDto, @CurrentActor() actor: AuthenticatedUser) {
+    return { data: await this.announcementsService.update(id, dto, actor.personId) };
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+    await this.announcementsService.remove(id, actor.personId);
   }
 }

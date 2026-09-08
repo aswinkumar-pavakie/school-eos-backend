@@ -14,7 +14,10 @@ export interface StaffDailyStatusRow {
 
 export interface MarkEventInput {
   staffId: string;
-  eventType: 'CHECK_IN' | 'ABSENT';
+  // 'ON_DUTY' is only ever written by the Faculty Employee Leave & OD
+  // approval handler (an approved OD request auto-marks this) -- the Admin
+  // bulk-mark DTO itself still only accepts CHECK_IN/ABSENT, unchanged.
+  eventType: 'CHECK_IN' | 'ABSENT' | 'ON_DUTY';
   occurredAt: string;
   reason: string;
   recordedBy: string;
@@ -111,6 +114,30 @@ export class StaffAttendanceRepository {
       presentCount: parseInt(rows[0].present_count, 10),
       totalCount: parseInt(rows[0].total_count, 10),
     };
+  }
+
+  /** Every raw event for one staff member in a date range, oldest first (then
+   * by received_at, so a later correction on the same occurred_at date sorts
+   * after the row it corrects) -- Faculty's own "My Attendance" view derives
+   * daily status/punch times from this itself (richer than the daily-roster
+   * query above, which only needs the single winning CHECK_IN/ABSENT verdict
+   * per day, not actual punch times or ON_DUTY). Same `occurred_at::date`
+   * convention as the rest of this repository -- no timezone conversion, the
+   * stored wall-clock value is already the intended local school-day time. */
+  async findEventsInRange(
+    staffId: string,
+    dateFrom: string,
+    dateTo: string,
+    executor: Queryable = this.postgres,
+  ): Promise<{ eventType: string; occurredAt: Date; receivedAt: Date }[]> {
+    const { rows } = await executor.query(
+      `SELECT event_type AS "eventType", occurred_at AS "occurredAt", received_at AS "receivedAt"
+       FROM staff_attendance_event
+       WHERE staff_id = $1 AND occurred_at::date BETWEEN $2::date AND $3::date
+       ORDER BY occurred_at::date, received_at`,
+      [staffId, dateFrom, dateTo],
+    );
+    return rows;
   }
 
   async markMany(inputs: MarkEventInput[], executor: Queryable = this.postgres): Promise<void> {

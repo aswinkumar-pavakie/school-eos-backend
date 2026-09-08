@@ -6,6 +6,8 @@ import { StaffAttendanceRepository } from './repositories/staff-attendance.repos
 @Module({
   controllers: [StaffAttendanceController],
   providers: [StaffAttendanceService, StaffAttendanceRepository],
-  exports: [StaffAttendanceService],
+  // StaffAttendanceRepository additionally backs Faculty's own read-only "My
+  // Attendance" view (faculty/my-attendance) -- same real table, self-scoped.
+  exports: [StaffAttendanceService, StaffAttendanceRepository],
 })
 export class StaffAttendanceModule {}

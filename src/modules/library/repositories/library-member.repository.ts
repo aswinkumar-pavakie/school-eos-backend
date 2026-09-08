@@ -141,6 +141,16 @@ export class LibraryMemberRepository {
     return rows[0] ?? null;
   }
 
+  /** "Which library_member row is *this* logged-in person" -- Faculty's own
+   * self-service view resolves its own memberId this way rather than ever
+   * trusting a client-supplied one (not every real STAFF/STUDENT person is
+   * necessarily an opted-in library member -- null is a genuine, honest
+   * "no library card yet" answer, not an error). */
+  async findByPersonId(personId: string, executor: Queryable = this.postgres): Promise<LibraryMemberRow | null> {
+    const { rows } = await executor.query<LibraryMemberRow>(`SELECT ${COLUMNS} FROM ${FROM} WHERE m.person_id = $1`, [personId]);
+    return rows[0] ?? null;
+  }
+
   async findByIdForUpdate(id: string, executor: Queryable): Promise<LibraryMemberRow | null> {
     const { rows } = await executor.query<LibraryMemberRow>(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE m.id = $1 FOR UPDATE OF m`,

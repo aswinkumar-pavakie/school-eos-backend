@@ -6,5 +6,6 @@ import { AnnouncementRepository } from './repositories/announcement.repository';
 @Module({
   controllers: [AnnouncementsController],
   providers: [AnnouncementsService, AnnouncementRepository],
+  exports: [AnnouncementsService, AnnouncementRepository],
 })
 export class AnnouncementsModule {}

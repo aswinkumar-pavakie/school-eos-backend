@@ -45,6 +45,22 @@ export class AttendanceSessionRepository {
     return rows[0] ?? null;
   }
 
+  /** The one DAILY session for this section+date, if any -- used by the
+   * Faculty attendance feature to find-or-create today's session, and by the
+   * student-leave auto-mark-absent rule to locate the right session for an
+   * already-decided date. */
+  async findBySectionAndDate(
+    sectionId: string,
+    sessionDate: string,
+    executor: Queryable = this.postgres,
+  ): Promise<AttendanceSessionRow | null> {
+    const { rows } = await executor.query<AttendanceSessionRow>(
+      `SELECT ${COLUMNS} FROM attendance_session WHERE section_id = $1 AND session_date = $2 AND session_type = 'DAILY'`,
+      [sectionId, sessionDate],
+    );
+    return rows[0] ?? null;
+  }
+
   async findMany(
     filter: { sectionId?: string; dateFrom?: string; dateTo?: string; limit: number; offset: number },
     executor: Queryable = this.postgres,
