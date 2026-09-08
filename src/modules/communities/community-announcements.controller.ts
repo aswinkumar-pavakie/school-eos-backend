@@ -27,7 +27,10 @@ import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 // These are community-scoped announcements (posts within one community),
 // distinct from the separate, school-wide Announcements sidebar module --
 // not a duplicate, no cross-module boundary crossed.
-@Roles('ADMIN', 'PRINCIPAL', 'COMMUNITY')
+// VICE_PRINCIPAL added (Vice Principal mobile Communities module) -- same
+// read-only tier as Principal; create/update stay ADMIN/COMMUNITY-only,
+// unaffected since those keep their own narrower method-level override.
+@Roles('ADMIN', 'PRINCIPAL', 'COMMUNITY', 'VICE_PRINCIPAL')
 @Controller()
 export class CommunityAnnouncementsController {
   constructor(

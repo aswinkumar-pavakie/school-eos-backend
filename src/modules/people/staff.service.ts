@@ -56,6 +56,17 @@ export class StaffService {
     return staff;
   }
 
+  /** The caller's OWN staff record, resolved from their authenticated
+   * personId -- reuses the existing findByPersonId() repository method
+   * (already used by parents.service.ts/guardian-link lookups), never a
+   * client-supplied id. Used by Vice Principal's mobile Profile screen
+   * (Phase 25); any authenticated staff member could equally call it. */
+  async getMine(personId: string) {
+    const staff = await this.staffRepo.findByPersonId(personId);
+    if (!staff) throw new NotFoundException('No staff record is associated with this account');
+    return staff;
+  }
+
   async create(dto: CreateStaffDto, actorPersonId: string) {
     const person = await this.personRepo.findById(dto.personId);
     if (!person) throw new BadRequestException('personId does not refer to an existing person.');

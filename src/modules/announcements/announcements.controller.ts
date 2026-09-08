@@ -20,7 +20,13 @@ import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 export class AnnouncementsController {
   constructor(private readonly announcementsService: AnnouncementsService) {}
 
+  // Method-level override, read-only: Vice Principal's own dashboard (Phase 3)
+  // needs to read school-wide announcements. Deliberately NOT a class-level
+  // change -- create (@Post() below) has no override of its own and inherits
+  // the class-level ADMIN+PRINCIPAL default, and Vice Principal is not meant
+  // to gain that create authority just by being able to read the list.
   @Get()
+  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
   async list(@Query() query: AnnouncementQueryDto) {
     return { data: await this.announcementsService.list(query) };
   }

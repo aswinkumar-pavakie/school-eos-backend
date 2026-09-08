@@ -4,6 +4,7 @@
 // Person → Staff/Student → Guardian, per workflow.md's dependency chain.
 
 import { Module } from '@nestjs/common';
+import { ApprovalsModule } from '../approvals/approvals.module';
 import { AttendanceModule } from '../attendance/attendance.module';
 import { AdminFinanceModule } from '../finance/admin-finance.module';
 import { IdentityModule } from '../identity/identity.module';
@@ -17,16 +18,27 @@ import { GuardianLinksService } from './guardian-links.service';
 import { ParentsController } from './parents.controller';
 import { ParentsService } from './parents.service';
 import { GuardianLinkRepository } from './repositories/guardian-link.repository';
+import { StaffLeaveRequestRepository } from './repositories/staff-leave-request.repository';
 import { StaffRepository } from './repositories/staff.repository';
 import { StudentEnrolmentRepository } from './repositories/student-enrolment.repository';
 import { StudentRepository } from './repositories/student.repository';
+import { StaffLeaveApprovalHandlers } from './staff-leave-approval-handlers.service';
+import { StaffLeaveService } from './staff-leave.service';
 import { StaffController } from './staff.controller';
 import { StaffService } from './staff.service';
 import { StudentsController } from './students.controller';
 import { StudentsService } from './students.service';
 
 @Module({
-  imports: [IdentityModule, TransportModule, TimetableModule, AdminFinanceModule, AttendanceModule, StaffAttendanceModule],
+  imports: [
+    IdentityModule,
+    TransportModule,
+    TimetableModule,
+    AdminFinanceModule,
+    AttendanceModule,
+    StaffAttendanceModule,
+    ApprovalsModule,
+  ],
   controllers: [
     StaffController,
     StudentsController,
@@ -44,6 +56,9 @@ import { StudentsService } from './students.service';
     StudentRepository,
     StudentEnrolmentRepository,
     GuardianLinkRepository,
+    StaffLeaveRequestRepository,
+    StaffLeaveService,
+    StaffLeaveApprovalHandlers,
   ],
   // StudentsService also backs the "Student administrative record correction"
   // effect in RequestsApprovalsModule (same cross-module pattern as the rest

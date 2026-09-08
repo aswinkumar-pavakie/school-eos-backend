@@ -8,9 +8,11 @@ import { UpdateHostelBlockDto } from './dto/update-hostel-block.dto';
 import { UpdateHostelDto } from './dto/update-hostel.dto';
 import { HostelsService } from './hostels.service';
 
-// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 12);
-// every write method below keeps its own narrower @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 12),
+// and to VICE_PRINCIPAL (Vice Principal mobile Hostel module -- same
+// oversight need) -- every write method below keeps its own narrower
+// @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller()
 export class HostelsController {
   constructor(private readonly hostelsService: HostelsService) {}

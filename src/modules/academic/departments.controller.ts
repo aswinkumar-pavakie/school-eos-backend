@@ -7,9 +7,10 @@ import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 
 // Class-level @Roles broadened to include PRINCIPAL for read-only oversight
-// (Principal's Academics module) -- write methods below have their own
-// narrower @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL')
+// (Principal's Academics module), and to VICE_PRINCIPAL (Phase 8 mobile
+// Academics module -- same read-only oversight need) -- write methods below
+// have their own narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller('departments')
 export class DepartmentsController {
   constructor(private readonly departmentsService: DepartmentsService) {}

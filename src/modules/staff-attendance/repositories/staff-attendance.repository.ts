@@ -113,6 +113,59 @@ export class StaffAttendanceRepository {
     };
   }
 
+  /** Same "one row per distinct day, latest event by received_at wins" rule
+   * as getAttendanceSummaryForStaff (this is that same CTE, just returning
+   * the day rows instead of only the aggregate counts) -- optionally
+   * narrowed to one calendar month. Backs Vice Principal's own My Attendance
+   * screen (Phase 27) via the self-scoped GET /staff/me/attendance-history;
+   * any authenticated staff member's own history could equally reuse it. */
+  async findEventsForStaff(
+    staffId: string,
+    month: string | undefined,
+    executor: Queryable = this.postgres,
+  ): Promise<{ date: string; status: string; occurredAt: Date; reason: string | null }[]> {
+    const params: unknown[] = [staffId];
+    let monthFilter = '';
+    if (month) {
+      params.push(`${month}-01`);
+      monthFilter = `AND date_trunc('month', e.occurred_at) = date_trunc('month', $${params.length}::date)`;
+    }
+    const { rows } = await executor.query<{ date: string; status: string; occurred_at: Date; reason: string | null }>(
+      `SELECT DISTINCT ON (e.occurred_at::date)
+              e.occurred_at::date AS date, e.event_type AS status, e.occurred_at, e.reason
+       FROM staff_attendance_event e
+       WHERE e.staff_id = $1 AND e.event_type IN ('CHECK_IN', 'ABSENT') ${monthFilter}
+       ORDER BY e.occurred_at::date DESC, e.received_at DESC`,
+      params,
+    );
+    return rows.map((r) => ({ date: r.date, status: r.status, occurredAt: r.occurred_at, reason: r.reason }));
+  }
+
+  /** Same dedup rule, aggregated -- used for the monthly summary in My
+   * Attendance, alongside the existing lifetime getAttendanceSummaryForStaff. */
+  async getAttendanceSummaryForStaffInMonth(
+    staffId: string,
+    month: string,
+    executor: Queryable = this.postgres,
+  ): Promise<{ presentCount: number; totalCount: number }> {
+    const { rows } = await executor.query<{ present_count: string; total_count: string }>(
+      `WITH daily AS (
+         SELECT DISTINCT ON (e.occurred_at::date) e.occurred_at::date AS day, e.event_type
+         FROM staff_attendance_event e
+         WHERE e.staff_id = $1 AND e.event_type IN ('CHECK_IN', 'ABSENT')
+           AND date_trunc('month', e.occurred_at) = date_trunc('month', $2::date)
+         ORDER BY e.occurred_at::date, e.received_at DESC
+       )
+       SELECT count(*) FILTER (WHERE event_type = 'CHECK_IN') AS present_count, count(*) AS total_count
+       FROM daily`,
+      [staffId, `${month}-01`],
+    );
+    return {
+      presentCount: parseInt(rows[0].present_count, 10),
+      totalCount: parseInt(rows[0].total_count, 10),
+    };
+  }
+
   async markMany(inputs: MarkEventInput[], executor: Queryable = this.postgres): Promise<void> {
     for (const input of inputs) {
       await executor.query(

@@ -12,11 +12,13 @@ import { TransferInventoryItemDto } from './dto/transfer-inventory-item.dto';
 import { UpdateInventoryItemDto } from './dto/update-inventory-item.dto';
 import { InventoryItemsService } from './inventory-items.service';
 
-// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 13);
-// every write method below keeps its own narrower @Roles('ADMIN') override --
-// RolesGuard's Reflector.getAllAndOverride means a method-level @Roles fully
-// replaces, never merges with, the class-level one.
-@Roles('ADMIN', 'PRINCIPAL')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 13),
+// and to VICE_PRINCIPAL (Vice Principal mobile Inventory module -- same
+// oversight need, covers list/overview/get) -- every write method below
+// keeps its own narrower @Roles('ADMIN') override -- RolesGuard's
+// Reflector.getAllAndOverride means a method-level @Roles fully replaces,
+// never merges with, the class-level one.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller('inventory-items')
 export class InventoryItemsController {
   constructor(private readonly itemsService: InventoryItemsService) {}

@@ -8,9 +8,10 @@ import { UpdateSectionDto } from './dto/update-section.dto';
 import { SectionQueryDto } from './dto/section-query.dto';
 
 // Class-level @Roles broadened to include PRINCIPAL for read-only oversight
-// (Principal's Students module needs section names for enrolment display) --
-// write methods below have their own narrower @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL')
+// (Principal's Students module needs section names for enrolment display),
+// and to VICE_PRINCIPAL (Phase 4 mobile Students module -- same filter-dropdown
+// need) -- write methods below have their own narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller('sections')
 export class SectionsController {
   constructor(private readonly sectionsService: SectionsService) {}

@@ -35,6 +35,7 @@ import { LibraryModule } from './modules/library/library.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { MediaModule } from './modules/media/media.module';
 import { MessagingModule } from './modules/messaging/messaging.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { OnlineClassesModule } from './modules/online-classes/online-classes.module';
 import { ParentModule } from './modules/parent/parent.module';
 import { PeopleModule } from './modules/people/people.module';
@@ -97,6 +98,7 @@ import { TransportModule } from './modules/transport/transport.module';
     CommunityProposalsModule,
     CommunityInitiativesModule,
     CommunityMembershipRequestsModule,
+    NotificationsModule,
   ],
   providers: [
     // Global guards, in order: AuthGuard resolves identity and sets request.user;

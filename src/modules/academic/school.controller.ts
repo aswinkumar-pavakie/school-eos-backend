@@ -10,7 +10,10 @@ import { SchoolService } from './school.service';
 // write/security risk, unlike Roles catalog/Document Retention/Terminals
 // (left ADMIN-only -- genuine Configuration-tier, no leadership-oversight
 // value, no doc authorization). PATCH stays ADMIN-only via the override below.
-@Roles('ADMIN', 'PRINCIPAL')
+// VICE_PRINCIPAL added (Vice Principal mobile Profile, Phase 25) -- same
+// read-only institutional-identity info, shown as the Profile screen's
+// School Information section.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller('school')
 export class SchoolController {
   constructor(private readonly schoolService: SchoolService) {}
