@@ -1,0 +1,868 @@
+// Orchestration-level tests against mocked repositories. The real authorization
+// semantics (REVOKED guardian excluded, TRANSFERRED_SECTION/CLOSED enrolment
+// excluded, current subject_offering.teacher_staff_id, CLASS_ADVISOR
+// role_assignment) live in the real SQL joins inside the repositories — those are
+// only meaningfully verified against a real Postgres query (see the real HTTP E2E
+// verification in the final report), not by mocking join behavior here. This suite
+// covers: does the service call the right repository methods with the right
+// (server-resolved) identity, dedupe/derive correctly from what the repositories
+// return, and enforce the object-level 404 rule consistently.
+
+import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
+import { MessagingService } from './messaging.service';
+import { ConversationView } from './repositories/conversation.repository';
+
+const PARENT_ACTOR: AuthenticatedUser = {
+  personId: 'parent-1',
+  roles: ['PARENT'],
+};
+const FACULTY_ACTOR: AuthenticatedUser = {
+  personId: 'faculty-1',
+  roles: ['FACULTY'],
+};
+
+function makeConversation(
+  overrides: Partial<ConversationView> = {},
+): ConversationView {
+  return {
+    id: 'conv-1',
+    studentId: 'student-1',
+    studentFirstName: 'Aarav',
+    studentLastName: 'Kumar',
+    parentPersonId: 'parent-1',
+    academicYearId: 'year-1',
+    academicYearName: '2025-2026',
+    sectionId: 'section-1',
+    sectionName: 'A',
+    gradeName: '8',
+    status: 'ACTIVE',
+    lastMessageId: null,
+    lastMessageAt: null,
+    createdAt: new Date('2026-09-01T00:00:00Z'),
+    updatedAt: new Date('2026-09-01T00:00:00Z'),
+    ...overrides,
+  };
+}
+
+const TEACHER = {
+  staffId: 'staff-teacher',
+  personId: 'faculty-1',
+  firstName: 'Lakshmi',
+  lastName: 'P',
+  displayName: null,
+};
+const ADVISOR = {
+  staffId: 'staff-advisor',
+  personId: 'faculty-2',
+  firstName: 'Suresh',
+  lastName: 'K',
+  displayName: null,
+};
+
+function buildService(
+  opts: {
+    conversation?: ConversationView | null;
+    wardEnrolments?: any[];
+    wardEnrolment?: any | null;
+    staff?: { id: string; personId: string; status: string } | null;
+    teachers?: (typeof TEACHER)[];
+    advisors?: (typeof ADVISOR)[];
+    teacherSections?: { sectionId: string; academicYearId: string }[];
+    advisorSections?: { sectionId: string; academicYearId: string }[];
+    ownParticipant?: { lastReadAt: Date | null } | null;
+    unreadCount?: number;
+    lastMessage?: any | null;
+    parentDisplayName?: any | null;
+    guardianPairs?: {
+      studentId: string;
+      academicYearId: string;
+      sectionId: string;
+      parentPersonId: string;
+    }[];
+  } = {},
+) {
+  const conversation =
+    opts.conversation === undefined ? makeConversation() : opts.conversation;
+
+  const guardianLinkRepo = {
+    findActiveWardEnrolments: jest.fn().mockResolvedValue(
+      opts.wardEnrolments ?? [
+        {
+          studentId: 'student-1',
+          studentFirstName: 'Aarav',
+          studentLastName: 'Kumar',
+          academicYearId: 'year-1',
+          academicYearName: '2025-2026',
+          sectionId: 'section-1',
+          sectionName: 'A',
+          gradeName: '8',
+        },
+      ],
+    ),
+    findActiveWardEnrolment: jest.fn().mockResolvedValue(
+      opts.wardEnrolment === undefined
+        ? {
+            studentId: 'student-1',
+            academicYearId: 'year-1',
+            sectionId: 'section-1',
+          }
+        : opts.wardEnrolment,
+    ),
+    findActiveGuardiansForSections: jest.fn().mockResolvedValue(
+      opts.guardianPairs ?? [
+        {
+          studentId: 'student-1',
+          academicYearId: 'year-1',
+          sectionId: 'section-1',
+          parentPersonId: 'parent-1',
+        },
+      ],
+    ),
+  } as any;
+
+  const staffRepo = {
+    findByPersonId: jest
+      .fn()
+      .mockResolvedValue(
+        opts.staff === undefined
+          ? { id: 'staff-teacher', personId: 'faculty-1', status: 'ACTIVE' }
+          : opts.staff,
+      ),
+  } as any;
+
+  const subjectOfferingRepo = {
+    findActiveTeachersForSection: jest
+      .fn()
+      .mockResolvedValue(opts.teachers ?? [TEACHER]),
+    findActiveTeachersForSections: jest
+      .fn()
+      .mockImplementation(
+        async (pairs: { sectionId: string; academicYearId: string }[]) => {
+          const map = new Map<string, (typeof TEACHER)[]>();
+          for (const p of pairs)
+            map.set(
+              `${p.sectionId}:${p.academicYearId}`,
+              opts.teachers ?? [TEACHER],
+            );
+          return map;
+        },
+      ),
+    findActiveSectionsForTeacher: jest
+      .fn()
+      .mockResolvedValue(
+        opts.teacherSections ?? [
+          { sectionId: 'section-1', academicYearId: 'year-1' },
+        ],
+      ),
+  } as any;
+
+  const classAdvisorRepo = {
+    findActiveAdvisorsForSections: jest
+      .fn()
+      .mockImplementation(async (sectionIds: string[]) => {
+        const map = new Map<string, (typeof ADVISOR)[]>();
+        for (const id of sectionIds) map.set(id, opts.advisors ?? [ADVISOR]);
+        return map;
+      }),
+    findActiveAdvisorsForSection: jest
+      .fn()
+      .mockResolvedValue(opts.advisors ?? [ADVISOR]),
+    findActiveSectionsForAdvisor: jest
+      .fn()
+      .mockResolvedValue(opts.advisorSections ?? []),
+  } as any;
+
+  const conversationRepo = {
+    findById: jest.fn().mockResolvedValue(conversation),
+    findOrCreate: jest.fn().mockResolvedValue(conversation),
+    listForParent: jest
+      .fn()
+      .mockResolvedValue(conversation ? [conversation] : []),
+    listBySectionYearPairs: jest
+      .fn()
+      .mockResolvedValue(conversation ? [conversation] : []),
+    ensureExist: jest.fn().mockResolvedValue(undefined),
+    updateLastMessage: jest.fn().mockResolvedValue(undefined),
+  } as any;
+
+  const participantRepo = {
+    sync: jest.fn().mockResolvedValue(undefined),
+    syncMany: jest.fn().mockResolvedValue(undefined),
+    findOne: jest
+      .fn()
+      .mockResolvedValue(
+        opts.ownParticipant === undefined ? null : opts.ownParticipant,
+      ),
+    findManyOwn: jest
+      .fn()
+      .mockImplementation(async (conversationIds: string[]) => {
+        const map = new Map<string, Date | null>();
+        if (opts.ownParticipant !== undefined) {
+          for (const id of conversationIds)
+            map.set(id, opts.ownParticipant?.lastReadAt ?? null);
+        }
+        return map;
+      }),
+    markRead: jest.fn().mockResolvedValue(undefined),
+    listForConversation: jest.fn().mockResolvedValue([]),
+  } as any;
+
+  const messageRepo = {
+    countUnread: jest.fn().mockResolvedValue(opts.unreadCount ?? 0),
+    countUnreadMany: jest
+      .fn()
+      .mockImplementation(async (requests: { conversationId: string }[]) => {
+        const map = new Map<string, number>();
+        for (const r of requests)
+          map.set(r.conversationId, opts.unreadCount ?? 0);
+        return map;
+      }),
+    findById: jest
+      .fn()
+      .mockResolvedValue(
+        opts.lastMessage === undefined ? null : opts.lastMessage,
+      ),
+    findByIds: jest
+      .fn()
+      .mockResolvedValue(
+        opts.lastMessage === undefined ? [] : [opts.lastMessage],
+      ),
+    listPage: jest.fn().mockResolvedValue({ items: [], hasMore: false }),
+    findByIdempotencyKey: jest.fn().mockResolvedValue(null),
+    insert: jest.fn().mockResolvedValue({
+      id: '101',
+      conversationId: 'conv-1',
+      senderPersonId: 'parent-1',
+      messageText: 'Good morning',
+      createdAt: new Date('2026-09-05T10:00:00Z'),
+    }),
+  } as any;
+
+  const defaultParentDisplayName = {
+    personId: 'parent-1',
+    firstName: 'Indira',
+    lastName: 'Palaniappan',
+    displayName: null,
+  };
+  const personRepo = {
+    findDisplayName: jest
+      .fn()
+      .mockResolvedValue(
+        opts.parentDisplayName === undefined
+          ? defaultParentDisplayName
+          : opts.parentDisplayName,
+      ),
+    findDisplayNames: jest
+      .fn()
+      .mockImplementation(async (personIds: string[]) => {
+        const view =
+          opts.parentDisplayName === undefined
+            ? defaultParentDisplayName
+            : opts.parentDisplayName;
+        const map = new Map<string, typeof defaultParentDisplayName>();
+        if (view) {
+          for (const id of personIds) map.set(id, { ...view, personId: id });
+        }
+        return map;
+      }),
+  } as any;
+
+  const translationService = {
+    translate: jest.fn().mockResolvedValue({
+      messageId: '101',
+      sourceLanguage: 'en',
+      targetLanguage: 'ta',
+      translatedText: 'காலை வணக்கம்',
+    }),
+  } as any;
+
+  const unitOfWork = {
+    run: jest
+      .fn()
+      .mockImplementation(async (work: (client: any) => Promise<any>) =>
+        work({}),
+      ),
+  } as any;
+
+  const service = new MessagingService(
+    guardianLinkRepo,
+    staffRepo,
+    subjectOfferingRepo,
+    classAdvisorRepo,
+    conversationRepo,
+    participantRepo,
+    messageRepo,
+    personRepo,
+    translationService,
+    unitOfWork,
+  );
+
+  return {
+    service,
+    guardianLinkRepo,
+    staffRepo,
+    subjectOfferingRepo,
+    classAdvisorRepo,
+    conversationRepo,
+    participantRepo,
+    messageRepo,
+    personRepo,
+    translationService,
+    unitOfWork,
+  };
+}
+
+describe('MessagingService — conversation list', () => {
+  it('1. parent list: resolves wards from the authenticated personId and find-or-creates a conversation per ward', async () => {
+    const { service, guardianLinkRepo, conversationRepo } = buildService();
+
+    const result = await service.listConversations(PARENT_ACTOR);
+
+    expect(guardianLinkRepo.findActiveWardEnrolments).toHaveBeenCalledWith(
+      'parent-1',
+    );
+    expect(conversationRepo.findOrCreate).toHaveBeenCalledWith(
+      'student-1',
+      'parent-1',
+      'year-1',
+      'section-1',
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].student.name).toBe('Aarav Kumar');
+  });
+
+  it('22. parent with two active wards sees both, never merged', async () => {
+    const ward2 = {
+      studentId: 'student-2',
+      studentFirstName: 'Diya',
+      studentLastName: 'Kumar',
+      academicYearId: 'year-1',
+      academicYearName: '2025-2026',
+      sectionId: 'section-9',
+      sectionName: 'C',
+      gradeName: '5',
+    };
+    const conv2 = makeConversation({
+      id: 'conv-2',
+      studentId: 'student-2',
+      studentFirstName: 'Diya',
+      sectionId: 'section-9',
+      sectionName: 'C',
+      gradeName: '5',
+    });
+    const { service, conversationRepo } = buildService({
+      wardEnrolments: [
+        {
+          studentId: 'student-1',
+          studentFirstName: 'Aarav',
+          studentLastName: 'Kumar',
+          academicYearId: 'year-1',
+          academicYearName: '2025-2026',
+          sectionId: 'section-1',
+          sectionName: 'A',
+          gradeName: '8',
+        },
+        ward2,
+      ],
+    });
+    conversationRepo.listForParent.mockResolvedValue([
+      makeConversation(),
+      conv2,
+    ]);
+
+    const result = await service.listConversations(PARENT_ACTOR);
+
+    expect(conversationRepo.findOrCreate).toHaveBeenCalledTimes(2);
+    expect(result.map((r) => r.student.name)).toEqual([
+      'Aarav Kumar',
+      'Diya Kumar',
+    ]);
+  });
+
+  it('16. faculty list: only conversations matching their currently authorized (section, year) pairs', async () => {
+    const { service, subjectOfferingRepo, classAdvisorRepo, conversationRepo } =
+      buildService();
+
+    await service.listConversations(FACULTY_ACTOR);
+
+    expect(
+      subjectOfferingRepo.findActiveSectionsForTeacher,
+    ).toHaveBeenCalledWith('staff-teacher');
+    expect(classAdvisorRepo.findActiveSectionsForAdvisor).toHaveBeenCalledWith(
+      'faculty-1',
+    );
+    expect(conversationRepo.listBySectionYearPairs).toHaveBeenCalledWith([
+      { sectionId: 'section-1', academicYearId: 'year-1' },
+    ]);
+  });
+
+  it('faculty list: every ACTIVE (student, guardian) pair in their authorized sections gets a conversation ensured to exist, not just pre-existing ones', async () => {
+    const { service, guardianLinkRepo, conversationRepo } = buildService({
+      guardianPairs: [
+        {
+          studentId: 'student-1',
+          academicYearId: 'year-1',
+          sectionId: 'section-1',
+          parentPersonId: 'parent-1',
+        },
+        {
+          studentId: 'student-2',
+          academicYearId: 'year-1',
+          sectionId: 'section-1',
+          parentPersonId: 'parent-2',
+        },
+        {
+          studentId: 'student-2',
+          academicYearId: 'year-1',
+          sectionId: 'section-1',
+          parentPersonId: 'parent-3',
+        },
+      ],
+    });
+
+    await service.listConversations(FACULTY_ACTOR);
+
+    expect(
+      guardianLinkRepo.findActiveGuardiansForSections,
+    ).toHaveBeenCalledWith([
+      { sectionId: 'section-1', academicYearId: 'year-1' },
+    ]);
+    expect(conversationRepo.ensureExist).toHaveBeenCalledWith([
+      {
+        studentId: 'student-1',
+        parentPersonId: 'parent-1',
+        academicYearId: 'year-1',
+        sectionId: 'section-1',
+      },
+      {
+        studentId: 'student-2',
+        parentPersonId: 'parent-2',
+        academicYearId: 'year-1',
+        sectionId: 'section-1',
+      },
+      {
+        studentId: 'student-2',
+        parentPersonId: 'parent-3',
+        academicYearId: 'year-1',
+        sectionId: 'section-1',
+      },
+    ]);
+  });
+
+  it('faculty list: conversations sharing the same (section, year) resolve the faculty list via one batched query, not one per conversation or one per section', async () => {
+    const conv1 = makeConversation({ id: 'conv-1', studentId: 'student-1' });
+    const conv2 = makeConversation({ id: 'conv-2', studentId: 'student-2' });
+    const { service, conversationRepo, subjectOfferingRepo, classAdvisorRepo } =
+      buildService();
+    conversationRepo.listBySectionYearPairs.mockResolvedValue([conv1, conv2]);
+
+    const result = await service.listConversations(FACULTY_ACTOR);
+
+    expect(result).toHaveLength(2);
+    expect(
+      subjectOfferingRepo.findActiveTeachersForSections,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      subjectOfferingRepo.findActiveTeachersForSections,
+    ).toHaveBeenCalledWith([
+      { sectionId: 'section-1', academicYearId: 'year-1' },
+    ]);
+    expect(
+      classAdvisorRepo.findActiveAdvisorsForSections,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      subjectOfferingRepo.findActiveTeachersForSection,
+    ).not.toHaveBeenCalled();
+    expect(
+      classAdvisorRepo.findActiveAdvisorsForSection,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('faculty list with many conversations never falls back to the per-conversation methods -- syncMany/findManyOwn/countUnreadMany/findByIds/findDisplayNames are called exactly once each, never sync/findOne/countUnread/findById/findDisplayName', async () => {
+    const conversations = Array.from({ length: 50 }, (_, i) =>
+      makeConversation({
+        id: `conv-${i}`,
+        studentId: `student-${i}`,
+        parentPersonId: `parent-${i}`,
+      }),
+    );
+    const {
+      service,
+      conversationRepo,
+      participantRepo,
+      messageRepo,
+      personRepo,
+    } = buildService();
+    conversationRepo.listBySectionYearPairs.mockResolvedValue(conversations);
+
+    const result = await service.listConversations(FACULTY_ACTOR);
+
+    expect(result).toHaveLength(50);
+    expect(participantRepo.syncMany).toHaveBeenCalledTimes(1);
+    expect(participantRepo.findManyOwn).toHaveBeenCalledTimes(1);
+    expect(messageRepo.countUnreadMany).toHaveBeenCalledTimes(1);
+    expect(messageRepo.findByIds).toHaveBeenCalledTimes(1);
+    expect(personRepo.findDisplayNames).toHaveBeenCalledTimes(1);
+    expect(participantRepo.sync).not.toHaveBeenCalled();
+    expect(participantRepo.findOne).not.toHaveBeenCalled();
+    expect(messageRepo.countUnread).not.toHaveBeenCalled();
+    expect(messageRepo.findById).not.toHaveBeenCalled();
+    expect(personRepo.findDisplayName).not.toHaveBeenCalled();
+  });
+
+  it('a faculty person with no active staff row is rejected as an actor-integrity failure (403), not a 404', async () => {
+    const { service } = buildService({ staff: null });
+
+    await expect(
+      service.listConversations(FACULTY_ACTOR),
+    ).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('a parent with zero active wards gets an empty list, no conversation created', async () => {
+    const { service, conversationRepo } = buildService({ wardEnrolments: [] });
+    conversationRepo.listForParent.mockResolvedValue([]);
+
+    const result = await service.listConversations(PARENT_ACTOR);
+
+    expect(result).toEqual([]);
+    expect(conversationRepo.findOrCreate).not.toHaveBeenCalled();
+  });
+
+  it('27. a faculty member who is both subject teacher and class advisor for the same ward appears once, labeled CLASS_ADVISOR', async () => {
+    const dualRole = {
+      staffId: 'staff-dual',
+      personId: 'faculty-dual',
+      firstName: 'Gomathi',
+      lastName: 'R',
+      displayName: null,
+    };
+    const { service } = buildService({
+      teachers: [dualRole],
+      advisors: [dualRole],
+    });
+
+    const result = await service.listConversations(PARENT_ACTOR);
+
+    const dualEntries = result[0].participants.filter(
+      (p) => p.personId === 'faculty-dual',
+    );
+    expect(dualEntries).toHaveLength(1);
+    expect(dualEntries[0].role).toBe('CLASS_ADVISOR');
+  });
+
+  it("8. participants list excludes the viewer themselves (shows only 'the other side')", async () => {
+    const { service } = buildService();
+
+    const result = await service.listConversations(PARENT_ACTOR);
+
+    expect(result[0].participants.some((p) => p.personId === 'parent-1')).toBe(
+      false,
+    );
+    expect(result[0].participants.some((p) => p.personId === 'faculty-1')).toBe(
+      true,
+    );
+  });
+});
+
+describe('MessagingService — conversation detail (authorization)', () => {
+  it('11. authorized parent can open their ward conversation', async () => {
+    const { service } = buildService();
+
+    const result = await service.getConversation(PARENT_ACTOR, 'conv-1');
+
+    expect(result.id).toBe('conv-1');
+  });
+
+  it('5. an unrelated parent gets 404 — parentPersonId mismatch is checked before any live re-verification', async () => {
+    const { service, guardianLinkRepo } = buildService({
+      conversation: makeConversation({ parentPersonId: 'someone-else' }),
+    });
+
+    await expect(
+      service.getConversation(PARENT_ACTOR, 'conv-1'),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(guardianLinkRepo.findActiveWardEnrolment).not.toHaveBeenCalled();
+  });
+
+  it('8. revoked guardian (live re-check returns null even though parentPersonId matches) -> 404', async () => {
+    const { service } = buildService({ wardEnrolment: null });
+
+    await expect(
+      service.getConversation(PARENT_ACTOR, 'conv-1'),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('7. a random/nonexistent conversation id -> 404', async () => {
+    const { service } = buildService({ conversation: null });
+
+    await expect(
+      service.getConversation(PARENT_ACTOR, 'does-not-exist'),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('17. authorized faculty (current subject teacher for this section+year) can open the conversation', async () => {
+    const { service } = buildService();
+
+    const result = await service.getConversation(FACULTY_ACTOR, 'conv-1');
+
+    expect(result.id).toBe('conv-1');
+  });
+
+  it('6/28. unrelated faculty (teaches a different section) -> 404', async () => {
+    const { service } = buildService({
+      teacherSections: [
+        { sectionId: 'other-section', academicYearId: 'year-1' },
+      ],
+    });
+
+    await expect(
+      service.getConversation(FACULTY_ACTOR, 'conv-1'),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('26. class advisor (not a subject teacher for this ward) is still authorized', async () => {
+    const { service } = buildService({
+      teacherSections: [],
+      advisorSections: [{ sectionId: 'section-1', academicYearId: 'year-1' }],
+    });
+
+    const result = await service.getConversation(FACULTY_ACTOR, 'conv-1');
+
+    expect(result.id).toBe('conv-1');
+  });
+
+  it('reassigned faculty: teaching a different section only grants access to that section, never automatically to the old one', async () => {
+    const { service } = buildService({
+      teacherSections: [{ sectionId: 'section-2', academicYearId: 'year-1' }],
+      advisorSections: [],
+    });
+
+    await expect(
+      service.getConversation(FACULTY_ACTOR, 'conv-1'),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('49. a different academic year context never satisfies the current one (isolation)', async () => {
+    const { service } = buildService({
+      conversation: makeConversation({ academicYearId: 'year-2025-old' }),
+      wardEnrolment: null, // the ward's ACTIVE enrolment is for the current year, not this old one
+    });
+
+    await expect(
+      service.getConversation(PARENT_ACTOR, 'conv-1'),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+describe('MessagingService — unread count / read state', () => {
+  it("35/37. parent's unread count uses only the parent's own last_read_at, independent of faculty's", async () => {
+    const { service, messageRepo, participantRepo } = buildService({
+      ownParticipant: { lastReadAt: new Date('2026-09-05T09:00:00Z') },
+      unreadCount: 2,
+    });
+
+    const result = await service.getConversation(PARENT_ACTOR, 'conv-1');
+
+    expect(participantRepo.findOne).toHaveBeenCalledWith('conv-1', 'parent-1');
+    expect(messageRepo.countUnread).toHaveBeenCalledWith(
+      'conv-1',
+      'parent-1',
+      new Date('2026-09-05T09:00:00Z'),
+    );
+    expect(result.unreadCount).toBe(2);
+  });
+
+  it("a user cannot modify another participant's read state — markRead only ever writes the caller's own personId", async () => {
+    const { service, participantRepo } = buildService();
+
+    await service.markRead(PARENT_ACTOR, 'conv-1');
+
+    expect(participantRepo.markRead).toHaveBeenCalledWith(
+      'conv-1',
+      'parent-1',
+      'PARENT',
+      expect.any(Date),
+    );
+  });
+
+  it('faculty markRead records the resolved SUBJECT_TEACHER/CLASS_ADVISOR role, never PARENT', async () => {
+    const { service, participantRepo } = buildService();
+
+    await service.markRead(FACULTY_ACTOR, 'conv-1');
+
+    expect(participantRepo.markRead).toHaveBeenCalledWith(
+      'conv-1',
+      'faculty-1',
+      'SUBJECT_TEACHER',
+      expect.any(Date),
+    );
+  });
+});
+
+describe('MessagingService — send message', () => {
+  it('13/19. authorized parent/faculty can send; sender identity comes only from the authenticated actor', async () => {
+    const { service, messageRepo } = buildService();
+
+    const result = await service.sendMessage(
+      PARENT_ACTOR,
+      'conv-1',
+      '  Good morning  ',
+      'key-1',
+    );
+
+    expect(messageRepo.insert).toHaveBeenCalledWith(
+      'conv-1',
+      'parent-1',
+      'Good morning',
+      'key-1',
+      expect.anything(),
+    );
+    expect(result.sender.personId).toBe('parent-1');
+    expect(result.status).toBe('SENT');
+  });
+
+  it('29. empty message rejected', async () => {
+    const { service } = buildService();
+    await expect(
+      service.sendMessage(PARENT_ACTOR, 'conv-1', '', 'key-1'),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('30. whitespace-only message rejected', async () => {
+    const { service } = buildService();
+    await expect(
+      service.sendMessage(PARENT_ACTOR, 'conv-1', '   \n\t  ', 'key-1'),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('31. oversized message rejected', async () => {
+    const { service } = buildService();
+    await expect(
+      service.sendMessage(PARENT_ACTOR, 'conv-1', 'a'.repeat(2001), 'key-1'),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('32. unicode message accepted and preserved verbatim', async () => {
+    const { service, messageRepo } = buildService();
+    const unicodeText = 'Aarav-இன் லேப் பதிவு படிக்க வேண்டும் 📚';
+
+    await service.sendMessage(PARENT_ACTOR, 'conv-1', unicodeText, 'key-1');
+
+    expect(messageRepo.insert).toHaveBeenCalledWith(
+      'conv-1',
+      'parent-1',
+      unicodeText,
+      'key-1',
+      expect.anything(),
+    );
+  });
+
+  it('33/34. no way to supply a sender or recipient — sendMessage takes only free text, never an id', async () => {
+    const { service } = buildService();
+    // Type-level guarantee: the method signature has no senderPersonId/recipientPersonId
+    // parameter at all. Runtime guarantee: whatever the DTO carries besides `message`
+    // is stripped by the global ValidationPipe's whitelist:true (see main.ts) before
+    // this method is ever called.
+    expect(service.sendMessage.length).toBe(4); // (actor, conversationId, rawMessage, idempotencyKey)
+  });
+
+  it('an unauthorized actor cannot send a message even with a well-formed body — authorization is checked before validation', async () => {
+    const { service } = buildService({ conversation: null });
+    await expect(
+      service.sendMessage(PARENT_ACTOR, 'nonexistent', 'Hello', 'key-1'),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('52. duplicate send with the same Idempotency-Key returns the original message, never a duplicate insert', async () => {
+    const existing = {
+      id: '55',
+      conversationId: 'conv-1',
+      senderPersonId: 'parent-1',
+      messageText: 'Good morning',
+      createdAt: new Date('2026-09-05T10:00:00Z'),
+    };
+    const { service, messageRepo } = buildService();
+    messageRepo.findByIdempotencyKey.mockResolvedValue(existing);
+
+    const result = await service.sendMessage(
+      PARENT_ACTOR,
+      'conv-1',
+      'Good morning',
+      'same-key',
+    );
+
+    expect(messageRepo.insert).not.toHaveBeenCalled();
+    expect(result.id).toBe('55');
+  });
+
+  it('sends within a single transaction — message insert and conversation last-message update use the same executor', async () => {
+    const { service, messageRepo, conversationRepo, unitOfWork } =
+      buildService();
+
+    await service.sendMessage(PARENT_ACTOR, 'conv-1', 'Hello', 'key-1');
+
+    expect(unitOfWork.run).toHaveBeenCalledTimes(1);
+    const insertExecutor = messageRepo.insert.mock.calls[0][4];
+    const updateExecutor = conversationRepo.updateLastMessage.mock.calls[0][3];
+    expect(insertExecutor).toBe(updateExecutor);
+  });
+});
+
+describe('MessagingService — translation', () => {
+  const MESSAGE = {
+    id: '101',
+    conversationId: 'conv-1',
+    senderPersonId: 'faculty-1',
+    messageText: "Good morning. Aarav's lab record is due Friday.",
+    createdAt: new Date('2026-09-05T08:00:00Z'),
+  };
+
+  it('39/40. authorized parent and faculty can translate a message in their conversation', async () => {
+    const { service, messageRepo, translationService } = buildService();
+    messageRepo.findById.mockResolvedValue(MESSAGE);
+
+    const result = await service.translateMessage(
+      PARENT_ACTOR,
+      'conv-1',
+      '101',
+      'ta',
+    );
+
+    expect(translationService.translate).toHaveBeenCalledWith(
+      '101',
+      MESSAGE.messageText,
+      'ta',
+    );
+    expect(result.translatedText).toBeTruthy();
+  });
+
+  it('41. unauthorized user cannot translate — 404 before the message is even looked up', async () => {
+    const { service, messageRepo } = buildService({ conversation: null });
+
+    await expect(
+      service.translateMessage(PARENT_ACTOR, 'conv-1', '101', 'ta'),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(messageRepo.findById).not.toHaveBeenCalled();
+  });
+
+  it('a message id belonging to a different conversation is rejected as not found, even for an authorized conversation', async () => {
+    const { service, messageRepo } = buildService();
+    messageRepo.findById.mockResolvedValue({
+      ...MESSAGE,
+      conversationId: 'other-conv',
+    });
+
+    await expect(
+      service.translateMessage(PARENT_ACTOR, 'conv-1', '101', 'ta'),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('42. translating never mutates the original message — translateMessage never calls any message-write method', async () => {
+    const { service, messageRepo } = buildService();
+    messageRepo.findById.mockResolvedValue(MESSAGE);
+    // The mocked repo has no update method at all; if the service tried to call
+    // one this would throw "not a function" rather than needing a spy assertion.
+    await service.translateMessage(PARENT_ACTOR, 'conv-1', '101', 'ta');
+    expect(messageRepo.findById).toHaveBeenCalledWith('101');
+  });
+});

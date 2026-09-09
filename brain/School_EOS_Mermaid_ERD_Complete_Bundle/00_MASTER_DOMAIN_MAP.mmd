@@ -1,0 +1,119 @@
+%%{init: {"flowchart": {"curve": "basis", "nodeSpacing": 45, "rankSpacing": 80}, "theme": {"fontFamily": "Arial", "fontSize": "13px"}}}%%
+flowchart TB
+  %% SCHOOL EOS — MASTER DOMAIN MAP
+  %% This is intentionally NOT a 242-table graph.
+  %% It is the navigation/architecture map; domain ERDs contain the table detail.
+
+  ORG["ORGANIZATION"]
+  PEOPLE["PEOPLE / STUDENT IDENTITY"]
+  IAM["IDENTITY & ACCESS"]
+  ACAD["ACADEMICS"]
+  ASSESS["ASSESSMENT & EXAMINATION"]
+  DEV["STUDENT DEVELOPMENT"]
+  COMM["COMMUNITY"]
+  SPORTS["SPORTS"]
+  FIN["FINANCE"]
+  WALLET["WALLET"]
+  CANTEEN["CANTEEN"]
+  HOSTEL["HOSTEL"]
+  TRANS["TRANSPORT / GPS / NFC"]
+  HEALTH["HEALTH & INFIRMARY"]
+  CAMPS["CAMPS"]
+  LIB["LIBRARY"]
+  SCHEMES["GOVERNMENT SCHEMES"]
+  COMMS["COMMUNICATION"]
+  WORKFLOW["WORKFLOW / APPROVAL"]
+  EMERGENCY["EMERGENCY / SAFETY"]
+  EVIDENCE["EVIDENCE / DOCUMENTS"]
+  REPORTING["REPORTING"]
+  AUDIT["AUDIT"]
+  RELIABILITY["RELIABILITY"]
+
+  ORG --> PEOPLE
+  ORG --> ACAD
+  PEOPLE --> IAM
+  PEOPLE --> ACAD
+  PEOPLE --> ASSESS
+  PEOPLE --> DEV
+  PEOPLE --> COMM
+  PEOPLE --> SPORTS
+  PEOPLE --> FIN
+  PEOPLE --> WALLET
+  PEOPLE --> HOSTEL
+  PEOPLE --> TRANS
+  PEOPLE --> HEALTH
+  PEOPLE --> CAMPS
+  PEOPLE --> LIB
+  PEOPLE --> SCHEMES
+  ACAD --> ASSESS
+  SPORTS --> HEALTH
+  CAMPS --> HEALTH
+  WALLET --> CANTEEN
+  TRANS --> EMERGENCY
+  HOSTEL --> EMERGENCY
+  WORKFLOW --> FIN
+  WORKFLOW --> HOSTEL
+  WORKFLOW --> SPORTS
+  WORKFLOW --> ASSESS
+  WORKFLOW --> CAMPS
+  COMMS --> PEOPLE
+  EVIDENCE --> PEOPLE
+  EVIDENCE --> FIN
+  EVIDENCE --> HEALTH
+  EVIDENCE --> CAMPS
+  REPORTING --> AUDIT
+  REPORTING --> ORG
+  RELIABILITY --> TRANS
+  RELIABILITY --> FIN
+  RELIABILITY --> WALLET
+  AUDIT --> PEOPLE
+
+  classDef org fill:#EAF2F8,stroke:#2874A6,stroke-width:2px;
+  classDef people fill:#FDEBD0,stroke:#CA6F1E,stroke-width:2px;
+  classDef identity fill:#E8DAEF,stroke:#7D3C98,stroke-width:2px;
+  classDef acad fill:#D6EAF8,stroke:#2E86C1,stroke-width:2px;
+  classDef assess fill:#D5F5E3,stroke:#239B56,stroke-width:2px;
+  classDef dev fill:#FCF3CF,stroke:#B7950B,stroke-width:2px;
+  classDef comm fill:#FADBD8,stroke:#C0392B,stroke-width:2px;
+  classDef sports fill:#D1F2EB,stroke:#148F77,stroke-width:2px;
+  classDef fin fill:#F5EEF8,stroke:#884EA0,stroke-width:2px;
+  classDef wallet fill:#E8F8F5,stroke:#16A085,stroke-width:2px;
+  classDef canteen fill:#FEF9E7,stroke:#B9770E,stroke-width:2px;
+  classDef hostel fill:#F6DDCC,stroke:#AF601A,stroke-width:2px;
+  classDef trans fill:#D6EAF8,stroke:#21618C,stroke-width:2px;
+  classDef health fill:#F5EEF8,stroke:#7D3C98,stroke-width:2px;
+  classDef camps fill:#E8F6F3,stroke:#117864,stroke-width:2px;
+  classDef lib fill:#F9E79F,stroke:#9A7D0A,stroke-width:2px;
+  classDef schemes fill:#EAEDED,stroke:#566573,stroke-width:2px;
+  classDef comms fill:#D4E6F1,stroke:#2874A6,stroke-width:2px;
+  classDef workflow fill:#EAECEE,stroke:#5D6D7E,stroke-width:2px;
+  classDef emergency fill:#F5B7B1,stroke:#922B21,stroke-width:2px;
+  classDef evidence fill:#EBDEF0,stroke:#76448A,stroke-width:2px;
+  classDef reporting fill:#D5DBDB,stroke:#34495E,stroke-width:2px;
+  classDef audit fill:#D6DBDF,stroke:#2C3E50,stroke-width:2px;
+  classDef reliability fill:#E5E7E9,stroke:#424949,stroke-width:2px;
+
+  class ORG org;
+  class PEOPLE people;
+  class IAM identity;
+  class ACAD acad;
+  class ASSESS assess;
+  class DEV dev;
+  class COMM comm;
+  class SPORTS sports;
+  class FIN fin;
+  class WALLET wallet;
+  class CANTEEN canteen;
+  class HOSTEL hostel;
+  class TRANS trans;
+  class HEALTH health;
+  class CAMPS camps;
+  class LIB lib;
+  class SCHEMES schemes;
+  class COMMS comms;
+  class WORKFLOW workflow;
+  class EMERGENCY emergency;
+  class EVIDENCE evidence;
+  class REPORTING reporting;
+  class AUDIT audit;
+  class RELIABILITY reliability;

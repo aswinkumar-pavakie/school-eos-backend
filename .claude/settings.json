@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "defaultMode": "ask",
+    "allow": [
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx tsc --noEmit:*)",
+      "Bash(npm run build)",
+      "Bash(npm run lint)",
+      "Bash(npm test)",
+      "Bash(npm test:*)",
+      "Bash(npx prisma db pull)",
+      "Bash(npx prisma generate)",
+      "Bash(git status)",
+      "Bash(git status:*)",
+      "Bash(git diff)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ]
+  },
+  "respectGitignore": true
+}

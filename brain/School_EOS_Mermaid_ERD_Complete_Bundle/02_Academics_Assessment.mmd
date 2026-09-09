@@ -1,0 +1,128 @@
+%%02_Academics_Assessment — COMPLETE DOMAIN ERD
+%% Full column list is embedded in each table node.
+%% Cross-domain FKs are shown as dashed references to shared entities.
+%%{init: {"flowchart": {"curve": "basis", "nodeSpacing": 28, "rankSpacing": 55}, "theme": {"fontFamily": "Arial", "fontSize": "11px"}}}%%
+flowchart LR
+  academic_classes["<b>academic_classes</b><br/>PK id : uuid<br/>FK academic_year_id : uuid<br/>FK grade_id : uuid<br/>FK section_id : uuid<br/>class_code : text<br/>FK class_advisor_staff_id : uuid<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  class_subject_assignments["<b>class_subject_assignments</b><br/>PK id : uuid<br/>FK academic_class_id : uuid<br/>FK subject_id : uuid<br/>FK staff_id : uuid<br/>valid_from : date<br/>valid_until : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  timetables["<b>timetables</b><br/>PK id : uuid<br/>FK academic_year_id : uuid<br/>name : text<br/>effective_from : date<br/>effective_until : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  timetable_entries["<b>timetable_entries</b><br/>PK id : uuid<br/>FK timetable_id : uuid<br/>FK academic_class_id : uuid<br/>FK subject_id : uuid<br/>FK staff_id : uuid<br/>weekday : smallint<br/>period_number : smallint<br/>starts_at : time<br/>ends_at : time<br/>room_reference : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  substitute_assignments["<b>substitute_assignments</b><br/>PK id : uuid<br/>FK timetable_entry_id : uuid<br/>FK substitute_staff_id : uuid<br/>substitution_date : date<br/>reason : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  attendance_sessions["<b>attendance_sessions</b><br/>PK id : uuid<br/>FK academic_class_id : uuid<br/>FK subject_id : uuid<br/>attendance_date : date<br/>session_type : text<br/>starts_at : timestamptz<br/>ends_at : timestamptz<br/>status : text<br/>FK recorded_by : uuid<br/>finalized_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  attendance_records["<b>attendance_records</b><br/>PK id : uuid<br/>FK attendance_session_id : uuid<br/>FK student_id : uuid<br/>attendance_status : text<br/>recorded_at : timestamptz<br/>FK recorded_by : uuid<br/>source : text"]
+  attendance_corrections["<b>attendance_corrections</b><br/>PK id : uuid<br/>FK attendance_record_id : uuid<br/>old_status : text<br/>new_status : text<br/>reason : text<br/>FK requested_by : uuid<br/>FK approved_by : uuid<br/>approved_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  homework["<b>homework</b><br/>PK id : uuid<br/>FK academic_class_id : uuid<br/>FK subject_id : uuid<br/>FK staff_id : uuid<br/>title : text<br/>description : text<br/>assigned_at : timestamptz<br/>due_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  assignments["<b>assignments</b><br/>PK id : uuid<br/>FK academic_class_id : uuid<br/>FK subject_id : uuid<br/>FK staff_id : uuid<br/>title : text<br/>description : text<br/>assigned_at : timestamptz<br/>due_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  assignment_submissions["<b>assignment_submissions</b><br/>PK id : uuid<br/>FK assignment_id : uuid<br/>FK student_id : uuid<br/>submitted_at : timestamptz<br/>status : text<br/>grade_value : numeric(10,2)<br/>feedback : text<br/>FK document_id : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  lms_materials["<b>lms_materials</b><br/>PK id : uuid<br/>FK academic_class_id : uuid<br/>FK subject_id : uuid<br/>FK staff_id : uuid<br/>title : text<br/>description : text<br/>material_type : text<br/>FK document_id : uuid<br/>published_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  tests["<b>tests</b><br/>PK id : uuid<br/>FK academic_class_id : uuid<br/>FK subject_id : uuid<br/>FK staff_id : uuid<br/>title : text<br/>test_date : date<br/>max_marks : numeric(10,2)<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  assessment_types["<b>assessment_types</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>weightage : numeric(6,3)<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  assessments["<b>assessments</b><br/>PK id : uuid<br/>FK academic_year_id : uuid<br/>FK assessment_type_id : uuid<br/>name : text<br/>starts_on : date<br/>ends_on : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  assessment_subjects["<b>assessment_subjects</b><br/>PK id : uuid<br/>FK assessment_id : uuid<br/>FK subject_id : uuid<br/>FK academic_class_id : uuid<br/>max_marks : numeric(10,2)<br/>weightage : numeric(6,3)<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  assessment_questions["<b>assessment_questions</b><br/>PK id : uuid<br/>FK assessment_subject_id : uuid<br/>question_number : smallint<br/>description : text<br/>max_marks : numeric(10,2)<br/>question_type : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  assessment_marks["<b>assessment_marks</b><br/>PK id : uuid<br/>FK assessment_subject_id : uuid<br/>FK student_id : uuid<br/>FK question_id : uuid<br/>marks : numeric(10,2)<br/>FK graded_by : uuid<br/>graded_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  mark_corrections["<b>mark_corrections</b><br/>PK id : uuid<br/>FK assessment_mark_id : uuid<br/>old_marks : numeric(10,2)<br/>new_marks : numeric(10,2)<br/>reason : text<br/>FK requested_by : uuid<br/>FK approved_by : uuid<br/>approved_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  examinations["<b>examinations</b><br/>PK id : uuid<br/>FK academic_year_id : uuid<br/>name : text<br/>examination_type : text<br/>starts_on : date<br/>ends_on : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  examination_subjects["<b>examination_subjects</b><br/>PK id : uuid<br/>FK examination_id : uuid<br/>FK subject_id : uuid<br/>max_marks : numeric(10,2)<br/>pass_marks : numeric(10,2)<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  examination_schedules["<b>examination_schedules</b><br/>PK id : uuid<br/>FK examination_id : uuid<br/>FK academic_class_id : uuid<br/>FK subject_id : uuid<br/>starts_at : timestamptz<br/>ends_at : timestamptz<br/>room : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  grade_scales["<b>grade_scales</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>minimum_score : numeric(6,3)<br/>maximum_score : numeric(6,3)<br/>grade : text<br/>grade_point : numeric(6,3)<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  report_cards["<b>report_cards</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK academic_year_id : uuid<br/>term : text<br/>status : text<br/>published_at : timestamptz<br/>finalized_at : timestamptz<br/>FK document_id : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  report_card_items["<b>report_card_items</b><br/>PK id : uuid<br/>FK report_card_id : uuid<br/>FK subject_id : uuid<br/>marks : numeric(10,2)<br/>grade : text<br/>grade_point : numeric(6,3)<br/>remarks : text"]
+  board_exams["<b>board_exams</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK academic_year_id : uuid<br/>board_name : text<br/>registration_number : text<br/>exam_year : smallint<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  board_exam_results["<b>board_exam_results</b><br/>PK id : uuid<br/>FK board_exam_id : uuid<br/>FK subject_id : uuid<br/>subject_code : text<br/>marks : numeric(10,2)<br/>grade : text<br/>result_status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  classDef academics fill:#F1E8F7,stroke:#566573,stroke-width:1px;
+  class academic_classes academics;
+  class class_subject_assignments academics;
+  class timetables academics;
+  class timetable_entries academics;
+  class substitute_assignments academics;
+  class attendance_sessions academics;
+  class attendance_records academics;
+  class attendance_corrections academics;
+  class homework academics;
+  class assignments academics;
+  class assignment_submissions academics;
+  class lms_materials academics;
+  class tests academics;
+  classDef assessment fill:#EAF5F3,stroke:#566573,stroke-width:1px;
+  class assessment_types assessment;
+  class assessments assessment;
+  class assessment_subjects assessment;
+  class assessment_questions assessment;
+  class assessment_marks assessment;
+  class mark_corrections assessment;
+  class examinations assessment;
+  class examination_subjects assessment;
+  class examination_schedules assessment;
+  class grade_scales assessment;
+  class report_cards assessment;
+  class report_card_items assessment;
+  class board_exams assessment;
+  class board_exam_results assessment;
+  academic_classes -->|academic_class_id| assessment_subjects
+  academic_classes -->|academic_class_id| assignments
+  academic_classes -->|academic_class_id| attendance_sessions
+  academic_classes -->|academic_class_id| class_subject_assignments
+  academic_classes -->|academic_class_id| examination_schedules
+  academic_classes -->|academic_class_id| homework
+  academic_classes -->|academic_class_id| lms_materials
+  academic_classes -->|academic_class_id| tests
+  academic_classes -->|academic_class_id| timetable_entries
+  academic_years -.->|academic_year_id| academic_classes
+  academic_years -.->|academic_year_id| assessments
+  academic_years -.->|academic_year_id| board_exams
+  academic_years -.->|academic_year_id| examinations
+  academic_years -.->|academic_year_id| report_cards
+  academic_years -.->|academic_year_id| timetables
+  assessment_marks -->|assessment_mark_id| mark_corrections
+  assessment_subjects -->|assessment_subject_id| assessment_marks
+  assessment_subjects -->|assessment_subject_id| assessment_questions
+  assessment_types -->|assessment_type_id| assessments
+  assessments -->|assessment_id| assessment_subjects
+  assignments -->|assignment_id| assignment_submissions
+  attendance_records -->|attendance_record_id| attendance_corrections
+  attendance_sessions -->|attendance_session_id| attendance_records
+  board_exams -->|board_exam_id| board_exam_results
+  documents -.->|document_id| assignment_submissions
+  documents -.->|document_id| lms_materials
+  documents -.->|document_id| report_cards
+  examinations -->|examination_id| examination_schedules
+  examinations -->|examination_id| examination_subjects
+  grades -.->|grade_id| academic_classes
+  report_cards -->|report_card_id| report_card_items
+  school -.->|school_id| assessment_types
+  school -.->|school_id| grade_scales
+  sections -.->|section_id| academic_classes
+  staff -.->|class_advisor_staff_id| academic_classes
+  staff -.->|staff_id| assignments
+  staff -.->|staff_id| class_subject_assignments
+  staff -.->|staff_id| homework
+  staff -.->|staff_id| lms_materials
+  staff -.->|substitute_staff_id| substitute_assignments
+  staff -.->|staff_id| tests
+  staff -.->|staff_id| timetable_entries
+  students -.->|student_id| assessment_marks
+  students -.->|student_id| assignment_submissions
+  students -.->|student_id| attendance_records
+  students -.->|student_id| board_exams
+  students -.->|student_id| report_cards
+  subjects -.->|subject_id| assessment_subjects
+  subjects -.->|subject_id| assignments
+  subjects -.->|subject_id| attendance_sessions
+  subjects -.->|subject_id| board_exam_results
+  subjects -.->|subject_id| class_subject_assignments
+  subjects -.->|subject_id| examination_schedules
+  subjects -.->|subject_id| examination_subjects
+  subjects -.->|subject_id| homework
+  subjects -.->|subject_id| lms_materials
+  subjects -.->|subject_id| report_card_items
+  subjects -.->|subject_id| tests
+  subjects -.->|subject_id| timetable_entries
+  timetable_entries -->|timetable_entry_id| substitute_assignments
+  timetables -->|timetable_id| timetable_entries
+  user_accounts -.->|approved_by| attendance_corrections
+  user_accounts -.->|requested_by| attendance_corrections
+  user_accounts -.->|recorded_by| attendance_records
+  user_accounts -.->|recorded_by| attendance_sessions
+  user_accounts -.->|approved_by| mark_corrections
+  user_accounts -.->|requested_by| mark_corrections

@@ -1,0 +1,1441 @@
+================================================================================
+SCHOOL EOS — FRONTEND WORKFLOW, BY LOGIN
+Nine logins (v2.0 — was ten; Sports Manager is removed, see PLATFORM
+SUMMARY below). Each section is that login's complete screen-by-screen
+workflow, end to end. Platform (WEB / APP / WEB+APP / DEVICE) is tagged
+on every login header — this is a client-side attribute of that login,
+not a reason the login is described twice.
+
+Companion document: school-eos-backend-workflow-by-login.txt — the
+SAME logins, from the backend's side. One shared NestJS backend serves
+every login below; it is described once, in that document, not here.
+================================================================================
+
+PLATFORM SUMMARY (v2.0 — 9 logins; Sports Manager removed, Academic
+Coordinator no longer unlocks web — see CHANGE NOTE below)
+--------------------------------------------------------------------------------
+  Login 1  — Admin                        WEB  (now also owns Sports
+                                                 structure & equipment)
+  Login 2  — Principal                    WEB + APP
+  Login 3  — Vice Principal               WEB
+  Login 4  — Finance / Accounts           WEB
+  Login 5  — Faculty                      APP only, always (Class Advisor,
+                                                 Academic Coordinator, Health
+                                                 In-Charge, Community In-Charge,
+                                                 Sports Faculty are all
+                                                 assignments on this same
+                                                 login — none of them unlock web)
+  Login 6  — Parent                       APP only — no web version exists
+  Login 7  — Hostel Warden                APP only — daily ops, no setup access
+  Login 8  — Bus Attendant                APP, device-scoped
+  Login 9  — Canteen Vendor               APP, device-scoped
+
+CHANGE NOTE (v2.0): There is no Sports Manager login anymore. Sports
+structural/asset work (defining sports & categories, facilities,
+equipment master data, coach assignment) is now Admin's job on web —
+see W1.5a below, the exact same pattern as the earlier Transport
+Manager removal. Sports day-to-day operations (teams, rosters, trials,
+training, tournaments, fixtures, results, achievements, equipment
+issue/return) move to a NEW Faculty assignment, Sports Faculty — see
+section 1.14 in the Faculty login below. Academic Coordinator no
+longer opens a web app; it is mobile-only like every other Faculty
+assignment, and the heavy screens it used to reach (timetable
+building, exam setup, bulk report card generation) are Admin/Vice
+Principal/Principal web work.
+
+Every API reference below uses the exact method + path from
+school-eos-api-documentation-FINAL.md (688 endpoints).
+
+GLOBAL RULES THAT APPLY TO EVERY LOGIN BELOW
+--------------------------------------------------------------------------------
+- Every screen after login sends `Authorization: Bearer <access-token>`
+  (device logins — 9 and 10 — use a device credential instead).
+- Every list screen supports pagination; never fetch "all" in one call.
+- A 404 means "not found or not yours" — show a generic not-found state,
+  never reveal whether the record exists for someone else.
+- A 409 means a conflict (duplicate, state, concurrency) — show the
+  specific conflict, never a generic "error occurred."
+- A 422 means a business rule was broken — show the rule, not a stack trace.
+- Any screen that creates or changes money, a boarding record, a card
+  tap, or a wallet balance MUST send an `Idempotency-Key` header,
+  generated once per user action and reused only on retry of that
+  exact action.
+- Web screens are desk-based: real tables, server-side pagination,
+  bulk actions. Mobile screens are stand-up, one-hand, offline-tolerant
+  where the workflow says so.
+
+
+================================================================================
+PART B — FRONTEND, ONE COMPLETE SECTION PER LOGIN
+================================================================================
+
+################################################################################
+LOGIN 1 — ADMIN                                                          [WEB]
+The heaviest login in the product. Now also owns Transport and Hostel setup.
+################################################################################
+
+--------------------------------------------------------------------------------
+W1.1 LOGIN & DASHBOARD
+--------------------------------------------------------------------------------
+1. Standard login -> POST /api/v1/auth/login
+2. GET /api/v1/me -> confirm Admin role and permissions.
+3. Dashboard on load, fetch in parallel (not sequentially):
+   - Enrolment count, staff count, today's attendance %
+   - Fee collection this month vs target
+   - Open complaints / incidents count
+   - Pending approvals awaiting Admin
+   - Hostel occupancy summary
+   - Transport fleet status summary
+   - Any expiring vehicle/driver documents (surfaced proactively, not
+     buried — this is the kind of thing that gets missed until it's a
+     compliance problem)
+
+--------------------------------------------------------------------------------
+W1.2 STUDENT RECORDS
+--------------------------------------------------------------------------------
+CREATE / EDIT:
+1. GET /api/v1/students (paginated, filterable by section/status/medium)
+2. Create: POST /api/v1/students -> then link guardian(s):
+   POST /api/v1/students/{id}/guardians
+3. Bulk import: use the Bulk Operations feature.
+   POST /api/v1/bulk-jobs (type=student-import) -> upload file -> poll
+   GET /api/v1/bulk-jobs/{id} until complete -> show per-row errors from
+   GET /api/v1/bulk-jobs/{id}/errors, never a single pass/fail summary.
+4. Section/medium transfer, sibling linking, document upload (birth
+   certificate, TC, community certificate) — standard CRUD screens against
+   the Students & Guardians endpoint group.
+5. Exit / TC issuance: mark status, generate certificate.
+   POST /api/v1/students/{id}/exit (or equivalent transition)
+   POST /api/v1/certificates/transfer-certificates
+
+--------------------------------------------------------------------------------
+W1.3 STAFF RECORDS & ROLE ASSIGNMENT
+--------------------------------------------------------------------------------
+1. GET /api/v1/staff -> list, filter by department/teaching status.
+2. Create staff -> POST /api/v1/staff
+3. Assign a role or a Faculty assignment (Class Advisor, Academic
+   Coordinator, Health In-Charge, stage In-Charge, Community In-Charge,
+   Sports Faculty):
+   POST /api/v1/staff/{id}/role-assignments
+   Scope picker matters here — assigning Class Advisor must ask WHICH
+   section; assigning Academic Coordinator must ask school-wide or which
+   stage; assigning Sports Faculty must ask WHICH sport(s)/team(s) (see
+   W1.5a). Do not let this be a free-text field. None of these
+   assignments — Sports Faculty and Academic Coordinator included —
+   grant any web access; Faculty is mobile-only regardless of
+   assignment.
+
+--------------------------------------------------------------------------------
+W1.3a STAFF BIOMETRIC ATTENDANCE — SETUP, OVERSIGHT & MANUAL FALLBACK
+--------------------------------------------------------------------------------
+SETUP (once, at installation):
+1. Register the biometric terminal the same way any other device is
+   registered — this is not a special case.
+   POST /api/v1/devices  { deviceType: "BIOMETRIC_TERMINAL", location: "Main Gate" }
+2. Configure the returned device credential into the physical terminal
+   (or the development simulator, before real hardware arrives).
+3. Enroll each staff member's face/fingerprint on the device itself
+   (this happens on the vendor's device/SDK, not through your API — the
+   device only ever sends you the RESULT of a match, never the biometric
+   data).
+
+DAILY OVERSIGHT:
+1. GET /api/v1/staff/attendance?dateFrom=X&dateTo=Y
+   -> a real data table: staff name, event type, method (biometric vs
+   manual), state (confirmed/pending/rejected), timestamp.
+2. Filter by method=MANUAL to see every fallback entry at a glance —
+   this is the screen that tells Admin whether the terminal has been
+   unreliable this week, which is worth knowing on its own.
+
+MANUAL FALLBACK — TWO DIFFERENT PATHS, BUILD BOTH:
+1. ADMIN DIRECT ENTRY (Admin/Principal physically present, device down):
+   POST /api/v1/staff/attendance/manual
+   { staffId, eventType, occurredAt, reason: "Terminal offline" }
+   -> written CONFIRMED immediately. No approval step — Admin's own
+   entry is the authority here.
+2. APPROVING A FACULTY SELF-REPORT (device was down, Admin wasn't at the
+   gate to see it):
+   GET /api/v1/approvals?requestType=STAFF_ATTENDANCE_MANUAL_ENTRY&status=pending
+   -> review the reason the Faculty member gave.
+   POST /api/v1/approvals/{id}/approve  or  /reject
+   -> this is the SAME generic approvals screen used for every other
+   approval type in the product (concessions, refunds, outings). Do not
+   build a separate "attendance approvals" screen — one inbox, filtered
+   by request type, same as everywhere else.
+
+WHY THIS IS TWO PATHS AND NOT ONE: a Faculty member reporting their own
+attendance can never be self-confirming — that defeats the entire
+purpose of a fallback check. Admin/Principal recording it directly is
+fine, because they're an independent party vouching for it, not the
+person whose attendance is in question.
+
+--------------------------------------------------------------------------------
+W1.4 ADMISSIONS
+--------------------------------------------------------------------------------
+1. Enquiry pipeline: GET /api/v1/admissions/enquiries
+2. Application review: GET /api/v1/admissions/applications/{id}
+3. Seat allotment, admission fee collection, then convert to a full student
+   record — this should be one guided flow, not four disconnected screens.
+   POST /api/v1/admissions/applications/{id}/convert
+
+--------------------------------------------------------------------------------
+W1.5 TRANSPORT SETUP (moved here from the former Transport Manager role)
+--------------------------------------------------------------------------------
+VEHICLES:
+1. GET /api/v1/transport/vehicles
+2. POST /api/v1/transport/vehicles -> registration, capacity, ownership.
+3. Document tracking (insurance, fitness, permit, PUC) with expiry —
+   surface expiring documents on the dashboard (W1.1), don't make Admin
+   go looking for this.
+4. Activate/deactivate: POST .../activate, POST .../deactivate
+
+ROUTES & STOPS:
+1. GET /api/v1/transport/routes
+2. Create route -> add stops in sequence with geofence radius:
+   POST /api/v1/transport/routes/{id}/stops
+3. Map view for stop placement is strongly preferred over lat/long text
+   entry — this is where operator error creates real problems later
+   (wrong geofence radius, stops out of sequence).
+
+DEVICES (GPS trackers, terminals):
+1. GET /api/v1/devices -> register a new GPS tracker or NFC terminal.
+   POST /api/v1/devices
+2. Assign a device to a vehicle or a counter:
+   POST /api/v1/devices/{id}/assignments
+
+STUDENT ALLOCATION:
+1. Assign a student to a route + stop:
+   POST /api/v1/transport/student-assignments
+2. Capacity is checked server-side against the vehicle seat count — the
+   UI should show remaining capacity per stop/route before Admin submits,
+   not just fail after the fact.
+
+DRIVERS / ATTENDANTS:
+1. Standard CRUD with licence + police verification expiry tracking,
+   same document-expiry pattern as vehicles.
+
+INCIDENTS:
+1. GET /api/v1/transport/incidents -> review, close.
+   PATCH /api/v1/transport/incidents/{id}
+   POST /api/v1/transport/incidents/{id}/close
+
+LIVE FLEET VIEW:
+1. Map showing all active trips.
+   GET /api/v1/transport/trips?status=active
+2. Per-trip detail including the boarding board:
+   GET /api/v1/transport/trips/{id}/student-status
+3. This is a genuinely useful oversight screen for Admin even though the
+   Bus Attendant app (Part 2) is where boarding actually happens — Admin
+   should be able to see, in real time, which trips have unresolved
+   NOT_BOARDED exceptions right now.
+
+--------------------------------------------------------------------------------
+W1.5a SPORTS STRUCTURE & EQUIPMENT (moved here from the former Sports Manager role)
+--------------------------------------------------------------------------------
+Rarely-touched setup work, same rhythm as Transport and Hostel setup
+above: Admin owns the structure and assets, Sports Faculty (Part 2,
+Faculty login, section 1.14) runs the day-to-day team operations
+against what Admin sets up here.
+
+SPORTS, CATEGORIES, FACILITIES, EQUIPMENT:
+1. Define sports and age/gender categories:
+   POST /api/v1/sports
+   POST /api/v1/sport-categories
+2. Facility master records (courts, grounds, pools):
+   POST /api/v1/sports/facilities
+3. Equipment master inventory — this is the "important sports
+   management" that stays with Admin even though issue/return is a
+   daily Sports Faculty task:
+   POST /api/v1/sports/equipment
+   GET /api/v1/sports/equipment-issues (oversight view — who currently
+   has what, across every team, without needing to ask each Sports
+   Faculty member individually)
+
+COACH ASSIGNMENT:
+1. Coach records — internal (a staff member already holding the Sports
+   Faculty assignment) or external (with police verification expiry
+   tracked the same way as a transport driver's documents).
+2. Assign a coach to a team:
+   POST /api/v1/sports/teams/{id}/coaches
+3. A coach with expired verification cannot be assigned — enforced
+   server-side; surface the expiry clearly before Admin attempts the
+   assignment, not just fail after.
+
+MARKING A FACULTY ACCOUNT AS SPORTS FACULTY:
+1. This is not a separate screen — it is the exact same Faculty
+   assignment flow used for Class Advisor, Academic Coordinator,
+   Health In-Charge, and Community In-Charge (see W1.3 above), usable
+   at staff creation/admission time or at any later point in that
+   staff member's record:
+   POST /api/v1/staff/{id}/role-assignments
+   { assignmentType: "SPORTS_FACULTY", scope: { sportIds / teamIds } }
+2. Scope picker matters here exactly as it does for Class Advisor's
+   section picker — ask WHICH sport(s)/team(s) this assignment covers,
+   never leave it as an unscoped grant. This is what keeps a Sports
+   Faculty member's app limited to their own teams and not the whole
+   school's sports program.
+
+--------------------------------------------------------------------------------
+W1.6 HOSTEL SETUP (structure and allocation — Warden has NO access to this)
+--------------------------------------------------------------------------------
+STRUCTURE:
+1. Create the hostel hierarchy once: hostel -> blocks -> floors -> rooms
+   -> beds.
+   POST /api/v1/hostels
+   POST /api/v1/hostels/{id}/blocks
+   POST /api/v1/hostel-blocks/{id}/rooms
+   POST /api/v1/hostel-rooms/{id}/beds
+2. This is rarely-touched setup work, mainly at the start of a year or
+   when physical capacity changes. Build it as a tree/hierarchy editor,
+   not a flat list — the room count per school makes a flat list unusable
+   past a small hostel.
+
+ALLOCATION:
+1. Assign a student to a specific bed:
+   POST /api/v1/hostel/allocations (or the specific allocation endpoint —
+   confirm exact path in your build against the Hostel feature group)
+2. Occupancy view: which beds are filled, which are vacant, by block/floor.
+   GET /api/v1/hostels/{id}/blocks (drill down through the hierarchy)
+3. This is the ONLY place a student-to-bed assignment can be created or
+   changed. The Warden app can only READ this allocation to build its
+   roll-call roster — enforce this server-side via the access rules
+   already defined in the API document, not just by hiding the UI here.
+
+--------------------------------------------------------------------------------
+W1.7 CERTIFICATES
+--------------------------------------------------------------------------------
+1. Template-driven generation: TC, bonafide, conduct, study certificate.
+   POST /api/v1/certificates/{type}
+2. Serial-numbered register, reprint tracking — GET the issue history
+   before allowing a reprint, and log every reprint as its own event, not
+   a silent overwrite.
+
+--------------------------------------------------------------------------------
+W1.8 ID CARDS
+--------------------------------------------------------------------------------
+1. Issue batch: select students/staff, generate card records, export a
+   print file for the card vendor.
+   POST /api/v1/nfc/cards (bulk creation)
+2. Block a lost/damaged card:
+   POST /api/v1/nfc/cards/{id}/suspend (or equivalent)
+3. Approve and issue a replacement (charged through the fee ledger, not
+   the wallet):
+   POST /api/v1/finance/... (replacement fee) then re-provision the card.
+4. Card provisioning itself is a DEVICE-authenticated flow at the
+   personalisation station — Admin's role here is authorising the token,
+   not performing the cryptographic write:
+   POST /api/v1/nfc/cards/{id}/provisioning-token
+
+--------------------------------------------------------------------------------
+W1.9 COMMUNITIES, COMPLAINTS, OPERATIONS
+--------------------------------------------------------------------------------
+1. Create communities, assign a Faculty Community In-Charge:
+   POST /api/v1/communities
+2. Publish school-wide notices:
+   POST /api/v1/announcements
+3. Administrative complaint queue (non-restricted categories only —
+   bullying/harassment/staff-conduct route to a restricted committee
+   queue, not here):
+   GET /api/v1/complaints?category=administrative
+4. Inventory, purchase requests, vendor records — standard CRUD screens.
+
+--------------------------------------------------------------------------------
+W1.10 CAMPS SETUP
+--------------------------------------------------------------------------------
+1. Create camp, register partner agency, define sessions and services.
+   POST /api/v1/camps
+   POST /api/v1/camp-partners
+   POST /api/v1/camps/{id}/services
+2. Announce to the target audience:
+   POST /api/v1/camps/{id}/announce
+3. Participant-level work (attendance, checkup findings) happens on the
+   Faculty and Health In-Charge mobile apps (Part 2) — Admin's job here
+   ends at setup and announcement.
+
+--------------------------------------------------------------------------------
+W1.11 REPORTS & BULK EXPORTS
+--------------------------------------------------------------------------------
+1. Standard reports: attendance trends, fee collection, enrolment by
+   category/medium, dropout/long-absence, syllabus coverage.
+   GET /api/v1/reports/{report-type}
+2. Large reports run async — POST to trigger, poll or get notified when
+   the download is ready, never block the browser tab.
+3. State education portal export (manual upload elsewhere, not a live
+   integration) — generate the file in the required format from here.
+
+
+================================================================================
+
+
+################################################################################
+LOGIN 2 — PRINCIPAL                                                [WEB + APP]
+Web carries reports, exports and printing. Mobile carries decisions made
+away from the desk. Both halves are complete below.
+################################################################################
+
+--------------------------------------------------------------------------------
+W2.1 DASHBOARD (web version — fuller than the mobile dashboard)
+--------------------------------------------------------------------------------
+1. Same summary tiles as mobile, plus full drill-down tables:
+   - Class-wise and section-wise attendance and performance
+   - Teacher performance: syllabus coverage, marks-entry timeliness,
+     attendance punctuality
+   - Public exam analysis against district/state benchmarks (if applicable)
+   GET /api/v1/reports/leadership-dashboard (or the relevant reporting
+   endpoints, composed into one view)
+
+--------------------------------------------------------------------------------
+W2.2 AUDIT LOG
+--------------------------------------------------------------------------------
+1. Review Admin's financial and administrative actions.
+   GET /api/v1/audit-log?actorRole=admin
+2. This is read-only oversight — Principal does not edit or reverse
+   anything from this screen, only reviews.
+
+--------------------------------------------------------------------------------
+W2.3 EXPORTS & PRINTING
+--------------------------------------------------------------------------------
+1. Any report from W2.1 can be exported to Excel/PDF — this is the reason
+   this half of the Principal workflow needs a desk, not a phone.
+2. Bulk report card sign-off before publication happens here, not on
+   mobile — reviewing 40 report cards on a small screen is impractical.
+   GET /api/v1/report-cards?status=pending-signoff
+   POST /api/v1/report-cards/{id}/signoff (or bulk equivalent)
+
+--------------------------------------------------------------------------------
+W2.4 POLICY DOCUMENTS (SOP / POP)
+--------------------------------------------------------------------------------
+1. Create, version, and publish policy documents with an acknowledgement
+   requirement for staff.
+   POST /api/v1/documents (category=policy)
+2. Track who has acknowledged: GET /api/v1/documents/{id}/acknowledgements
+
+The mobile half of this login follows immediately below.
+
+
+================================================================================
+
+--------------------------------------------------------------------------------
+PRINCIPAL — MOBILE HALF (the web half lives in the ADMIN-adjacent section
+above under "PRINCIPAL"; this covers decisions made away from the desk)
+--------------------------------------------------------------------------------
+This was previously only referenced, never written out. Written here in full.
+
+DASHBOARD (lighter than the web version — summary tiles, not full tables):
+1. GET /api/v1/reports/leadership-dashboard?view=summary
+2. Tiles: attendance % today, fee collection this month, open complaints,
+   pending approvals awaiting Principal, any open SOS incidents.
+3. Tapping any tile opens a simple read-only detail list — NOT the full
+   drill-down tables that exist on the web dashboard. If a Principal
+   needs to export or print something, the app should say so and point
+   them to the web app rather than trying to replicate a data table on
+   a phone screen.
+
+APPROVALS INBOX:
+1. GET /api/v1/approvals?assignedRole=principal&status=pending
+2. One list, every request type mixed together (fee concessions, hostel
+   outings, mark corrections, staff attendance manual entries) — sorted
+   by how close each is to its SLA deadline, oldest/most urgent first.
+3. Tap an item -> see the request detail and the reason given ->
+   Approve or Reject with an optional comment.
+   POST /api/v1/approvals/{id}/approve
+   POST /api/v1/approvals/{id}/reject
+4. This is the SAME approvals engine as everywhere else in the product —
+   there is no "mobile-only" approval type. If it can be approved on
+   web, it can be approved here, and vice versa.
+
+ANNOUNCEMENTS:
+1. Compose -> audience picker (whole school / class / medium / group /
+   single person) -> publish.
+   POST /api/v1/announcements
+2. This is the one place a non-emergency announcement is sent from
+   mobile just as easily as from web — no reason to force a Principal
+   back to a desk for a routine notice.
+
+EMERGENCY / SOS — the single most safety-critical screen in this login:
+1. Always reachable, one tap away from anywhere in the app, not buried
+   in a menu.
+2. Requires re-authentication (PIN or biometric unlock) before it fires
+   — this is deliberate friction to prevent an accidental trigger, not
+   an obstacle to a genuine emergency.
+   POST /api/v1/incidents/sos
+3. On confirm, this triggers the tiered escalation server-side — the
+   app does not need to know or manage the escalation tiers, it only
+   needs to fire the request and show "Help alerted" clearly.
+4. If the SOS relates to a live transport incident, show the affected
+   vehicle's frozen last-known position directly on this confirmation
+   screen, not as a separate step to go find it.
+
+LIVE BUS MAP:
+1. GET /api/v1/transport/trips?status=active
+2. Map showing every active trip's current position, refreshed every
+   15 seconds while this screen is open.
+3. This is oversight, not operations — tapping a vehicle shows its
+   route and current student boarding status
+   (GET /transport/trips/{id}/student-status) but this screen has no
+   edit actions. Route changes, driver reassignment, all of that stays
+   on the web Admin screens.
+
+LOOKUP:
+1. A single search bar -> search any student, staff member, or class by
+   name.
+2. Results show a read-only summary card — attendance, recent marks,
+   fee status for a student; role and assignments for a staff member.
+3. This exists so a Principal standing in a hallway, talking to a
+   parent or a teacher, can pull up relevant information in seconds
+   without needing to be at a desk. Keep it fast and keep it read-only.
+
+
+################################################################################
+LOGIN 3 — VICE PRINCIPAL                                                 [WEB]
+################################################################################
+
+--------------------------------------------------------------------------------
+W3.1 LOGIN & DASHBOARD
+--------------------------------------------------------------------------------
+1. Standard login. Dashboard scoped to delegated academic oversight:
+   attendance trends, class-wise performance, syllabus progress across
+   subjects, faculty activity monitoring.
+   GET /api/v1/reports/academic-oversight
+
+--------------------------------------------------------------------------------
+W3.2 ACADEMIC MONITORING
+--------------------------------------------------------------------------------
+1. Review syllabus coverage by subject/teacher:
+   GET /api/v1/syllabus/progress?scope=school
+2. Review examination and assessment progress:
+   GET /api/v1/exams?status=in-progress
+3. Review student development and discipline within authorised scope —
+   read access, same restricted-scope rules as everywhere else (no
+   clinical health detail, no counselling notes).
+
+--------------------------------------------------------------------------------
+W3.3 DELEGATED APPROVALS
+--------------------------------------------------------------------------------
+1. Approvals inbox filtered to whatever request types have been delegated
+   to this role by policy configuration.
+   GET /api/v1/approvals?assignedRole=vice-principal
+2. Approve/reject same as any approval step:
+   POST /api/v1/approvals/{id}/approve
+   POST /api/v1/approvals/{id}/reject
+
+
+================================================================================
+
+
+################################################################################
+LOGIN 4 — FINANCE / ACCOUNTS                                             [WEB]
+################################################################################
+
+--------------------------------------------------------------------------------
+W4.1 LOGIN & DASHBOARD
+--------------------------------------------------------------------------------
+1. Standard login. Dashboard: today's collection, month-to-date, overall
+   outstanding, pending approvals awaiting Finance.
+   GET /api/v1/reports/finance-dashboard
+
+--------------------------------------------------------------------------------
+W4.2 FEE STRUCTURE & OBLIGATIONS
+--------------------------------------------------------------------------------
+1. Create fee heads and structures per class/category/medium.
+   POST /api/v1/finance/fee-structures
+2. This requires Principal + (eventually) Correspondent approval above
+   configured thresholds — submit creates a PENDING structure, it does
+   not go live until the approval chain clears.
+3. Assign structures to students, apply concessions:
+   POST /api/v1/finance/obligations
+   POST /api/v1/finance/concessions
+
+--------------------------------------------------------------------------------
+W4.3 COLLECTIONS
+--------------------------------------------------------------------------------
+1. Record a counter payment (cash/cheque/UPI taken in person):
+   POST /api/v1/finance/payments (mode=cash|cheque|upi_counter)
+2. Online payments confirm via the server-side webhook
+   (POST /finance/payment-events) — Finance's screen just reflects the
+   resulting state, it never manually marks an online payment as paid.
+3. Receipts, one per student even when one payment covered several
+   siblings:
+   GET /api/v1/finance/receipts
+
+--------------------------------------------------------------------------------
+W4.4 DEFAULTERS & REMINDERS
+--------------------------------------------------------------------------------
+1. GET /api/v1/finance/obligations?status=overdue
+2. Trigger reminder batch (SMS/WhatsApp/push via the notification queue):
+   POST /api/v1/finance/reminders
+
+--------------------------------------------------------------------------------
+W4.5 EXTENSION REQUESTS
+--------------------------------------------------------------------------------
+1. Review parent-submitted due-date extension requests:
+   GET /api/v1/finance/extension-requests?status=pending
+2. These route through the approval engine — Finance acts as the first
+   approval step, not the sole decision-maker for larger extensions.
+
+--------------------------------------------------------------------------------
+W4.6 REFUNDS & EXPENSES
+--------------------------------------------------------------------------------
+1. Raise a refund -> goes to approval above threshold.
+   POST /api/v1/finance/refunds
+2. Record expenses, categorised, with petty-cash threshold triggering
+   approval automatically:
+   POST /api/v1/finance/expenses
+
+--------------------------------------------------------------------------------
+W4.7 PAYROLL
+--------------------------------------------------------------------------------
+1. Salary configuration per staff member (versioned — a change doesn't
+   retroactively alter past payslips):
+   POST /api/v1/finance/salary-configs
+2. Process a payroll period, generate payslips:
+   POST /api/v1/finance/payroll-periods/{id}/process
+3. Payroll release requires approval above the office level.
+
+--------------------------------------------------------------------------------
+W4.8 WALLET & CANTEEN RECONCILIATION
+--------------------------------------------------------------------------------
+1. Reconcile wallet top-ups against the payment gateway:
+   GET /api/v1/finance/reconciliations?type=wallet-topup
+2. Reconcile canteen sales against the wallet ledger, prepare vendor
+   settlement with commission:
+   POST /api/v1/canteen/settlements (or via the vendor settlement
+   endpoints — this needs Finance approval before it is marked payable)
+3. Process wallet refunds when a student exits:
+   POST /api/v1/wallets/{id}/refunds
+
+
+================================================================================
+
+
+################################################################################
+LOGIN 5 — FACULTY                                                        [APP]
+Class Advisor, Academic Coordinator, Health In-Charge, stage In-Charge,
+Community In-Charge, and Sports Faculty are ASSIGNMENTS on this same
+login, not separate apps. NONE of them — Academic Coordinator included —
+unlock a web app anymore. Faculty is mobile-only, always. (There is no
+Sports Manager login; its former end-to-end sports operations move into
+this login's Sports Faculty assignment, section 1.14 below. Sports
+structure/equipment stays with Admin, W1.5a.)
+################################################################################
+
+--------------------------------------------------------------------------------
+1.1 LOGIN & SESSION
+--------------------------------------------------------------------------------
+1. Faculty opens the app -> Login screen (email/mobile + password).
+2. Submit -> POST /api/v1/auth/login
+3. On success -> store access token + refresh token securely (Keychain /
+   Keystore, never plain storage).
+4. Call GET /api/v1/me -> returns identity, roles, and effective permissions.
+   Use this response to decide which extra menu items to show (Class
+   Advisor, Academic Coordinator, Health In-Charge, Community In-Charge —
+   whichever assignments this faculty member actually holds).
+5. If token expires mid-session -> silently call POST /api/v1/auth/refresh
+   before retrying the failed request. Only force re-login if refresh fails.
+6. Logout -> POST /api/v1/auth/logout -> clear local tokens -> back to
+   Login screen.
+
+--------------------------------------------------------------------------------
+1.2 HOME / TODAY SCREEN
+--------------------------------------------------------------------------------
+1. On load -> fetch today's timetable for this faculty member.
+   GET /api/v1/timetable/slots?facultyId=me&date=today
+2. Show current period highlighted, rest of the day below.
+3. Fetch substitution duties assigned to them for today.
+   GET /api/v1/timetable/substitutions?facultyId=me&date=today
+4. Fetch pending tasks badge count (ungraded homework, pending marks entry
+   windows, unread notices) — combine into one badge, don't spam five
+   separate badges.
+5. Tapping a period -> opens that class's Attendance or Marks screen
+   depending on whether attendance for that session is already marked.
+
+--------------------------------------------------------------------------------
+1.3 MARK ATTENDANCE  [OFFLINE]
+--------------------------------------------------------------------------------
+1. From Today screen or Attendance tab -> select class/section + date.
+2. GET /api/v1/attendance/sessions?sectionId=X&date=Y -> check if a session
+   already exists for this date/section.
+   - If exists and locked -> show read-only view, offer "Request Correction."
+   - If exists and unlocked -> load existing marks for editing.
+   - If none exists -> create new.
+3. Load the class roster with photos:
+   GET /api/v1/students?sectionId=X&status=active
+4. Render one row per student, default to PRESENT, large tap target to
+   toggle ABSENT / LATE / ON_LEAVE. Reason field appears only for ABSENT.
+5. On Save (works with or without connection):
+   - If online: POST /api/v1/attendance/sessions (if new) then
+     POST /api/v1/attendance/sessions/{id}/records (bulk), each record
+     idempotent by session+student.
+   - If offline: write to local encrypted queue with a client-generated
+     clientKey. Show "1 unsynced" badge on the screen and in the app's
+     global sync indicator.
+6. When connection returns -> auto-fire:
+   POST /api/v1/attendance/sessions/sync
+   with the queued batch. Handle the per-item response:
+   - ACCEPTED -> remove from local queue, show green check
+   - DUPLICATE -> treat as success, remove from queue (this is not an error)
+   - REJECTED -> keep in queue, show the reason, let the teacher review
+7. Absence notifications to parents are triggered server-side after
+   successful save. No client action needed, but the UI should NOT imply
+   the parent has been notified until the sync confirms ACCEPTED.
+
+--------------------------------------------------------------------------------
+1.4 ATTENDANCE CORRECTION (Class Advisor only)
+--------------------------------------------------------------------------------
+1. On a locked session -> "Request Correction" button.
+2. Enter the new status + a mandatory reason.
+3. POST /api/v1/attendance/sessions/{id}/corrections
+4. This never edits the original record — it appends a correction. Show
+   both the original and corrected value in the history view afterward.
+   GET /api/v1/attendance/sessions/{id}/corrections
+
+--------------------------------------------------------------------------------
+1.5 MARKS ENTRY  [purpose-built screen — see notes]
+--------------------------------------------------------------------------------
+1. From Today screen or an exam notification -> select exam + subject
+   (only subjects this faculty member teaches will appear; enforced
+   server-side, don't rely on hiding the option client-side).
+2. GET /api/v1/exams/{examId}/subjects/{subjectId}/marks?sectionId=X
+3. Screen design: ONE student at a time, roll-number order, name + photo
+   large, a numeric keypad (not a generic text field), auto-advance to the
+   next student on entry. This is the single most important screen for
+   whether teachers accept the product — do not build it as a scrolling
+   form.
+4. Allow partial save at any point:
+   PATCH /api/v1/exams/{examId}/subjects/{subjectId}/marks
+   (saves whatever has been entered so far, resumable later)
+5. Marks outside 0..maxMarks are rejected server-side with 422 — show the
+   valid range inline before the teacher even submits.
+6. Once all students are marked -> "Submit for Verification" ->
+   POST /api/v1/exams/{examId}/subjects/{subjectId}/marks/submit
+7. After submission, the window closes for this teacher — screen becomes
+   read-only until Academic Coordinator either verifies or returns it.
+
+--------------------------------------------------------------------------------
+1.6 HOMEWORK — CREATE & GRADE
+--------------------------------------------------------------------------------
+CREATE:
+1. Compose screen -> subject, title, description, due date, optional photo/
+   file attachment (camera or file picker).
+2. POST /api/v1/homework (multipart if attachment included, or separate
+   upload-then-attach flow depending on your storage upload pattern)
+3. On success -> confirmation, appears immediately in parent app.
+
+GRADE SUBMISSIONS:
+1. Homework detail -> "Submissions" tab.
+   GET /api/v1/homework/{id}/submissions
+2. List shows SUBMITTED / LATE / NOT_DONE with student photo + name.
+3. Tap a submission -> view attachment -> enter grade + feedback.
+   PATCH /api/v1/homework/{id}/submissions/{submissionId}
+4. Bulk "mark not done" for anyone with no submission past due date is a
+   convenience action, same endpoint, looped client-side or via a bulk
+   action if the API supports it — check the bulk operations endpoints
+   before building a client-side loop for large classes.
+
+--------------------------------------------------------------------------------
+1.7 STUDY MATERIAL (LMS)
+--------------------------------------------------------------------------------
+1. Upload screen -> subject + chapter tag + file/photo/link.
+2. POST /api/v1/lms/materials
+3. Keep uploads small — this runs on a teacher's mobile data. Compress
+   photos before upload; warn before uploading over a size threshold.
+
+--------------------------------------------------------------------------------
+1.8 SYLLABUS PROGRESS
+--------------------------------------------------------------------------------
+1. Syllabus tab -> list of units/chapters for subjects taught.
+   GET /api/v1/syllabus/units?subjectId=X&sectionId=Y
+2. Toggle each unit: NOT_STARTED / IN_PROGRESS / COMPLETED.
+   PATCH /api/v1/syllabus/progress/{id}
+3. Show a simple coverage bar at the top (completed / total).
+
+--------------------------------------------------------------------------------
+1.9 COMMUNICATION
+--------------------------------------------------------------------------------
+1. Notices tab -> GET /api/v1/announcements?scope=mine
+2. Subject/class communities -> GET /api/v1/communities/{id}/posts
+   Post -> POST /api/v1/communities/{id}/posts (goes to PENDING if the
+   community is pre-moderated; show "awaiting approval" state).
+3. Message a parent -> this is logged, never a private unmonitored channel.
+   POST /api/v1/messages (or the specific messaging endpoint in your spec)
+
+--------------------------------------------------------------------------------
+1.9a MY ATTENDANCE (own record — biometric, and manual fallback self-report)
+--------------------------------------------------------------------------------
+NORMAL DAY — NOTHING TO DO:
+1. Faculty walks up to the biometric terminal at the gate. It recognizes
+   them and fires the event on its own. Nothing happens in the app —
+   this screen exists purely for VIEWING, not for daily marking.
+
+VIEW OWN RECORD:
+1. "My Attendance" tab -> GET /api/v1/staff/attendance?staffId=me
+2. Show a simple calendar/list: date, check-in time, check-out time,
+   method (a small icon distinguishing biometric vs manual is enough —
+   don't over-design this), and state if it's not yet CONFIRMED.
+
+WHEN THE BIOMETRIC TERMINAL IS DOWN (self-report fallback):
+1. A visible "Report Manual Attendance" button on this screen — this is
+   the fallback path when the gate device isn't working and no Admin is
+   physically there to enter it directly.
+2. Form: event type (check-in/check-out), a MANDATORY reason field
+   ("Terminal not working", "Terminal not installed at this gate yet",
+   etc. — free text is fine, just don't allow submission without one).
+   POST /api/v1/staff/attendance/manual
+   { staffId: me, eventType, occurredAt: now, reason }
+3. IMPORTANT — set expectations clearly in the UI at this exact moment:
+   this does NOT immediately count. Show "Submitted — pending Admin
+   approval" prominently, not a plain success checkmark. A Faculty
+   member seeing a green tick here and assuming they're covered, when
+   the entry is actually still PENDING, is the exact failure mode this
+   screen needs to avoid.
+4. Status of a pending self-report is visible on the same "My
+   Attendance" list — PENDING / CONFIRMED / REJECTED, same as any other
+   record, so there's one place to check rather than a separate inbox.
+
+--------------------------------------------------------------------------------
+1.10 LEAVE REQUEST (self)
+--------------------------------------------------------------------------------
+1. Leave tab -> shows current balance.
+   GET /api/v1/staff/leave/balance
+2. Apply -> type, dates, reason.
+   POST /api/v1/staff/leave-requests
+3. Status view -> GET /api/v1/staff/leave-requests?staffId=me
+
+--------------------------------------------------------------------------------
+1.11 DISCIPLINE INCIDENT
+--------------------------------------------------------------------------------
+1. From a student's profile or a standalone "Report Incident" button.
+2. Select severity, category, description.
+3. POST /api/v1/discipline/incidents
+4. Severity determines what happens next server-side (parent notification,
+   escalation) — the app doesn't need to branch logic here, just submit
+   and show confirmation.
+
+--------------------------------------------------------------------------------
+1.12 CLASS ADVISOR EXTRA SCREENS (only if this assignment is held)
+--------------------------------------------------------------------------------
+- Class dashboard: attendance %, pending fees, upcoming birthdays, open
+  concerns for the whole section.
+  GET /api/v1/sections/{id}/dashboard
+- Full class roster with ALL-SUBJECT marks (not just own subject):
+  GET /api/v1/sections/{id}/students/{studentId}/marks
+- Report card remarks: PATCH /api/v1/report-cards/{id} (advisorRemark field)
+- Approve student leave: POST /api/v1/students/leave-requests/{id}/approve
+- Class community management, PTM scheduling, house points — same pattern
+  as sections 1.9 and equivalent endpoints in Sports/Community phases.
+
+--------------------------------------------------------------------------------
+1.13 HEALTH IN-CHARGE EXTRA SCREENS (only if this assignment is held)
+--------------------------------------------------------------------------------
+- Medication round: GET /api/v1/health/medication-rounds?from=X&to=Y
+  One tap per dose: GIVEN / MISSED / REFUSED, reason required if not GIVEN.
+  POST /api/v1/health/medications/{id}/administer
+- Record infirmary visit: POST /api/v1/health/infirmary-visits
+- Sick bay admission/discharge:
+  POST /api/v1/health/infirmary-visits/{id}/sick-bay-admission
+  POST /api/v1/health/infirmary-visits/{id}/sick-bay-discharge
+- Standing medication schedule setup (for hostellers on daily meds):
+  POST /api/v1/health/students/{studentId}/medication-schedules
+  (requires an active parentConsentId — the UI must block submission
+  without one, don't rely on the server rejection alone as the only guard)
+
+--------------------------------------------------------------------------------
+1.14 SPORTS FACULTY EXTRA SCREENS (only if this assignment is held — moved here from the former Sports Manager login)
+--------------------------------------------------------------------------------
+Everything below is scoped server-side to the sport(s)/team(s) this
+Faculty member is actually assigned to — the menu should only ever
+show their own teams, never a school-wide sports roster. Sport/category
+definitions, facilities, and equipment master data are NOT editable
+here at all; that stays on Admin's web screens (W1.5a) — this
+assignment only reads those (facility list, equipment list) to build
+its own operational screens below.
+
+DASHBOARD:
+1. On opening the Sports tab: active teams (mine only), upcoming
+   fixtures, equipment currently issued to my teams, pending
+   achievement records.
+
+TEAMS, ROSTERS & STUDENT SPORT PROFILES:
+1. Create/manage teams within my assigned sport(s), manage rosters:
+   POST /api/v1/sports/teams
+   POST /api/v1/sports/teams/{id}/rosters
+   POST /api/v1/sports/teams/{id}/rosters/{rosterId}/end
+2. A student's sport profile and participation history — this is the
+   "team students profile and all details" view, one screen per
+   student rather than a spreadsheet:
+   POST /api/v1/student-sport-profiles
+   PATCH /api/v1/student-sport-profiles/{id}
+   POST /api/v1/student-sport-participations
+   PATCH /api/v1/student-sport-participations/{id}
+3. Trials and trial results, for selecting into a team:
+   POST /api/v1/sport-trials
+   PATCH /api/v1/sport-trials/{id}
+   POST /api/v1/sport-trial-results
+
+TRAINING:
+1. Schedule training sessions for my team(s), record attendance:
+   POST /api/v1/sports/training-sessions
+   PATCH /api/v1/sports/training-sessions/{id}
+   POST /api/v1/sports/training-sessions/{id}/attendance
+2. Book a facility slot for training (facility list is read-only here,
+   Admin owns the master record):
+   POST /api/v1/sports/facilities/{id}/bookings
+   PATCH /api/v1/sports/facility-bookings/{id}
+   POST /api/v1/sports/facility-bookings/{id}/cancel
+
+TOURNAMENTS & FIXTURES:
+1. Create tournament, enter my team(s), generate/manage fixtures:
+   POST /api/v1/sports/tournaments
+   PATCH /api/v1/sports/tournaments/{id}
+   POST /api/v1/sports/tournaments/{id}/entries
+   POST /api/v1/sports/fixtures
+   PATCH /api/v1/sports/fixtures/{id}
+2. Record results and rankings after the fixture:
+   POST /api/v1/sports/fixtures/{id}/results
+   POST /api/v1/sports/team-rankings
+3. A result cannot be recorded before the fixture's scheduled start
+   time — this is a real server-side check, don't build a client-side
+   date picker that allows backdating past this rule and rely on the
+   API to catch it silently.
+
+ACHIEVEMENTS & CERTIFICATES:
+1. Record individual/team achievements — these feed the student's
+   consolidated development profile automatically, no separate step
+   needed on the student side.
+   POST /api/v1/sports/achievements
+   POST /api/v1/sports/certificates
+
+EQUIPMENT ISSUE/RETURN (daily operations against Admin's master inventory):
+1. GET /api/v1/sports/equipment (read-only list from Admin's master
+   inventory — cannot create or edit equipment records here)
+2. Issue to a student/team, record return:
+   POST /api/v1/sports/equipment/{id}/issues
+   POST /api/v1/sports/equipment-issues/{id}/return
+
+CONSENT FOR AWAY MATCHES:
+1. Trigger consent collection for an away fixture — this generates a
+   consent request the parent handles in their own app (Login 6,
+   Parent), Sports Faculty just tracks completion status here.
+   GET /api/v1/sports/fixtures/{id}/consents
+
+
+================================================================================
+
+
+################################################################################
+LOGIN 6 — PARENT                                                         [APP]
+No web version exists at all.
+################################################################################
+
+--------------------------------------------------------------------------------
+2.1 LOGIN & SESSION
+--------------------------------------------------------------------------------
+1. Login screen -> email/mobile + password.
+   POST /api/v1/auth/login
+2. GET /api/v1/me -> returns linked children via the guardian relationship.
+3. IMPORTANT: if this parent has ONE child, skip the child list entirely
+   and go straight to that child's Home. If MORE than one, show the
+   combined Home (see 2.2). Never force a "select child" step for a
+   single-child parent.
+4. Password reset allowance is limited (one self-service reset). If the
+   reset endpoint returns "allowance exhausted," show a clear message
+   directing them to contact the school office — do not imply a bug.
+
+--------------------------------------------------------------------------------
+2.2 HOME SCREEN — MOST IMPORTANT SCREEN IN THE APP
+--------------------------------------------------------------------------------
+1. GET /api/v1/me -> list of linked children.
+2. For EACH child, fetch a lightweight summary in parallel (do not
+   sequence these calls, they must load together):
+   - Attendance today
+   - Homework due count
+   - Bus status (if transport allocated)
+   - Wallet balance (if wallet enabled)
+   - Fee due amount
+3. Render ONE CARD PER CHILD. Assign each child a consistent colour used
+   everywhere in the app (cards, notifications, calendar) — pick it once
+   at first load and persist it locally, don't regenerate randomly each
+   session.
+4. Tapping a card enters that child's full context. A child switcher stays
+   pinned in the header from this point on — switching is one tap, never
+   a logout/re-navigation.
+5. Every notification and every screen title from here on must NAME the
+   child ("Arjun — Class 10A"), never say "your child."
+
+--------------------------------------------------------------------------------
+2.3 ATTENDANCE (per child)
+--------------------------------------------------------------------------------
+1. GET /api/v1/students/{studentId}/attendance?month=X
+2. Calendar view, tap a day for the reason if absent.
+3. No PIN required — this is open information for the linked parent.
+
+--------------------------------------------------------------------------------
+2.4 HOMEWORK (per child)
+--------------------------------------------------------------------------------
+1. GET /api/v1/students/{studentId}/homework?status=pending
+2. Tap -> detail -> "Upload completed work" -> camera or file picker.
+   POST /api/v1/homework/{id}/submissions
+3. Submitted items move to a "Completed" tab automatically.
+
+--------------------------------------------------------------------------------
+2.5 MARKS & REPORT CARD (per child)
+--------------------------------------------------------------------------------
+1. GET /api/v1/students/{studentId}/exams
+2. GET /api/v1/students/{studentId}/report-cards
+3. Report card PDF download -> use the signed URL the API returns, do not
+   construct storage URLs client-side.
+
+--------------------------------------------------------------------------------
+2.6 BUS TRACKING (per child) — live status
+--------------------------------------------------------------------------------
+1. GET /api/v1/students/{studentId}/transport/status
+   -> shows one of: Not boarded yet / On bus / Dropped / Did not board /
+   Absent. Use exactly this wording, never raw enum values.
+2. If status is "On bus" -> show live map, poll every 15 seconds:
+   GET /api/v1/students/{studentId}/transport/live
+   Stop polling immediately when status changes away from "On bus" or the
+   screen is backgrounded.
+3. If `isStale` is true in the response -> show "Last updated HH:MM"
+   instead of implying a live position.
+4. This endpoint returns 404 outside an active trip — treat that as
+   "no live tracking right now," not an error state.
+5. "Did not board" is the highest-priority notification in the whole app.
+   When this notification arrives, deep-link directly into THIS child's
+   bus screen (not the generic Home), and surface a one-tap "Call
+   attendant" action using the route's stored contact number.
+
+--------------------------------------------------------------------------------
+2.7 WALLET (per child) — PIN required
+--------------------------------------------------------------------------------
+1. PIN gate before entering this section at all.
+2. GET /api/v1/wallets/{walletId} -> balance + status (ACTIVE/FROZEN).
+3. Transaction list: GET /api/v1/wallets/{walletId}/ledger
+4. Top-up:
+   - UPI shown first and most prominent, other methods secondary.
+   - POST /api/v1/wallets/{id}/topups -> get gateway order -> hand off to
+     gateway SDK -> DO NOT mark as successful on the client callback.
+     The balance updates only after the server confirms via
+     POST /api/v1/finance/payment-events (server-side, parent app just
+     polls or waits for a push confirming the new balance).
+5. Auto top-up setup:
+   POST /api/v1/wallets/{id}/auto-topup (threshold + amount + mandate)
+6. Spending limits: PATCH equivalent on wallet limits endpoint.
+7. Item blocks (allergy/dietary/parental): set per menu item or category.
+8. FREEZE button — one tap, prominent, always reachable from this screen
+   without extra navigation. This may be used in a genuine emergency
+   (lost card); do not bury it in a submenu.
+   POST /api/v1/wallets/{id}/freeze
+9. Meal pre-order:
+   POST /api/v1/canteen/pre-orders
+   Shows in a "Tomorrow's meal" card once ordered; collection status
+   updates automatically once the child taps at the counter.
+
+--------------------------------------------------------------------------------
+2.8 FEES — PIN required
+--------------------------------------------------------------------------------
+1. GET /api/v1/students/{studentId}/fee-obligations
+2. If parent has multiple children: show a COMBINED total across all
+   children with a per-child breakdown, and let them select which
+   children/instalments to pay in ONE transaction.
+3. Pay: create one payment covering the selected obligations across
+   children. On success, the server issues a SEPARATE receipt per
+   student/child — both downloadable from the receipts list.
+   GET /api/v1/students/{studentId}/receipts
+4. Request extension:
+   POST /api/v1/finance/obligations/{obligationId}/extension-requests
+   Show its approval status afterward, it does not change the due date
+   until approved.
+
+--------------------------------------------------------------------------------
+2.9 LEAVE REQUEST (for child) — PIN required
+--------------------------------------------------------------------------------
+1. POST /api/v1/students/{studentId}/leave-requests
+2. Status view shows pending/approved/rejected.
+
+--------------------------------------------------------------------------------
+2.10 COMPLAINTS — PIN required
+--------------------------------------------------------------------------------
+1. POST /api/v1/complaints — category picker, description, optional
+   "raise anonymously" toggle for sensitive categories.
+2. Status tracker: GET /api/v1/complaints?raisedBy=me
+
+--------------------------------------------------------------------------------
+2.11 COMMUNITY (per child)
+--------------------------------------------------------------------------------
+1. GET /api/v1/students/{studentId}/communities
+2. View-only for announcements; can post in the discussion space if the
+   community has it enabled — posts from a pre-moderated community show
+   "pending" until approved.
+
+--------------------------------------------------------------------------------
+2.12 CAMPS (per child)
+--------------------------------------------------------------------------------
+1. GET /api/v1/students/{studentId}/camps
+2. Consent action if a camp requires it and hasn't been given yet — this
+   should be a prominent banner, not buried, since attendance can't be
+   marked without it.
+   POST /api/v1/camps/{id}/consents
+3. Findings view shows: attended, services received, results, and
+   recommendation/follow-up status. Abnormal findings should be visually
+   distinct (not just plain text) — this is health information a parent
+   needs to notice, not skim past.
+
+--------------------------------------------------------------------------------
+2.13 HOSTEL (per child, if hosteller)
+--------------------------------------------------------------------------------
+1. Room/allocation info: GET /api/v1/students/{studentId}/hostel
+2. Outing request: POST /api/v1/hostel/outing-requests
+3. Approved gate passes and movement history — read only for the parent.
+
+--------------------------------------------------------------------------------
+2.14 NOTIFICATIONS (global, all children)
+--------------------------------------------------------------------------------
+1. Inbox grouped by child, then by date.
+   GET /api/v1/notifications?scope=mine
+2. Mark read: PATCH /api/v1/notifications/{id}
+3. Preferences: which channels per notification type, and quiet hours.
+   PATCH /api/v1/notification-preferences
+
+
+================================================================================
+
+
+################################################################################
+LOGIN 7 — HOSTEL WARDEN                                                  [APP]
+Daily operations only. Room/bed structure and allocation are Admin's job
+on web (Login 1) — the Warden has zero access to those screens or
+endpoints, enforced server-side, not just hidden client-side.
+################################################################################
+
+--------------------------------------------------------------------------------
+3.1 LOGIN & TODAY SCREEN
+--------------------------------------------------------------------------------
+1. Standard login (1.1 pattern).
+2. Today dashboard:
+   - Current occupancy count (READ from Admin's allocation, not editable)
+   - Students currently outside on a pass
+   - Pending outing requests count
+   - Open incidents count
+   GET /api/v1/hostel/dashboard
+
+--------------------------------------------------------------------------------
+3.2 NIGHT ROLL CALL  [OFFLINE]
+--------------------------------------------------------------------------------
+1. Select roll call date/session (MORNING/NIGHT).
+2. GET /api/v1/hostel/attendance?date=X&session=Y -> roster in bed order
+   (not alphabetical — must match the physical walk-through). This roster
+   comes from Admin's existing allocation; the Warden app only reads it.
+3. One tap per student: PRESENT / ABSENT / ON_LEAVE / SICKBAY /
+   OUT_ON_PASS.
+4. Save -> same offline-queue-and-sync pattern as Faculty attendance
+   (1.3). Use the attendance sync endpoint with clientKey per record.
+
+--------------------------------------------------------------------------------
+3.3 IN/OUT REGISTER
+--------------------------------------------------------------------------------
+1. GET /api/v1/hostel/gate-movements?date=today
+2. Record entry/exit not tied to a formal outing (e.g. daily school
+   commute for day-attached hostellers, if applicable to your school).
+
+--------------------------------------------------------------------------------
+3.4 OUTING REQUESTS — NORMAL
+--------------------------------------------------------------------------------
+1. Pending list: GET /api/v1/hostel/outing-requests?status=pending
+2. Review -> Approve or Reject.
+   POST /api/v1/hostel/outing-requests/{id}/approve
+   POST /api/v1/hostel/outing-requests/{id}/reject
+3. Overnight requests route through an additional Principal approval
+   step server-side — the warden's screen just shows the resulting
+   status (PENDING_PRINCIPAL, APPROVED, REJECTED), no extra client logic
+   needed.
+4. On approval -> issue gate pass:
+   POST /api/v1/hostel/gate-passes
+5. Record gate-out / gate-in at the actual time of movement:
+   POST /api/v1/hostel/gate-passes/{id}/gate-out
+   POST /api/v1/hostel/gate-passes/{id}/gate-in
+
+--------------------------------------------------------------------------------
+3.5 EMERGENCY GATE PASS
+--------------------------------------------------------------------------------
+1. Separate, clearly distinct button from normal outings — do not bury
+   this in the same flow.
+2. Enter: student, reason (mandatory), collecting person.
+3. Collecting person MUST be checked against the authorised pickup list
+   for that student. If not on the list, require an explicit override
+   with its own reason field — never silently allow it.
+4. POST /api/v1/hostel/gate-passes/emergency
+5. Pass issues IMMEDIATELY — do not block on any approval before letting
+   the child leave. Show clearly that this creates a retrospective
+   approval requirement for the Principal, and that the pass cannot be
+   marked closed until that approval completes.
+   GET /api/v1/hostel/gate-passes/{id} -> check retrospectiveApprovalId
+   before allowing "Mark Returned."
+
+--------------------------------------------------------------------------------
+3.6 VISITORS
+--------------------------------------------------------------------------------
+1. POST /api/v1/hostel/visitors (entry)
+2. PATCH /api/v1/hostel/visitors/{id} (exit time)
+3. Open visitor list (no exit recorded yet):
+   GET /api/v1/hostel/visitors?status=inside
+
+--------------------------------------------------------------------------------
+3.7 MESS ATTENDANCE
+--------------------------------------------------------------------------------
+1. Select meal (BREAKFAST/LUNCH/SNACKS/DINNER).
+2. Mark attended per student, or bulk "all present" with exceptions.
+   POST /api/v1/hostel/mess/attendance
+3. Show dietary restriction/allergy flag next to any student who has one
+   — pulled from the health module, read-only here.
+
+--------------------------------------------------------------------------------
+3.8 HEALTH — HOSTELLER SCOPE (shared pattern with Faculty Health In-Charge)
+--------------------------------------------------------------------------------
+Same workflows as section 1.13, but scoped to hostellers only:
+- Medication round: GET /api/v1/health/medication-rounds?hostelId=X
+- Infirmary visit, sick bay admission/discharge — same endpoints as 1.13.
+- Escalation log for a night-time incident:
+  POST /api/v1/health/escalations (or the specific escalation endpoint)
+
+--------------------------------------------------------------------------------
+3.9 INCIDENTS
+--------------------------------------------------------------------------------
+1. POST /api/v1/hostel/incidents — severity, description, action taken.
+2. Escalation happens server-side based on severity; app just submits and
+   confirms.
+
+--------------------------------------------------------------------------------
+3.10 EMERGENCY / SOS
+--------------------------------------------------------------------------------
+1. Always-reachable SOS button, requires a confirm-tap (not accidental).
+   POST /api/v1/incidents/sos (or the specific SOS endpoint in Phase 9)
+2. This fires the tiered escalation server-side — warden doesn't need to
+   know or manage that sequence, just trigger it and show "Help alerted."
+
+
+================================================================================
+
+
+################################################################################
+LOGIN 8 — BUS ATTENDANT                                                  [APP]
+Device-scoped. Deliberately minimal — large buttons, must work with no
+signal.
+################################################################################
+
+--------------------------------------------------------------------------------
+4.1 LOGIN
+--------------------------------------------------------------------------------
+1. Standard login OR device-bound credential depending on how this
+   terminal is provisioned (check with backend team which applies to
+   your build — the app-based attendant login uses the standard Bearer
+   flow; a dedicated hardware terminal uses a device credential instead).
+2. On success -> Today's Trip screen. Nothing else. No menu, no settings
+   buried anywhere non-obvious.
+
+--------------------------------------------------------------------------------
+4.2 TODAY'S TRIP
+--------------------------------------------------------------------------------
+1. GET /api/v1/transport/trips?assignedTo=me&date=today
+2. Show route name, direction (pickup/drop), a single large "Start Trip"
+   button.
+3. Start: POST /api/v1/transport/trips/{id}/start (or equivalent state
+   transition endpoint) -> trip becomes STARTED.
+
+--------------------------------------------------------------------------------
+4.3 STOP LIST & BOARDING  [OFFLINE — this must never block on connectivity]
+--------------------------------------------------------------------------------
+1. GET /api/v1/transport/trips/{id}/exceptions and the stop list together
+   to build the screen: stops in order, current stop highlighted,
+   expected-vs-boarded count per stop.
+2. Tap-to-scan mode: on a successful NFC tap, flash the student's photo +
+   name full-screen briefly (this is the confirmation, not a checkbox).
+   POST /api/v1/transport/trips/{id}/boardings
+   direction=BOARD, source=CARD_TAP, tapEventId=<from the tap hardware>
+3. If offline when the tap happens -> queue locally with a
+   deviceIdempotencyKey, show "X unsynced" badge, keep working normally.
+   Sync automatically when connection returns via
+   POST /api/v1/transport/taps/sync (or the boarding-specific sync
+   endpoint if separate in your build — confirm with backend).
+4. A student tapping who is NOT allocated to this route -> full-screen
+   WRONG BUS warning, does not silently succeed.
+5. Manual override for a student whose card fails to read:
+   Same boardings endpoint, source=ATTENDANT_MANUAL, no tapEventId.
+6. On DROP trips, same flow with direction=ALIGHT. An ALIGHT with no
+   prior BOARD for that student on this trip will be rejected — if this
+   happens, it usually means the wrong trip is selected; surface that
+   possibility in the error message, don't just show a raw 422.
+
+--------------------------------------------------------------------------------
+4.4 CLOSE BOARDING
+--------------------------------------------------------------------------------
+1. Before the vehicle leaves the last stop, or at trip end -> "Close
+   Boarding" button.
+2. POST /api/v1/transport/trips/{id}/boarding/close
+3. This is what turns every still-EXPECTED student into NOT_BOARDED and
+   fires the parent alert server-side. Show a brief summary before
+   confirming ("3 students still not boarded — closing will alert their
+   parents") so the attendant has one last chance to fix a missed
+   manual entry first.
+
+--------------------------------------------------------------------------------
+4.5 SOS
+--------------------------------------------------------------------------------
+1. Always visible, always reachable, requires a confirm-tap.
+2. POST /api/v1/incidents/sos (transport context)
+3. Also usable to report a breakdown or delay without a full SOS — a
+   separate, less alarming "Report Issue" button for non-emergencies.
+
+--------------------------------------------------------------------------------
+4.6 WHAT THIS LOGIN MUST NEVER SHOW
+--------------------------------------------------------------------------------
+Marks, fees, addresses, phone numbers, or any guardian detail. This
+login's API responses are already scoped server-side to name + photo +
+stop only — do not add client-side code that fetches or caches anything
+beyond that, even for convenience.
+
+
+================================================================================
+
+
+################################################################################
+LOGIN 9 — CANTEEN VENDOR                                                 [APP]
+Device-scoped. The sale screen is the highest-stakes screen in the product.
+################################################################################
+
+--------------------------------------------------------------------------------
+5.1 LOGIN & SHIFT
+--------------------------------------------------------------------------------
+1. Operator login (may be device-bound per terminal, confirm with backend).
+2. Open shift: enter opening float amount.
+   POST /api/v1/canteen/shifts (or equivalent — confirm exact endpoint
+   name with backend if not explicitly listed)
+3. Idle screen after shift opens: "Tap card" — this is the default resting
+   state the app returns to after every transaction.
+
+--------------------------------------------------------------------------------
+5.2 SALE — THE CORE FLOW
+--------------------------------------------------------------------------------
+1. Idle screen shows "Tap card."
+2. On tap -> resolve credential -> fetch student + wallet snapshot.
+   (This should be a single fast call; if your build separates these,
+   fire them together, not sequentially.)
+3. Screen fills with STUDENT PHOTO (large), NAME, CLASS, BALANCE.
+   THIS IS THE SECURITY CONTROL — do not make the photo small or
+   secondary to anything else on screen.
+4. Cashier visually confirms the child matches, then either:
+   a) enters an amount (amount-only mode), or
+   b) selects items from the menu (item-level mode)
+   GET /api/v1/canteen/menu-items (loaded once at shift start, cached
+   locally, not re-fetched per sale)
+5. Confirm -> server checks in order: card not blocked, wallet active,
+   within per-transaction cap, within daily cap, no item block, balance
+   sufficient (or within grace allowance). Each of these has ITS OWN
+   distinct rejection screen — never collapse them into one generic
+   "Payment failed."
+   POST /api/v1/canteen/transactions (with deviceIdempotencyKey)
+6. On success -> brief on-screen receipt, then auto-return to idle after
+   a few seconds. Do not require a manual "Done" tap for the common case
+   — that adds friction to every single sale during a lunch rush.
+7. Parent is notified server-side automatically. No client action needed.
+
+--------------------------------------------------------------------------------
+5.3 REJECTION SCREENS (each must be visually distinct, not a shared modal)
+--------------------------------------------------------------------------------
+- Card blocked
+- Wallet frozen
+- Over daily limit
+- Item blocked by parent (name the specific item)
+- Insufficient balance (show the shortfall amount)
+
+A generic failure screen encourages the cashier to just re-tap, and
+re-tapping is exactly how double charges happen if idempotency isn't
+respected client-side too (always reuse the same deviceIdempotencyKey
+on a retry of the same attempted sale, never generate a new one).
+
+--------------------------------------------------------------------------------
+5.4 PRE-ORDER COLLECTION
+--------------------------------------------------------------------------------
+1. Separate mode/tab from a fresh sale.
+2. GET /api/v1/canteen/pre-orders?forDate=today&status=paid
+3. On tap -> match against a pre-order for that student -> confirm
+   collection. NO photo-confirmation gate needed here (already paid and
+   authorised at order time) — this should be visibly FASTER than a
+   fresh sale.
+   POST /api/v1/canteen/pre-orders/{id}/collect
+
+--------------------------------------------------------------------------------
+5.5 OFFLINE SALES  [OFFLINE]
+--------------------------------------------------------------------------------
+1. If connectivity drops mid-shift, do not stop the counter.
+2. Cache at shift start: roster, photos, balances, limits, item blocks,
+   card blocklist (with its version number).
+3. Allow sales up to the configured offline floor per student per day.
+   Queue locally with deviceIdempotencyKey.
+4. If the blocklist is older than the configured max age -> REFUSE
+   payment taps entirely, show "Offline too long — payment unavailable,"
+   do not silently allow a possibly-blocked card through.
+5. On reconnect -> auto-sync:
+   POST /api/v1/canteen/transactions/sync
+   Handle ACCEPTED / DUPLICATE / REJECTED per item exactly as in 1.3.
+
+--------------------------------------------------------------------------------
+5.6 SHIFT CLOSE
+--------------------------------------------------------------------------------
+1. End of day -> enter declared cash total (if any cash side-sales exist
+   outside the wallet system).
+2. System shows its own recorded total; variance is calculated, not
+   hidden, even if it doesn't reconcile to zero.
+   POST /api/v1/canteen/shifts/{id}/close
+3. Settlement view (read-only for the vendor, Finance manages the actual
+   settlement approval):
+   GET /api/v1/canteen/settlements?vendorId=me
+
+
+================================================================================
+
+
+================================================================================
+CROSS-REFERENCE — FORMER "TRANSPORT MANAGER" TASKS
+================================================================================
+There is no Transport Manager role. Every task that role used to cover
+now lives entirely under Login 1 — Admin: vehicles, documents, routes,
+stops, devices, student allocation, drivers/attendants, incident review,
+live fleet view. The only physical, on-vehicle task — scanning students
+onto the bus — could never be an Admin task and remains Login 8, Bus
+Attendant.
+
+
+================================================================================
+CROSS-REFERENCE — FORMER "SPORTS MANAGER" TASKS
+================================================================================
+There is no Sports Manager role. That login's end-to-end sports
+operations split the same way Transport Manager's tasks did:
+- Structure and assets — defining sports/categories, facility master
+  records, equipment master inventory, and coach assignment — now live
+  under Login 1 — Admin, section W1.5a.
+- Day-to-day operations — teams, rosters, student sport profiles and
+  participations, trials, training sessions, tournaments, fixtures,
+  results, rankings, achievements, certificates, facility bookings, and
+  equipment issue/return — move to Login 5 — Faculty, as a new
+  permission assignment called Sports Faculty, section 1.14. Admin
+  grants this assignment (and can grant it at admission time, the same
+  moment a student — or in this case a staff record — is first set up,
+  or at any later point) the same way it grants Class Advisor or
+  Academic Coordinator: W1.3, `POST /api/v1/staff/{id}/role-assignments`.
+There is no "Coach" login either — an internal coach is simply a
+Faculty member holding the Sports Faculty assignment for that team; an
+external coach is a records-only entry Admin manages alongside the
+assignment, with the same police-verification-expiry tracking a
+transport driver's documents get.
+
+
+================================================================================
+END OF DOCUMENT — 688 endpoints, 9 logins, 1 shared backend
+================================================================================
+
+
+================================================================================
+END OF DOCUMENT — 9 logins, frontend side only.
+See school-eos-backend-workflow-by-login.txt for the same 9 logins
+from the backend's perspective.
+================================================================================

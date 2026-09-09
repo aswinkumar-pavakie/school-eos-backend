@@ -1,0 +1,58 @@
+%%06_Hostel — COMPLETE DOMAIN ERD
+%% Full column list is embedded in each table node.
+%% Cross-domain FKs are shown as dashed references to shared entities.
+%%{init: {"flowchart": {"curve": "basis", "nodeSpacing": 28, "rankSpacing": 55}, "theme": {"fontFamily": "Arial", "fontSize": "11px"}}}%%
+flowchart LR
+  hostels["<b>hostels</b><br/>PK id : uuid<br/>FK campus_id : uuid<br/>name : text<br/>code : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  hostel_blocks["<b>hostel_blocks</b><br/>PK id : uuid<br/>FK hostel_id : uuid<br/>name : text<br/>code : text<br/>gender_category : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  hostel_floors["<b>hostel_floors</b><br/>PK id : uuid<br/>FK hostel_block_id : uuid<br/>floor_number : smallint<br/>name : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  hostel_rooms["<b>hostel_rooms</b><br/>PK id : uuid<br/>FK hostel_floor_id : uuid<br/>room_number : text<br/>room_type : text<br/>capacity : integer<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  hostel_beds["<b>hostel_beds</b><br/>PK id : uuid<br/>FK hostel_room_id : uuid<br/>bed_number : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  hostel_allocations["<b>hostel_allocations</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK hostel_bed_id : uuid<br/>allocated_from : date<br/>allocated_until : date<br/>reason : text<br/>status : text<br/>FK allocated_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  hostel_staff_assignments["<b>hostel_staff_assignments</b><br/>PK id : uuid<br/>FK hostel_id : uuid<br/>FK staff_id : uuid<br/>assignment_type : text<br/>valid_from : date<br/>valid_until : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  hostel_attendance_sessions["<b>hostel_attendance_sessions</b><br/>PK id : uuid<br/>FK hostel_id : uuid<br/>attendance_date : date<br/>session_type : text<br/>starts_at : timestamptz<br/>ends_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  hostel_attendance_records["<b>hostel_attendance_records</b><br/>PK id : uuid<br/>FK attendance_session_id : uuid<br/>FK student_id : uuid<br/>attendance_status : text<br/>recorded_at : timestamptz<br/>FK recorded_by : uuid"]
+  outing_requests["<b>outing_requests</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK requested_by : uuid<br/>reason : text<br/>requested_at : timestamptz<br/>expected_return_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  gate_passes["<b>gate_passes</b><br/>PK id : uuid<br/>FK outing_request_id : uuid<br/>pass_number : text<br/>issued_at : timestamptz<br/>expires_at : timestamptz<br/>status : text<br/>FK approved_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  hostel_gate_movements["<b>hostel_gate_movements</b><br/>PK id : uuid<br/>FK gate_pass_id : uuid<br/>movement_type : text<br/>occurred_at : timestamptz<br/>FK recorded_by : uuid"]
+  hostel_visitors["<b>hostel_visitors</b><br/>PK id : uuid<br/>name : text<br/>phone : text<br/>identification_reference : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  hostel_visits["<b>hostel_visits</b><br/>PK id : uuid<br/>FK visitor_id : uuid<br/>FK student_id : uuid<br/>check_in_at : timestamptz<br/>check_out_at : timestamptz<br/>purpose : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  hostel_incidents["<b>hostel_incidents</b><br/>PK id : uuid<br/>FK hostel_id : uuid<br/>FK student_id : uuid<br/>incident_type : text<br/>severity : text<br/>description : text<br/>occurred_at : timestamptz<br/>status : text<br/>FK reported_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  classDef hostel fill:#F1E8F7,stroke:#566573,stroke-width:1px;
+  class hostels hostel;
+  class hostel_blocks hostel;
+  class hostel_floors hostel;
+  class hostel_rooms hostel;
+  class hostel_beds hostel;
+  class hostel_allocations hostel;
+  class hostel_staff_assignments hostel;
+  class hostel_attendance_sessions hostel;
+  class hostel_attendance_records hostel;
+  class outing_requests hostel;
+  class gate_passes hostel;
+  class hostel_gate_movements hostel;
+  class hostel_visitors hostel;
+  class hostel_visits hostel;
+  class hostel_incidents hostel;
+  attendance_sessions -.->|attendance_session_id| hostel_attendance_records
+  campuses -.->|campus_id| hostels
+  hostel_beds -->|hostel_bed_id| hostel_allocations
+  hostel_blocks -->|hostel_block_id| hostel_floors
+  hostel_floors -->|hostel_floor_id| hostel_rooms
+  hostel_rooms -->|hostel_room_id| hostel_beds
+  hostels -->|hostel_id| hostel_attendance_sessions
+  hostels -->|hostel_id| hostel_blocks
+  hostels -->|hostel_id| hostel_incidents
+  hostels -->|hostel_id| hostel_staff_assignments
+  outing_requests -->|outing_request_id| gate_passes
+  staff -.->|staff_id| hostel_staff_assignments
+  students -.->|student_id| hostel_allocations
+  students -.->|student_id| hostel_attendance_records
+  students -.->|student_id| hostel_incidents
+  students -.->|student_id| hostel_visits
+  students -.->|student_id| outing_requests
+  user_accounts -.->|approved_by| gate_passes
+  user_accounts -.->|recorded_by| hostel_attendance_records
+  user_accounts -.->|recorded_by| hostel_gate_movements
+  user_accounts -.->|reported_by| hostel_incidents
+  user_accounts -.->|requested_by| outing_requests

@@ -1,0 +1,119 @@
+%%03_Development_Community_Communication — COMPLETE DOMAIN ERD
+%% Full column list is embedded in each table node.
+%% Cross-domain FKs are shown as dashed references to shared entities.
+%%{init: {"flowchart": {"curve": "basis", "nodeSpacing": 28, "rankSpacing": 55}, "theme": {"fontFamily": "Arial", "fontSize": "11px"}}}%%
+flowchart LR
+  activities["<b>activities</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>activity_type : text<br/>description : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  activity_offerings["<b>activity_offerings</b><br/>PK id : uuid<br/>FK activity_id : uuid<br/>FK academic_year_id : uuid<br/>starts_at : timestamptz<br/>ends_at : timestamptz<br/>capacity : integer<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  student_activity_participations["<b>student_activity_participations</b><br/>PK id : uuid<br/>FK activity_offering_id : uuid<br/>FK student_id : uuid<br/>joined_at : timestamptz<br/>left_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  activity_attendance["<b>activity_attendance</b><br/>PK id : uuid<br/>FK activity_offering_id : uuid<br/>FK student_id : uuid<br/>attendance_status : text<br/>recorded_at : timestamptz<br/>FK recorded_by : uuid"]
+  student_achievements["<b>student_achievements</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>achievement_type : text<br/>title : text<br/>description : text<br/>achieved_on : date<br/>level : text<br/>FK document_id : uuid<br/>FK created_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  student_certificates["<b>student_certificates</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>certificate_type : text<br/>title : text<br/>issued_on : date<br/>certificate_number : text<br/>FK document_id : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  student_behaviour_records["<b>student_behaviour_records</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>record_type : text<br/>occurred_at : timestamptz<br/>description : text<br/>severity : text<br/>status : text<br/>FK recorded_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  student_observations["<b>student_observations</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>observation_type : text<br/>observation : text<br/>observed_at : timestamptz<br/>FK recorded_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  student_progress_records["<b>student_progress_records</b><br/>PK id : uuid<br/>FK student_id : uuid<br/>FK academic_year_id : uuid<br/>category : text<br/>summary : text<br/>FK recorded_by : uuid<br/>recorded_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  communities["<b>communities</b><br/>PK id : uuid<br/>FK school_id : uuid<br/>name : text<br/>code : text<br/>description : text<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  community_incharge_assignments["<b>community_incharge_assignments</b><br/>PK id : uuid<br/>FK community_id : uuid<br/>FK staff_id : uuid<br/>valid_from : date<br/>valid_until : date<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  community_memberships["<b>community_memberships</b><br/>PK id : uuid<br/>FK community_id : uuid<br/>FK student_id : uuid<br/>joined_at : timestamptz<br/>left_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  community_activities["<b>community_activities</b><br/>PK id : uuid<br/>FK community_id : uuid<br/>name : text<br/>description : text<br/>starts_at : timestamptz<br/>ends_at : timestamptz<br/>status : text<br/>FK created_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  community_activity_participants["<b>community_activity_participants</b><br/>PK id : uuid<br/>FK community_activity_id : uuid<br/>FK student_id : uuid<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  community_activity_attendance["<b>community_activity_attendance</b><br/>PK id : uuid<br/>FK community_activity_id : uuid<br/>FK student_id : uuid<br/>attendance_status : text<br/>recorded_at : timestamptz<br/>FK recorded_by : uuid"]
+  community_achievements["<b>community_achievements</b><br/>PK id : uuid<br/>FK community_id : uuid<br/>FK student_id : uuid<br/>title : text<br/>description : text<br/>achieved_on : date<br/>FK document_id : uuid<br/>FK created_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  announcements["<b>announcements</b><br/>PK id : uuid<br/>title : text<br/>content : text<br/>announcement_type : text<br/>priority : text<br/>status : text<br/>published_at : timestamptz<br/>expires_at : timestamptz<br/>FK created_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  announcement_grades["<b>announcement_grades</b><br/>PK announcement_id : uuid<br/>PK grade_id : uuid"]
+  announcement_sections["<b>announcement_sections</b><br/>PK announcement_id : uuid<br/>PK section_id : uuid"]
+  announcement_communities["<b>announcement_communities</b><br/>PK announcement_id : uuid<br/>PK community_id : uuid"]
+  announcement_students["<b>announcement_students</b><br/>PK announcement_id : uuid<br/>PK student_id : uuid"]
+  notification_templates["<b>notification_templates</b><br/>PK id : uuid<br/>name : text<br/>code : text<br/>channel : text<br/>subject_template : text<br/>body_template : text<br/>status : text<br/>FK created_by : uuid<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  notification_deliveries["<b>notification_deliveries</b><br/>PK id : uuid<br/>FK announcement_id : uuid<br/>FK recipient_user_id : uuid<br/>channel : text<br/>delivery_status : text<br/>sent_at : timestamptz<br/>delivered_at : timestamptz<br/>read_at : timestamptz<br/>failure_reason : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  complaints["<b>complaints</b><br/>PK id : uuid<br/>complaint_number : text<br/>FK submitted_by_user_id : uuid<br/>FK student_id : uuid<br/>category : text<br/>subject : text<br/>description : text<br/>priority : text<br/>status : text<br/>submitted_at : timestamptz<br/>resolved_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  complaint_assignments["<b>complaint_assignments</b><br/>PK id : uuid<br/>FK complaint_id : uuid<br/>FK assigned_to_user_id : uuid<br/>FK assigned_by_user_id : uuid<br/>assigned_at : timestamptz<br/>unassigned_at : timestamptz<br/>status : text<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  complaint_actions["<b>complaint_actions</b><br/>PK id : uuid<br/>FK complaint_id : uuid<br/>action_type : text<br/>description : text<br/>FK performed_by : uuid<br/>performed_at : timestamptz"]
+  complaint_resolutions["<b>complaint_resolutions</b><br/>PK id : uuid<br/>FK complaint_id : uuid<br/>resolution_type : text<br/>resolution_summary : text<br/>FK resolved_by : uuid<br/>resolved_at : timestamptz<br/>complainant_notified_at : timestamptz<br/>created_at : timestamptz<br/>updated_at : timestamptz"]
+  classDef development fill:#F8E9E9,stroke:#566573,stroke-width:1px;
+  class activities development;
+  class activity_offerings development;
+  class student_activity_participations development;
+  class activity_attendance development;
+  class student_achievements development;
+  class student_certificates development;
+  class student_behaviour_records development;
+  class student_observations development;
+  class student_progress_records development;
+  classDef community fill:#ECECF8,stroke:#566573,stroke-width:1px;
+  class communities community;
+  class community_incharge_assignments community;
+  class community_memberships community;
+  class community_activities community;
+  class community_activity_participants community;
+  class community_activity_attendance community;
+  class community_achievements community;
+  classDef communication fill:#EEF6E8,stroke:#566573,stroke-width:1px;
+  class announcements communication;
+  class announcement_grades communication;
+  class announcement_sections communication;
+  class announcement_communities communication;
+  class announcement_students communication;
+  class notification_templates communication;
+  class notification_deliveries communication;
+  class complaints communication;
+  class complaint_assignments communication;
+  class complaint_actions communication;
+  class complaint_resolutions communication;
+  academic_years -.->|academic_year_id| activity_offerings
+  academic_years -.->|academic_year_id| student_progress_records
+  activities -->|activity_id| activity_offerings
+  activity_offerings -->|activity_offering_id| activity_attendance
+  activity_offerings -->|activity_offering_id| student_activity_participations
+  announcements -->|announcement_id| announcement_communities
+  announcements -->|announcement_id| announcement_grades
+  announcements -->|announcement_id| announcement_sections
+  announcements -->|announcement_id| announcement_students
+  announcements -->|announcement_id| notification_deliveries
+  communities -->|community_id| announcement_communities
+  communities -->|community_id| community_achievements
+  communities -->|community_id| community_activities
+  communities -->|community_id| community_incharge_assignments
+  communities -->|community_id| community_memberships
+  community_activities -->|community_activity_id| community_activity_attendance
+  community_activities -->|community_activity_id| community_activity_participants
+  complaints -->|complaint_id| complaint_actions
+  complaints -->|complaint_id| complaint_assignments
+  complaints -->|complaint_id| complaint_resolutions
+  documents -.->|document_id| community_achievements
+  documents -.->|document_id| student_achievements
+  documents -.->|document_id| student_certificates
+  grades -.->|grade_id| announcement_grades
+  school -.->|school_id| activities
+  school -.->|school_id| communities
+  sections -.->|section_id| announcement_sections
+  staff -.->|staff_id| community_incharge_assignments
+  students -.->|student_id| activity_attendance
+  students -.->|student_id| announcement_students
+  students -.->|student_id| community_achievements
+  students -.->|student_id| community_activity_attendance
+  students -.->|student_id| community_activity_participants
+  students -.->|student_id| community_memberships
+  students -.->|student_id| complaints
+  students -.->|student_id| student_achievements
+  students -.->|student_id| student_activity_participations
+  students -.->|student_id| student_behaviour_records
+  students -.->|student_id| student_certificates
+  students -.->|student_id| student_observations
+  students -.->|student_id| student_progress_records
+  user_accounts -.->|recorded_by| activity_attendance
+  user_accounts -.->|created_by| announcements
+  user_accounts -.->|created_by| community_achievements
+  user_accounts -.->|created_by| community_activities
+  user_accounts -.->|recorded_by| community_activity_attendance
+  user_accounts -.->|performed_by| complaint_actions
+  user_accounts -.->|assigned_by_user_id| complaint_assignments
+  user_accounts -.->|assigned_to_user_id| complaint_assignments
+  user_accounts -.->|resolved_by| complaint_resolutions
+  user_accounts -.->|submitted_by_user_id| complaints
+  user_accounts -.->|recipient_user_id| notification_deliveries
+  user_accounts -.->|created_by| notification_templates
+  user_accounts -.->|created_by| student_achievements
+  user_accounts -.->|recorded_by| student_behaviour_records
+  user_accounts -.->|recorded_by| student_observations
+  user_accounts -.->|recorded_by| student_progress_records
