@@ -298,9 +298,15 @@ export class PersonsService {
   }
 
   /**
-   * General reset for any account. Only clears reset_allowance_used (re-opening
-   * self-service) when the target actually holds an active PARENT role — see
-   * UserCredentialRepository.generalPasswordReset's own comment for why.
+   * General reset for any account. Clears reset_allowance_used (re-opening
+   * self-service) when the target holds an active PARENT or FACULTY role --
+   * see UserCredentialRepository.generalPasswordReset's own comment for why
+   * this only matters for roles with a self-service reset allowance to begin
+   * with. The self-service flow itself (POST /auth/password-reset/*) is
+   * @Public() and role-agnostic -- any real login can use it -- but only
+   * Parent's and (as of this admin UI addition) Faculty's own profile pages
+   * expose an admin-triggered re-reset once that allowance is used up, so
+   * only those two roles need their allowance actually cleared here.
    */
   async resetPassword(
     personId: string,
@@ -312,7 +318,9 @@ export class PersonsService {
 
     const activeRoles =
       await this.roleAssignmentRepo.findActiveByPersonId(personId);
-    const isParent = activeRoles.some((r) => r.roleCode === 'PARENT');
+    const hasSelfServiceResetUi = activeRoles.some(
+      (r) => r.roleCode === 'PARENT' || r.roleCode === 'FACULTY',
+    );
 
     const password = dto.newPassword ?? generateTempPassword();
     const passwordHash = await argon2.hash(password, ARGON2_OPTIONS);
@@ -321,7 +329,7 @@ export class PersonsService {
       await this.userCredentialRepo.generalPasswordReset(
         personId,
         passwordHash,
-        isParent,
+        hasSelfServiceResetUi,
         client,
       );
       await this.sessionRepo.deleteAllForPerson(personId, client);

@@ -155,9 +155,10 @@ export class UserCredentialRepository {
   /**
    * General admin-authorized reset for ANY account (Access module). Functionally the
    * same core action as completeAdminReset, but only clears reset_allowance_used when
-   * the caller says the target is a Parent -- that field means nothing for roles that
-   * never had a self-service reset to begin with, so it's left untouched for them
-   * rather than flipped to a value that's never read.
+   * the caller says the target holds a role whose own profile page exposes an
+   * admin re-reset once the allowance is used up (Parent, Faculty) -- for every
+   * other role that flag is never read by anything, so it's left untouched
+   * rather than flipped to a value nothing consumes.
    */
   async generalPasswordReset(
     personId: string,

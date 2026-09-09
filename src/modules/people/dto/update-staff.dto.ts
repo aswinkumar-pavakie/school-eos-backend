@@ -1,4 +1,4 @@
-import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class UpdateStaffDto {
   @IsOptional()
@@ -24,4 +24,11 @@ export class UpdateStaffDto {
   @IsOptional()
   @IsBoolean()
   isTeaching?: boolean;
+
+  // See create-staff.dto.ts's own comment -- admin-entered after reviewing
+  // this staff member's uploaded certificates, not derived from tenure.
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  experienceYears?: number;
 }

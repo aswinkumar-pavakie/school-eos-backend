@@ -19,6 +19,7 @@ export interface StaffRow {
   dateOfJoining: string;
   dateOfExit: string | null;
   exitReason: string | null;
+  experienceYears: number | null;
   status: string;
   createdAt: Date;
   updatedAt: Date;
@@ -39,6 +40,7 @@ export interface CreateStaffInput {
   stateTeacherId?: string | null;
   isTeaching?: boolean;
   dateOfJoining: string;
+  experienceYears?: number | null;
 }
 
 export interface UpdateStaffInput {
@@ -48,6 +50,7 @@ export interface UpdateStaffInput {
   postType?: string | null;
   stateTeacherId?: string | null;
   isTeaching?: boolean;
+  experienceYears?: number | null;
 }
 
 // A function, not a top-level constant -- see student.repository.ts's columns()
@@ -57,6 +60,7 @@ const columns =
   s.employee_no AS "employeeNo", s.designation, s.teacher_category AS "teacherCategory",
   s.post_type AS "postType", s.state_teacher_id AS "stateTeacherId", s.is_teaching AS "isTeaching",
   s.date_of_joining AS "dateOfJoining", s.date_of_exit AS "dateOfExit", s.exit_reason AS "exitReason",
+  s.experience_years AS "experienceYears",
   s.status, s.created_at AS "createdAt", s.updated_at AS "updatedAt",
   ${personPhotoPublicUrlSql('p.photo_object_key')} AS "photoUrl",
   p.address_line1 AS "addressLine1", p.address_line2 AS "addressLine2", p.city, p.state, p.pincode`;
@@ -192,8 +196,8 @@ export class StaffRepository {
   ): Promise<StaffRow> {
     const { rows } = await executor.query<{ id: string }>(
       `INSERT INTO staff (person_id, employee_no, designation, teacher_category, post_type,
-         state_teacher_id, is_teaching, date_of_joining)
-       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, true), $8)
+         state_teacher_id, is_teaching, date_of_joining, experience_years)
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, true), $8, $9)
        RETURNING id`,
       [
         input.personId,
@@ -204,6 +208,7 @@ export class StaffRepository {
         input.stateTeacherId ?? null,
         input.isTeaching ?? null,
         input.dateOfJoining,
+        input.experienceYears ?? null,
       ],
     );
     return (await this.findById(rows[0].id, executor))!;
@@ -222,6 +227,7 @@ export class StaffRepository {
          post_type = COALESCE($5, post_type),
          state_teacher_id = COALESCE($6, state_teacher_id),
          is_teaching = COALESCE($7, is_teaching),
+         experience_years = COALESCE($8, experience_years),
          updated_at = now()
        WHERE id = $1
        RETURNING id`,
@@ -233,6 +239,7 @@ export class StaffRepository {
         input.postType ?? null,
         input.stateTeacherId ?? null,
         input.isTeaching ?? null,
+        input.experienceYears ?? null,
       ],
     );
     if (rows.length === 0) return null;

@@ -42,6 +42,14 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { OnlineClassesModule } from './modules/online-classes/online-classes.module';
 import { ParentModule } from './modules/parent/parent.module';
 import { PeopleModule } from './modules/people/people.module';
+// PermissionsModule: existed on hot-fix-krishna earlier (added in
+// ca9f24b "feat: implement messaging, online classes, and permission
+// modules...") but the entire module -- files and registration both -- was
+// later removed by commit e4851a6 "permission module deleted", well before
+// this merge. hot-fix-aswin still had the full module, so this merge restores
+// it (files + this import/registration) rather than picking one side over
+// the other.
+import { PermissionsModule } from './modules/permissions/permissions.module';
 import { PrincipalModule } from './modules/principal/principal.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { RequestsApprovalsModule } from './modules/requests-approvals/requests-approvals.module';
@@ -96,6 +104,7 @@ import { TransportOpsModule } from './modules/transport-ops/transport-ops.module
     PrincipalModule,
     OnlineClassesModule,
     MessagingModule,
+    PermissionsModule,
     MediaModule,
     StudentEventsModule,
     ExaminationsModule,
