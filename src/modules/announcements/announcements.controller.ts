@@ -1,10 +1,11 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
 import { AnnouncementsService } from './announcements.service';
 import { AnnouncementQueryDto } from './dto/announcement-query.dto';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
+import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 
 // School-wide, role-targeted announcements -- distinct from community_announcement
 // (scoped to a single community). Principal added (Phase 18): the approved API
@@ -42,5 +43,26 @@ export class AnnouncementsController {
   @HttpCode(HttpStatus.OK)
   async archive(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.announcementsService.archive(id, actor.personId) };
+  }
+
+  // Explicit ADMIN-only override added during the hot-fix-sri merge: these
+  // two methods originated on hot-fix-sri with no override of their own,
+  // which was correct there (class-level was still plain @Roles('ADMIN')
+  // on that branch). This branch's class-level is now broadened to
+  // ('ADMIN', 'PRINCIPAL') for read-only oversight (see the class comment),
+  // and RolesGuard's Reflector.getAllAndOverride means a method with no
+  // override inherits that broadened default -- without this override,
+  // PRINCIPAL would silently gain edit/delete authority sri never intended.
+  @Patch(':id')
+  @Roles('ADMIN')
+  async update(@Param('id') id: string, @Body() dto: UpdateAnnouncementDto, @CurrentActor() actor: AuthenticatedUser) {
+    return { data: await this.announcementsService.update(id, dto, actor.personId) };
+  }
+
+  @Delete(':id')
+  @Roles('ADMIN')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+    await this.announcementsService.remove(id, actor.personId);
   }
 }
