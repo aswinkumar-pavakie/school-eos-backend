@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface FeeHeadRow {
   id: string;
@@ -51,7 +54,10 @@ export class FeeHeadRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<FeeHeadRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<FeeHeadRow | null> {
     const { rows } = await executor.query<FeeHeadRow>(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE fh.id = $1 ${GROUP_BY}`,
       [id],
@@ -59,12 +65,21 @@ export class FeeHeadRepository {
     return rows[0] ?? null;
   }
 
-  async create(input: CreateFeeHeadInput, executor: Queryable = this.postgres): Promise<FeeHeadRow> {
+  async create(
+    input: CreateFeeHeadInput,
+    executor: Queryable = this.postgres,
+  ): Promise<FeeHeadRow> {
     const { rows } = await executor.query<FeeHeadRow>(
       `INSERT INTO fee_head (name, code, head_type, is_refundable, status)
        VALUES ($1, $2, $3, COALESCE($4, false), COALESCE($5, 'ACTIVE'))
        RETURNING ${COLUMNS}`,
-      [input.name, input.code, input.headType, input.isRefundable ?? null, input.status ?? null],
+      [
+        input.name,
+        input.code,
+        input.headType,
+        input.isRefundable ?? null,
+        input.status ?? null,
+      ],
     );
     return rows[0];
   }
@@ -82,7 +97,13 @@ export class FeeHeadRepository {
          status = COALESCE($5, status)
        WHERE id = $1
        RETURNING ${COLUMNS}`,
-      [id, input.name ?? null, input.headType ?? null, input.isRefundable ?? null, input.status ?? null],
+      [
+        id,
+        input.name ?? null,
+        input.headType ?? null,
+        input.isRefundable ?? null,
+        input.status ?? null,
+      ],
     );
     return rows[0] ?? null;
   }

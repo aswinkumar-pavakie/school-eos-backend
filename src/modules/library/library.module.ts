@@ -8,7 +8,10 @@ import { Module } from '@nestjs/common';
 import { FinanceModule } from '../finance/finance.module';
 import { AuditController } from './audit.controller';
 import { LibraryAuditService } from './library-audit.service';
-import { BookCopiesListController, BookCopiesActionsController } from './book-copies.controller';
+import {
+  BookCopiesListController,
+  BookCopiesActionsController,
+} from './book-copies.controller';
 import { BookCopiesService } from './book-copies.service';
 import { BooksController } from './books.controller';
 import { BooksService } from './books.service';
@@ -91,6 +94,12 @@ import { LibraryReservationRepository } from './repositories/library-reservation
   // BooksService/CategoriesService/CirculationService/LibraryMemberRepository
   // additionally back Faculty's own read-only catalog-search + "my issues"
   // view (faculty/library) -- same real tables, no rebuild, no new writes.
-  exports: [LibraryOverviewService, BooksService, CategoriesService, CirculationService, LibraryMemberRepository],
+  exports: [
+    LibraryOverviewService,
+    BooksService,
+    CategoriesService,
+    CirculationService,
+    LibraryMemberRepository,
+  ],
 })
 export class LibraryModule {}

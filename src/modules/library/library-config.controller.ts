@@ -17,7 +17,10 @@ export class LibraryConfigController {
 
   @Patch()
   @Roles('LIBRARY')
-  async update(@Body() dto: UpdateConfigDto, @CurrentActor() actor: AuthenticatedUser) {
+  async update(
+    @Body() dto: UpdateConfigDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.configService.update(dto, actor.personId) };
   }
 }

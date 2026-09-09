@@ -1,6 +1,14 @@
 // POST /auth/login, /auth/refresh, /auth/logout, GET /me.
 
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
@@ -13,7 +21,9 @@ function deviceContextFrom(req: Request): DeviceContext {
   const userAgent = req.headers['user-agent'];
   return {
     ipAddress: req.ip ?? null,
-    userAgent: Array.isArray(userAgent) ? userAgent[0] ?? null : userAgent ?? null,
+    userAgent: Array.isArray(userAgent)
+      ? (userAgent[0] ?? null)
+      : (userAgent ?? null),
   };
 }
 
@@ -25,7 +35,10 @@ export class IdentityController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto, @Req() req: Request) {
-    const result = await this.identityService.login(dto, deviceContextFrom(req));
+    const result = await this.identityService.login(
+      dto,
+      deviceContextFrom(req),
+    );
     return { data: result };
   }
 
@@ -33,7 +46,10 @@ export class IdentityController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() dto: RefreshTokenDto, @Req() req: Request) {
-    const result = await this.identityService.refresh(dto, deviceContextFrom(req));
+    const result = await this.identityService.refresh(
+      dto,
+      deviceContextFrom(req),
+    );
     return { data: result };
   }
 

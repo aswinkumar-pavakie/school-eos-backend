@@ -38,7 +38,10 @@ export class DocumentsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateDocumentDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateDocumentDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.documentsService.create(dto, actor) };
   }
 
@@ -50,13 +53,17 @@ export class DocumentsController {
     @UploadedFile() file: Express.Multer.File | undefined,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    if (!file) throw new BadRequestException('A file is required (field name "file").');
+    if (!file)
+      throw new BadRequestException('A file is required (field name "file").');
     return { data: await this.documentsService.upload(dto, file, actor) };
   }
 
   @Post(':id/purge')
   @HttpCode(HttpStatus.OK)
-  async purge(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async purge(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.documentsService.purge(id, actor.personId) };
   }
 }

@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../../common/auth/current-actor.decorator';
 import { Roles } from '../../../common/auth/roles.decorator';
@@ -11,7 +20,15 @@ export class MiscReceivablesController {
 
   @Get()
   @Roles('FINANCE', 'ADMIN')
-  async list(@Query() query: { status?: string; sourceModule?: string; page?: string; limit?: string }) {
+  async list(
+    @Query()
+    query: {
+      status?: string;
+      sourceModule?: string;
+      page?: string;
+      limit?: string;
+    },
+  ) {
     return this.receivablesService.list({
       status: query.status,
       sourceModule: query.sourceModule,
@@ -34,6 +51,12 @@ export class MiscReceivablesController {
     @Body() dto: CollectPaymentDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.receivablesService.collectPayment(id, dto, actor.personId) };
+    return {
+      data: await this.receivablesService.collectPayment(
+        id,
+        dto,
+        actor.personId,
+      ),
+    };
   }
 }

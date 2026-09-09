@@ -4,12 +4,19 @@
 // amount threshold/bypass, unlike Refund). Every concession routes through the
 // approvals engine; there is no Finance-direct-processing path here.
 
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
 import { PageQuery } from '../../../common/pagination/pagination.util';
 import { UnitOfWork } from '../../../common/transactions/unit-of-work';
 import { ApprovalsService } from '../../approvals/approvals.service';
-import { ConcessionRepository, ConcessionRow } from './repositories/concession.repository';
+import {
+  ConcessionRepository,
+  ConcessionRow,
+} from './repositories/concession.repository';
 
 const OPEN_APPROVAL_STATES = ['PENDING', 'RETROSPECTIVE_PENDING'];
 
@@ -21,7 +28,10 @@ export class ConcessionsService {
     private readonly unitOfWork: UnitOfWork,
   ) {}
 
-  async list(filter: { studentId?: string; state?: string; studentSearch?: string }, page: PageQuery) {
+  async list(
+    filter: { studentId?: string; state?: string; studentSearch?: string },
+    page: PageQuery,
+  ) {
     return this.repo.list(filter, page);
   }
 
@@ -45,7 +55,9 @@ export class ConcessionsService {
     // concession_amount_or_pct is a DB-level XOR constraint — enforced here too, for a
     // clean 409 instead of a raw constraint-violation 500.
     if (Boolean(input.amountPaise) === Boolean(input.percent)) {
-      throw new ConflictException('Provide exactly one of amountPaise or percent, not both or neither');
+      throw new ConflictException(
+        'Provide exactly one of amountPaise or percent, not both or neither',
+      );
     }
     return this.unitOfWork.run(async (client) => {
       const concession = await this.repo.create(
@@ -70,7 +82,11 @@ export class ConcessionsService {
         },
         client,
       );
-      await this.repo.linkApprovalRequest(concession.id, approvalRequest.id, client);
+      await this.repo.linkApprovalRequest(
+        concession.id,
+        approvalRequest.id,
+        client,
+      );
       return { ...concession, approvalRequestId: approvalRequest.id };
     });
   }
@@ -80,7 +96,9 @@ export class ConcessionsService {
       throw new ConflictException('This concession has already been decided');
     }
     if (concession.approvalRequestId) {
-      const state = await this.approvalsService.getState(concession.approvalRequestId);
+      const state = await this.approvalsService.getState(
+        concession.approvalRequestId,
+      );
       if (state && !OPEN_APPROVAL_STATES.includes(state)) {
         throw new ConflictException('This concession has already been decided');
       }

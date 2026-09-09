@@ -3,7 +3,10 @@
 // students or short-term help with no system login at all.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface MediaTeamMemberRow {
   id: string;
@@ -45,7 +48,9 @@ export class MediaTeamMemberRepository {
 
   /** activeJobs = real count of shoot_assignment rows this member is crewed on that
    * are still PLANNED or IN_PROGRESS -- never a client-side reduce. */
-  async listWithLoad(executor: Queryable = this.postgres): Promise<MediaTeamMemberWithLoadRow[]> {
+  async listWithLoad(
+    executor: Queryable = this.postgres,
+  ): Promise<MediaTeamMemberWithLoadRow[]> {
     const { rows } = await executor.query(
       `SELECT m.*,
          (SELECT COUNT(*) FROM shoot_assignment_crew sac
@@ -57,14 +62,26 @@ export class MediaTeamMemberRepository {
     return rows.map((r: any) => ({ ...mapRow(r), activeJobs: r.active_jobs }));
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<MediaTeamMemberRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM media_team_member WHERE id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<MediaTeamMemberRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM media_team_member WHERE id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
-  async findManyByIds(ids: string[], executor: Queryable = this.postgres): Promise<MediaTeamMemberRow[]> {
+  async findManyByIds(
+    ids: string[],
+    executor: Queryable = this.postgres,
+  ): Promise<MediaTeamMemberRow[]> {
     if (ids.length === 0) return [];
-    const { rows } = await executor.query(`SELECT * FROM media_team_member WHERE id = ANY($1::uuid[])`, [ids]);
+    const { rows } = await executor.query(
+      `SELECT * FROM media_team_member WHERE id = ANY($1::uuid[])`,
+      [ids],
+    );
     return rows.map(mapRow);
   }
 
@@ -120,7 +137,15 @@ export class MediaTeamMemberRepository {
          updated_at = now()
        WHERE id = $1
        RETURNING *`,
-      [id, input.fullName ?? null, input.designation ?? null, input.email ?? null, input.phone ?? null, input.skills ?? null, input.status ?? null],
+      [
+        id,
+        input.fullName ?? null,
+        input.designation ?? null,
+        input.email ?? null,
+        input.phone ?? null,
+        input.skills ?? null,
+        input.status ?? null,
+      ],
     );
     return rows.length ? mapRow(rows[0]) : null;
   }

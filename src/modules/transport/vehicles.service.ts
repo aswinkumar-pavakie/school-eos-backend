@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { VehicleRepository } from './repositories/vehicle.repository';
 import { VehicleDocumentRepository } from './repositories/vehicle-document.repository';
@@ -43,7 +48,10 @@ export class VehiclesService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A vehicle with this registration number already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A vehicle with this registration number already exists.',
+        );
       throw err;
     }
   }
@@ -64,7 +72,10 @@ export class VehiclesService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A vehicle with this registration number already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A vehicle with this registration number already exists.',
+        );
       throw err;
     }
   }
@@ -74,7 +85,11 @@ export class VehiclesService {
     return this.vehicleDocumentRepo.findByVehicleId(vehicleId);
   }
 
-  async createDocument(vehicleId: string, dto: CreateVehicleDocumentDto, actorPersonId: string) {
+  async createDocument(
+    vehicleId: string,
+    dto: CreateVehicleDocumentDto,
+    actorPersonId: string,
+  ) {
     await this.get(vehicleId);
     if (dto.validFrom && dto.validTo < dto.validFrom) {
       throw new BadRequestException('validTo must be on or after validFrom.');
@@ -91,12 +106,17 @@ export class VehiclesService {
       });
       return created;
     } catch (err) {
-      if (isCheckViolation(err)) throw new BadRequestException('validTo must be on or after validFrom.');
+      if (isCheckViolation(err))
+        throw new BadRequestException('validTo must be on or after validFrom.');
       throw err;
     }
   }
 
-  async updateDocument(documentId: string, dto: UpdateVehicleDocumentDto, actorPersonId: string) {
+  async updateDocument(
+    documentId: string,
+    dto: UpdateVehicleDocumentDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.vehicleDocumentRepo.findById(documentId);
     if (!existing) throw new NotFoundException('Vehicle document not found');
 
@@ -120,7 +140,8 @@ export class VehiclesService {
       });
       return updated;
     } catch (err) {
-      if (isCheckViolation(err)) throw new BadRequestException('validTo must be on or after validFrom.');
+      if (isCheckViolation(err))
+        throw new BadRequestException('validTo must be on or after validFrom.');
       throw err;
     }
   }
@@ -142,7 +163,11 @@ export class VehiclesService {
     return this.vehicleMaintenanceRepo.findByVehicleId(vehicleId);
   }
 
-  async createMaintenance(vehicleId: string, dto: CreateVehicleMaintenanceDto, actorPersonId: string) {
+  async createMaintenance(
+    vehicleId: string,
+    dto: CreateVehicleMaintenanceDto,
+    actorPersonId: string,
+  ) {
     await this.get(vehicleId);
     const created = await this.vehicleMaintenanceRepo.create(vehicleId, dto);
     await this.auditService.record({
@@ -156,9 +181,17 @@ export class VehiclesService {
     return created;
   }
 
-  async updateMaintenance(maintenanceId: string, dto: UpdateVehicleMaintenanceDto, actorPersonId: string) {
-    const updated = await this.vehicleMaintenanceRepo.update(maintenanceId, dto);
-    if (!updated) throw new NotFoundException('Vehicle maintenance record not found');
+  async updateMaintenance(
+    maintenanceId: string,
+    dto: UpdateVehicleMaintenanceDto,
+    actorPersonId: string,
+  ) {
+    const updated = await this.vehicleMaintenanceRepo.update(
+      maintenanceId,
+      dto,
+    );
+    if (!updated)
+      throw new NotFoundException('Vehicle maintenance record not found');
     await this.auditService.record({
       actorPersonId,
       action: 'VEHICLE_MAINTENANCE_UPDATED',

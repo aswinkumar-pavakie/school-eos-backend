@@ -7,7 +7,10 @@
 // layer) is what checks a real ACTIVE guardian_link first.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 import { personPhotoPublicUrlSql } from '../../../infrastructure/storage/public-photo-url.util';
 
 export interface CurrentSection {
@@ -30,7 +33,10 @@ export interface StudentOffering {
 export class ParentAcademicRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async getCurrentSection(studentId: string, executor: Queryable = this.postgres): Promise<CurrentSection | null> {
+  async getCurrentSection(
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<CurrentSection | null> {
     const { rows } = await executor.query(
       `SELECT sec.id AS section_id, g.id AS grade_id, g.name AS grade_name, sec.name AS section_name, g.stage
        FROM student_enrolment se
@@ -42,10 +48,19 @@ export class ParentAcademicRepository {
     );
     if (!rows.length) return null;
     const r = rows[0];
-    return { sectionId: r.section_id, gradeId: r.grade_id, gradeName: r.grade_name, sectionName: r.section_name, stage: r.stage };
+    return {
+      sectionId: r.section_id,
+      gradeId: r.grade_id,
+      gradeName: r.grade_name,
+      sectionName: r.section_name,
+      stage: r.stage,
+    };
   }
 
-  async getCurrentOfferings(studentId: string, executor: Queryable = this.postgres): Promise<StudentOffering[]> {
+  async getCurrentOfferings(
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StudentOffering[]> {
     const { rows } = await executor.query(
       `SELECT so.id AS subject_offering_id, subj.id AS subject_id, subj.name AS subject_name, so.weekly_periods,
               (p.first_name || COALESCE(' ' || p.last_name, '')) AS teacher_name
@@ -71,8 +86,14 @@ export class ParentAcademicRepository {
   /** Every student has their own real person row (login or not) -- Library/
    * Health/Feedback all resolve real per-person tables (library_member,
    * health_profile) via the CHILD's own person_id, never the parent's. */
-  async getPersonId(studentId: string, executor: Queryable = this.postgres): Promise<string | null> {
-    const { rows } = await executor.query(`SELECT person_id FROM student WHERE id = $1`, [studentId]);
+  async getPersonId(
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string | null> {
+    const { rows } = await executor.query(
+      `SELECT person_id FROM student WHERE id = $1`,
+      [studentId],
+    );
     return rows.length ? rows[0].person_id : null;
   }
 
@@ -142,7 +163,10 @@ export class ParentAcademicRepository {
   // ('VERIFIED','PUBLISHED') -- a draft/entered-only mark never reaches here.
   // ============================================================
 
-  async findPublishedExamsForSection(sectionId: string, executor: Queryable = this.postgres) {
+  async findPublishedExamsForSection(
+    sectionId: string,
+    executor: Queryable = this.postgres,
+  ) {
     const { rows } = await executor.query(
       `SELECT DISTINCT e.id AS exam_id, e.name AS exam_name, e.exam_type, e.term, e.created_at
        FROM exam e
@@ -152,10 +176,19 @@ export class ParentAcademicRepository {
        ORDER BY e.created_at DESC`,
       [sectionId],
     );
-    return rows.map((r: any) => ({ examId: r.exam_id, examName: r.exam_name, examType: r.exam_type, term: r.term }));
+    return rows.map((r: any) => ({
+      examId: r.exam_id,
+      examName: r.exam_name,
+      examType: r.exam_type,
+      term: r.term,
+    }));
   }
 
-  async findResultsForStudent(studentId: string, examId: string, executor: Queryable = this.postgres) {
+  async findResultsForStudent(
+    studentId: string,
+    examId: string,
+    executor: Queryable = this.postgres,
+  ) {
     const { rows } = await executor.query(
       `SELECT subj.name AS subject_name, es.max_marks, m.marks_obtained, m.is_absent
        FROM student_enrolment se
@@ -171,7 +204,8 @@ export class ParentAcademicRepository {
     return rows.map((r: any) => ({
       subjectName: r.subject_name,
       maxMarks: Number(r.max_marks),
-      marksObtained: r.marks_obtained === null ? null : Number(r.marks_obtained),
+      marksObtained:
+        r.marks_obtained === null ? null : Number(r.marks_obtained),
       isAbsent: r.is_absent ?? false,
     }));
   }
@@ -181,7 +215,10 @@ export class ParentAcademicRepository {
   // SCHEDULED (a still-DRAFT exam has no real date/room to show yet).
   // ============================================================
 
-  async findExamScheduleForStudent(studentId: string, executor: Queryable = this.postgres) {
+  async findExamScheduleForStudent(
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ) {
     const { rows } = await executor.query(
       `SELECT es.id AS exam_subject_id, e.name AS exam_name, subj.name AS subject_name,
               es.exam_date, es.start_time, es.duration_minutes, es.room, es.max_marks
@@ -211,7 +248,12 @@ export class ParentAcademicRepository {
   // Subjects + syllabus progress
   // ============================================================
 
-  async findSyllabusProgress(subjectId: string, gradeId: string, subjectOfferingId: string, executor: Queryable = this.postgres): Promise<number> {
+  async findSyllabusProgress(
+    subjectId: string,
+    gradeId: string,
+    subjectOfferingId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<number> {
     const { rows } = await executor.query(
       `SELECT count(*) FILTER (WHERE sp.status = 'COMPLETED') AS done, count(su.id) AS total
        FROM syllabus_unit su
@@ -230,7 +272,10 @@ export class ParentAcademicRepository {
   // Faculty LMS/Homework modules themselves write to.
   // ============================================================
 
-  async findSharedFolders(subjectOfferingId: string, executor: Queryable = this.postgres) {
+  async findSharedFolders(
+    subjectOfferingId: string,
+    executor: Queryable = this.postgres,
+  ) {
     const { rows } = await executor.query(
       `SELECT f.id, f.title, f.description,
               (SELECT count(*) FROM lms_file lf WHERE lf.folder_id = f.id) AS file_count
@@ -240,10 +285,19 @@ export class ParentAcademicRepository {
        ORDER BY f.title`,
       [subjectOfferingId],
     );
-    return rows.map((r: any) => ({ id: r.id, title: r.title, description: r.description, fileCount: Number(r.file_count) }));
+    return rows.map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      fileCount: Number(r.file_count),
+    }));
   }
 
-  async findFolderFiles(folderId: string, subjectOfferingId: string, executor: Queryable = this.postgres) {
+  async findFolderFiles(
+    folderId: string,
+    subjectOfferingId: string,
+    executor: Queryable = this.postgres,
+  ) {
     const { rows } = await executor.query(
       `SELECT lf.id, lf.file_name, lf.object_key, lf.mime_type, lf.size_bytes, lf.uploaded_at
        FROM lms_file lf
@@ -266,7 +320,11 @@ export class ParentAcademicRepository {
    * offering before ever handing back an object key -- a folder's share list
    * can change at any time (see the Faculty LMS module's own edit flow), so
    * this is re-checked fresh on every request, never cached. */
-  async findSharedFile(fileId: string, subjectOfferingId: string, executor: Queryable = this.postgres): Promise<{ objectKey: string; fileName: string } | null> {
+  async findSharedFile(
+    fileId: string,
+    subjectOfferingId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<{ objectKey: string; fileName: string } | null> {
     const { rows } = await executor.query(
       `SELECT lf.object_key, lf.file_name
        FROM lms_file lf
@@ -274,15 +332,25 @@ export class ParentAcademicRepository {
        WHERE lf.id = $1`,
       [fileId, subjectOfferingId],
     );
-    return rows.length ? { objectKey: rows[0].object_key, fileName: rows[0].file_name } : null;
+    return rows.length
+      ? { objectKey: rows[0].object_key, fileName: rows[0].file_name }
+      : null;
   }
 
-  async findLessonPlans(subjectOfferingId: string, executor: Queryable = this.postgres) {
+  async findLessonPlans(
+    subjectOfferingId: string,
+    executor: Queryable = this.postgres,
+  ) {
     const { rows } = await executor.query(
       `SELECT id, title, content, week_start FROM lms_lesson_plan WHERE subject_offering_id = $1 ORDER BY week_start NULLS LAST, created_at DESC`,
       [subjectOfferingId],
     );
-    return rows.map((r: any) => ({ id: r.id, title: r.title, content: r.content, weekStart: r.week_start }));
+    return rows.map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      content: r.content,
+      weekStart: r.week_start,
+    }));
   }
 
   // ============================================================
@@ -290,7 +358,11 @@ export class ParentAcademicRepository {
   // student's own section.
   // ============================================================
 
-  async findTimetableForSection(sectionId: string, stage: string, executor: Queryable = this.postgres) {
+  async findTimetableForSection(
+    sectionId: string,
+    stage: string,
+    executor: Queryable = this.postgres,
+  ) {
     const [{ rows: periods }, { rows: slots }] = await Promise.all([
       executor.query(
         `SELECT id, period_no, label, start_time, end_time, is_break

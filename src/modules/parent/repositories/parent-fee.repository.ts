@@ -7,7 +7,10 @@
 // ~June, instalment 2 due ~November, per fee head, per academic year.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface FeeTermRow {
   academicYearId: string;
@@ -38,7 +41,10 @@ export class ParentFeeRepository {
   constructor(private readonly postgres: PostgresService) {}
 
   /** Every distinct (academic year, instalment) this student actually has a real fee_demand under — never a hardcoded "Term 1/2/3" list, so a student with only one instalment on record shows only one. */
-  async listTerms(studentId: string, executor: Queryable = this.postgres): Promise<FeeTermRow[]> {
+  async listTerms(
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<FeeTermRow[]> {
     const { rows } = await executor.query(
       `SELECT DISTINCT ay.id AS academic_year_id, ay.name AS academic_year_name, ay.start_date, fd.instalment_no
        ${TERM_JOIN}

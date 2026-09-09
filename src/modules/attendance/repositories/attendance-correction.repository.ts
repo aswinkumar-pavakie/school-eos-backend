@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface AttendanceCorrectionRow {
   // bigint column -- node-pg returns this as a string to avoid precision loss.
@@ -35,12 +38,21 @@ export class AttendanceCorrectionRepository {
       `INSERT INTO attendance_correction (attendance_record_id, old_status, new_status, reason, corrected_by)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
-      [input.attendanceRecordId, input.oldStatus, input.newStatus, input.reason, input.correctedBy],
+      [
+        input.attendanceRecordId,
+        input.oldStatus,
+        input.newStatus,
+        input.reason,
+        input.correctedBy,
+      ],
     );
     return (await this.findById(rows[0].id, executor))!;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<AttendanceCorrectionRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<AttendanceCorrectionRow | null> {
     const { rows } = await executor.query<AttendanceCorrectionRow>(
       `SELECT ${COLUMNS} FROM attendance_correction WHERE id = $1`,
       [id],

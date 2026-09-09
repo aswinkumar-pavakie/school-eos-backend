@@ -1,4 +1,11 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+} from '@nestjs/common';
 import { CurrentActor } from '../../../common/auth/current-actor.decorator';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
 import { Roles } from '../../../common/auth/roles.decorator';
@@ -18,7 +25,10 @@ export class RefundsController {
   @Post(':id/process')
   @Roles('FINANCE')
   @HttpCode(HttpStatus.OK)
-  async process(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async process(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const data = await this.service.processRefundPayout(id, actor);
     return { data };
   }

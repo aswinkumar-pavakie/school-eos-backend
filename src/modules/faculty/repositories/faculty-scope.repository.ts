@@ -19,7 +19,10 @@
 // this a teacher could see last year's classes as if still theirs.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface ScopedSection {
   sectionId: string;
@@ -59,7 +62,10 @@ export class FacultyScopeRepository {
 
   /** Every section this person is the current, ACTIVE class advisor for, in
    * the current academic year. */
-  async getAdvisorSections(personId: string, executor: Queryable = this.postgres): Promise<ScopedSection[]> {
+  async getAdvisorSections(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ScopedSection[]> {
     const { rows } = await executor.query(
       `SELECT DISTINCT sec.id AS section_id, sec.academic_year_id, g.name AS grade_name, sec.name AS section_name
        FROM role_assignment ra
@@ -76,7 +82,11 @@ export class FacultyScopeRepository {
 
   /** True if this person is the current, ACTIVE class advisor for this exact
    * section (the authorization check every advisor-only feature runs first). */
-  async isAdvisorForSection(personId: string, sectionId: string, executor: Queryable = this.postgres): Promise<boolean> {
+  async isAdvisorForSection(
+    personId: string,
+    sectionId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<boolean> {
     const { rows } = await executor.query(
       `SELECT 1
        FROM role_assignment ra
@@ -91,7 +101,10 @@ export class FacultyScopeRepository {
   /** Every subject_offering this person currently, actively teaches, in the
    * current academic year -- the real "switch class" list for Records/Marks
    * Entry/Homework (subject-scoped, not advisor-scoped). */
-  async getTeachingOfferings(personId: string, executor: Queryable = this.postgres): Promise<TeachingOffering[]> {
+  async getTeachingOfferings(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<TeachingOffering[]> {
     const { rows } = await executor.query(
       `SELECT so.id AS subject_offering_id, so.section_id, so.academic_year_id,
               g.name AS grade_name, sec.name AS section_name, subj.id AS subject_id, subj.name AS subject_name
@@ -120,8 +133,14 @@ export class FacultyScopeRepository {
    * (My Attendance, Employee Leave & OD, HR Payroll, Payslip, Appraisal).
    * Null for a person with no ACTIVE staff record (shouldn't happen for a
    * real FACULTY-role login, but never assumed). */
-  async getStaffId(personId: string, executor: Queryable = this.postgres): Promise<string | null> {
-    const { rows } = await executor.query(`SELECT id FROM staff WHERE person_id = $1 AND status = 'ACTIVE'`, [personId]);
+  async getStaffId(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string | null> {
+    const { rows } = await executor.query(
+      `SELECT id FROM staff WHERE person_id = $1 AND status = 'ACTIVE'`,
+      [personId],
+    );
     return rows[0]?.id ?? null;
   }
 
@@ -131,7 +150,10 @@ export class FacultyScopeRepository {
    * announce something to a class), and any other feature that just needs
    * "which sections is this person allowed to touch" without caring which
    * scope grants it. */
-  async getAllScopedSectionIds(personId: string, executor: Queryable = this.postgres): Promise<string[]> {
+  async getAllScopedSectionIds(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string[]> {
     const [advisorSections, teachingOfferings] = await Promise.all([
       this.getAdvisorSections(personId, executor),
       this.getTeachingOfferings(personId, executor),
@@ -145,7 +167,10 @@ export class FacultyScopeRepository {
   /** Every real schooling stage (grade.stage, e.g. 'HIGHER_SECONDARY') this
    * person's own advisor + teaching sections actually fall under -- the
    * Academic Calendar's own STAGE-scoped event filter reads this. */
-  async getRelevantStages(personId: string, executor: Queryable = this.postgres): Promise<string[]> {
+  async getRelevantStages(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string[]> {
     const { rows } = await executor.query(
       `SELECT DISTINCT g.stage
        FROM grade g
@@ -169,7 +194,11 @@ export class FacultyScopeRepository {
 
   /** True if this exact subject_offering belongs to this person (the
    * authorization check every teaching-scoped feature runs first). */
-  async ownsOffering(personId: string, subjectOfferingId: string, executor: Queryable = this.postgres): Promise<boolean> {
+  async ownsOffering(
+    personId: string,
+    subjectOfferingId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<boolean> {
     const { rows } = await executor.query(
       `SELECT 1 FROM subject_offering so
        JOIN staff st ON st.id = so.teacher_staff_id AND st.person_id = $1 AND st.status = 'ACTIVE'
@@ -186,7 +215,10 @@ export class FacultyScopeRepository {
    * role-assignments endpoint) -- nothing new to model here, just read it. A
    * person can hold several rows (e.g. two STAGE grants), so this always
    * returns the raw set; callers resolve it down to concrete grades. */
-  async getCoordinatorScope(personId: string, executor: Queryable = this.postgres): Promise<CoordinatorScopeRow[]> {
+  async getCoordinatorScope(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<CoordinatorScopeRow[]> {
     const { rows } = await executor.query(
       `SELECT scope_type, scope_stage, scope_id
        FROM role_assignment
@@ -194,7 +226,11 @@ export class FacultyScopeRepository {
          AND valid_from <= CURRENT_DATE AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)`,
       [personId],
     );
-    return rows.map((r: any) => ({ scopeType: r.scope_type, scopeStage: r.scope_stage, scopeId: r.scope_id }));
+    return rows.map((r: any) => ({
+      scopeType: r.scope_type,
+      scopeStage: r.scope_stage,
+      scopeId: r.scope_id,
+    }));
   }
 
   /** True if this exact student is currently taught OR advised by this
@@ -202,7 +238,11 @@ export class FacultyScopeRepository {
    * students this faculty actually teaches or advises may book their real
    * schedule"), checked server-side even on the minimal Parent-side creation
    * path, not just assumed from what slots got shown. */
-  async teachesOrAdvisesStudent(personId: string, studentId: string, executor: Queryable = this.postgres): Promise<boolean> {
+  async teachesOrAdvisesStudent(
+    personId: string,
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<boolean> {
     const { rows } = await executor.query(
       `SELECT 1
        FROM student_enrolment se

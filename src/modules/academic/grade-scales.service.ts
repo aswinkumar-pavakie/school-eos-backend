@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { GradeScaleRepository } from './repositories/grade-scale.repository';
@@ -39,7 +44,10 @@ export class GradeScalesService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A grade scale with this name already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A grade scale with this name already exists.',
+        );
       throw err;
     }
   }
@@ -60,7 +68,10 @@ export class GradeScalesService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A grade scale with this name already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A grade scale with this name already exists.',
+        );
       throw err;
     }
   }
@@ -91,10 +102,16 @@ export class GradeScalesService {
     return this.gradeScaleRepo.findBands(gradeScaleId);
   }
 
-  async createBand(gradeScaleId: string, dto: CreateGradeBandDto, actorPersonId: string) {
+  async createBand(
+    gradeScaleId: string,
+    dto: CreateGradeBandDto,
+    actorPersonId: string,
+  ) {
     await this.get(gradeScaleId);
     if (dto.maxPercent < dto.minPercent) {
-      throw new BadRequestException('maxPercent must be greater than or equal to minPercent.');
+      throw new BadRequestException(
+        'maxPercent must be greater than or equal to minPercent.',
+      );
     }
     try {
       const created = await this.gradeScaleRepo.createBand(gradeScaleId, dto);
@@ -108,20 +125,32 @@ export class GradeScalesService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A band with this label already exists on this scale.');
-      if (isCheckViolation(err)) throw new BadRequestException('maxPercent must be greater than or equal to minPercent, and both within 0-100.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A band with this label already exists on this scale.',
+        );
+      if (isCheckViolation(err))
+        throw new BadRequestException(
+          'maxPercent must be greater than or equal to minPercent, and both within 0-100.',
+        );
       throw err;
     }
   }
 
-  async updateBand(bandId: string, dto: UpdateGradeBandDto, actorPersonId: string) {
+  async updateBand(
+    bandId: string,
+    dto: UpdateGradeBandDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.gradeScaleRepo.findBandById(bandId);
     if (!existing) throw new NotFoundException('Grade band not found');
 
     const nextMin = dto.minPercent ?? Number(existing.minPercent);
     const nextMax = dto.maxPercent ?? Number(existing.maxPercent);
     if (nextMax < nextMin) {
-      throw new BadRequestException('maxPercent must be greater than or equal to minPercent.');
+      throw new BadRequestException(
+        'maxPercent must be greater than or equal to minPercent.',
+      );
     }
 
     try {
@@ -138,8 +167,14 @@ export class GradeScalesService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A band with this label already exists on this scale.');
-      if (isCheckViolation(err)) throw new BadRequestException('maxPercent must be greater than or equal to minPercent, and both within 0-100.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A band with this label already exists on this scale.',
+        );
+      if (isCheckViolation(err))
+        throw new BadRequestException(
+          'maxPercent must be greater than or equal to minPercent, and both within 0-100.',
+        );
       throw err;
     }
   }

@@ -5,7 +5,10 @@
 // matches — most request types need just one unconditional step.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface ApprovalPolicyStep {
   sequenceNo: number;
@@ -16,7 +19,10 @@ export interface ApprovalPolicyStep {
   condition: Record<string, unknown>;
 }
 
-function matchesCondition(condition: Record<string, unknown>, amountPaise: string | null): boolean {
+function matchesCondition(
+  condition: Record<string, unknown>,
+  amountPaise: string | null,
+): boolean {
   const min = condition.minAmountPaise;
   const max = condition.maxAmountPaise;
   if (min === undefined && max === undefined) return true;
@@ -65,6 +71,8 @@ export class ApprovalPolicyRepository {
         condition: row.condition ?? {},
       });
     }
-    return Array.from(bySequence.values()).sort((a, b) => a.sequenceNo - b.sequenceNo);
+    return Array.from(bySequence.values()).sort(
+      (a, b) => a.sequenceNo - b.sequenceNo,
+    );
   }
 }

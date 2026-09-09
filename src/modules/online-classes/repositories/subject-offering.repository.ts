@@ -4,7 +4,10 @@
 // it's built; this repository stays private to online-classes.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface SubjectOfferingView {
   id: string;

@@ -5,12 +5,19 @@
 // already documents ("the backend itself rejects a request for a student
 // with no active hostel allocation").
 
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { GuardianLinkRepository } from '../parent/repositories/guardian-link.repository';
 import { CreateOutingRequestDto } from './dto/create-outing-request.dto';
 import { HostelScopeRepository } from './repositories/hostel-scope.repository';
-import { OutingRequestRepository, type OutingRequestType } from './repositories/outing-request.repository';
+import {
+  OutingRequestRepository,
+  type OutingRequestType,
+} from './repositories/outing-request.repository';
 
 @Injectable()
 export class ParentHostelRequestsService {
@@ -23,13 +30,19 @@ export class ParentHostelRequestsService {
 
   private async assertGuardian(personId: string, studentId: string) {
     const link = await this.guardianRepo.findActiveLink(personId, studentId);
-    if (!link) throw new ForbiddenException('You are not a registered guardian of this student.');
+    if (!link)
+      throw new ForbiddenException(
+        'You are not a registered guardian of this student.',
+      );
   }
 
   private async assertActiveBoarder(studentId: string) {
-    const allocation = await this.scopeRepo.getActiveHostelForStudent(studentId);
+    const allocation =
+      await this.scopeRepo.getActiveHostelForStudent(studentId);
     if (!allocation) {
-      throw new BadRequestException('This student does not have an active hostel allocation.');
+      throw new BadRequestException(
+        'This student does not have an active hostel allocation.',
+      );
     }
     return allocation;
   }
@@ -41,11 +54,19 @@ export class ParentHostelRequestsService {
     return this.outingRepo.findByRequestedBy(personId, requestType);
   }
 
-  async create(personId: string, requestType: OutingRequestType, dto: CreateOutingRequestDto) {
+  async create(
+    personId: string,
+    requestType: OutingRequestType,
+    dto: CreateOutingRequestDto,
+  ) {
     await this.assertGuardian(personId, dto.studentId);
     await this.assertActiveBoarder(dto.studentId);
-    if (new Date(dto.expectedReturn).getTime() <= new Date(dto.outFrom).getTime()) {
-      throw new BadRequestException('expectedReturn must be strictly after outFrom.');
+    if (
+      new Date(dto.expectedReturn).getTime() <= new Date(dto.outFrom).getTime()
+    ) {
+      throw new BadRequestException(
+        'expectedReturn must be strictly after outFrom.',
+      );
     }
     const id = await this.outingRepo.create({
       studentId: dto.studentId,
@@ -60,7 +81,10 @@ export class ParentHostelRequestsService {
     await this.audit.record({
       actorPersonId: personId,
       actorRoleCode: 'PARENT',
-      action: requestType === 'GATE_PASS' ? 'GATE_PASS_REQUESTED' : 'EMERGENCY_EXIT_REQUESTED',
+      action:
+        requestType === 'GATE_PASS'
+          ? 'GATE_PASS_REQUESTED'
+          : 'EMERGENCY_EXIT_REQUESTED',
       objectType: 'outing_request',
       objectId: id,
       outcome: 'SUCCESS',

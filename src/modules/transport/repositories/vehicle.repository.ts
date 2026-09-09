@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface VehicleRow {
   id: string;
@@ -42,14 +45,21 @@ export class VehicleRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<VehicleRow | null> {
-    const { rows } = await executor.query<VehicleRow>(`SELECT ${COLUMNS} FROM vehicle WHERE id = $1`, [
-      id,
-    ]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<VehicleRow | null> {
+    const { rows } = await executor.query<VehicleRow>(
+      `SELECT ${COLUMNS} FROM vehicle WHERE id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
-  async create(input: CreateVehicleInput, executor: Queryable = this.postgres): Promise<VehicleRow> {
+  async create(
+    input: CreateVehicleInput,
+    executor: Queryable = this.postgres,
+  ): Promise<VehicleRow> {
     const { rows } = await executor.query<VehicleRow>(
       `INSERT INTO vehicle (registration_no, model, capacity, ownership, operational_status)
        VALUES ($1, $2, $3, $4, COALESCE($5, 'ACTIVE'))

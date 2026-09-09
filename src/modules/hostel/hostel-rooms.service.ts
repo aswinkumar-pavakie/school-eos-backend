@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CreateHostelBedDto } from './dto/create-hostel-bed.dto';
 import { UpdateHostelBedDto } from './dto/update-hostel-bed.dto';
@@ -24,7 +28,11 @@ export class HostelRoomsService {
     return this.hostelBedRepo.findByRoomId(roomId);
   }
 
-  async createBed(roomId: string, dto: CreateHostelBedDto, actorPersonId: string) {
+  async createBed(
+    roomId: string,
+    dto: CreateHostelBedDto,
+    actorPersonId: string,
+  ) {
     await this.assertRoomExists(roomId);
     try {
       const created = await this.hostelBedRepo.create(roomId, dto);
@@ -39,13 +47,19 @@ export class HostelRoomsService {
       return created;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A bed with this number already exists in this room.');
+        throw new ConflictException(
+          'A bed with this number already exists in this room.',
+        );
       }
       throw err;
     }
   }
 
-  async updateBed(bedId: string, dto: UpdateHostelBedDto, actorPersonId: string) {
+  async updateBed(
+    bedId: string,
+    dto: UpdateHostelBedDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.hostelBedRepo.findById(bedId);
     if (!existing) throw new NotFoundException('Hostel bed not found');
     try {
@@ -63,7 +77,9 @@ export class HostelRoomsService {
       return updated;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A bed with this number already exists in this room.');
+        throw new ConflictException(
+          'A bed with this number already exists in this room.',
+        );
       }
       throw err;
     }

@@ -11,7 +11,10 @@ import { AddRecordingDto } from './dto/add-recording.dto';
 import { CancelOnlineClassDto } from './dto/cancel-online-class.dto';
 import { RescheduleOnlineClassDto } from './dto/reschedule-online-class.dto';
 import { ScheduleOnlineClassDto } from './dto/schedule-online-class.dto';
-import { CalendarCreationOutcome, CalendarSyncOutcome } from './google/google-calendar.service';
+import {
+  CalendarCreationOutcome,
+  CalendarSyncOutcome,
+} from './google/google-calendar.service';
 import { OnlineClassesService } from './online-classes.service';
 import { OnlineClassDetail } from './repositories/online-class.repository';
 
@@ -25,7 +28,9 @@ const DTO: ScheduleOnlineClassDto = {
   endTime: '11:00',
 };
 
-function makeRow(overrides: Partial<OnlineClassDetail> = {}): OnlineClassDetail {
+function makeRow(
+  overrides: Partial<OnlineClassDetail> = {},
+): OnlineClassDetail {
   return {
     id: 'oc-1',
     subjectOfferingId: 'offering-1',
@@ -58,7 +63,9 @@ function makeRow(overrides: Partial<OnlineClassDetail> = {}): OnlineClassDetail 
 
 /** A SCHEDULED row with a real-looking, already-created Google Meet — the starting
  * point for every reschedule/cancel/state-transition test below. */
-function makeScheduledRow(overrides: Partial<OnlineClassDetail> = {}): OnlineClassDetail {
+function makeScheduledRow(
+  overrides: Partial<OnlineClassDetail> = {},
+): OnlineClassDetail {
   return makeRow({
     status: 'SCHEDULED',
     meetingCreationStatus: 'SUCCEEDED',
@@ -98,11 +105,17 @@ function buildService(initialRow: OnlineClassDetail, opts: BuildOptions = {}) {
   let current: OnlineClassDetail = { ...initialRow };
 
   const onlineClassRepo = {
-    findByFacultyAndIdempotencyKey: jest.fn().mockResolvedValue(
-      opts.existingIdempotencyMatch ? { id: opts.existingIdempotencyMatch } : null,
-    ),
+    findByFacultyAndIdempotencyKey: jest
+      .fn()
+      .mockResolvedValue(
+        opts.existingIdempotencyMatch
+          ? { id: opts.existingIdempotencyMatch }
+          : null,
+      ),
     create: jest.fn().mockResolvedValue(current.id),
-    findDetailById: jest.fn().mockImplementation(() => Promise.resolve({ ...current })),
+    findDetailById: jest
+      .fn()
+      .mockImplementation(() => Promise.resolve({ ...current })),
     listByFacultyAndStatuses: jest.fn(),
     hasOverlap: jest.fn().mockResolvedValue(false),
     updateSchedule: jest.fn().mockImplementation((_id: string, params: any) => {
@@ -126,7 +139,11 @@ function buildService(initialRow: OnlineClassDetail, opts: BuildOptions = {}) {
       return Promise.resolve();
     }),
     addRecording: jest.fn().mockImplementation((_id: string, params: any) => {
-      current = { ...current, recordingUrl: params.recordingUrl, recordingAddedAt: new Date() };
+      current = {
+        ...current,
+        recordingUrl: params.recordingUrl,
+        recordingAddedAt: new Date(),
+      };
       return Promise.resolve();
     }),
     claimForMeetingCreation: jest.fn().mockImplementation(() => {
@@ -134,26 +151,39 @@ function buildService(initialRow: OnlineClassDetail, opts: BuildOptions = {}) {
       current = { ...current, meetingCreationStatus: 'CREATING' };
       return Promise.resolve(true);
     }),
-    markMeetingSucceeded: jest.fn().mockImplementation((_id: string, params: any) => {
-      current = {
-        ...current,
-        status: 'SCHEDULED',
-        meetingCreationStatus: 'SUCCEEDED',
-        meetingCreationError: null,
-        googleCalendarEventId: params.googleCalendarEventId,
-        googleMeetId: params.googleMeetId,
-        meetingUrl: params.meetingUrl,
-      };
-      return Promise.resolve();
-    }),
-    markMeetingStillPending: jest.fn().mockImplementation((_id: string, params: any) => {
-      current = { ...current, googleCalendarEventId: params.googleCalendarEventId };
-      return Promise.resolve();
-    }),
-    markMeetingFailed: jest.fn().mockImplementation((_id: string, params: any) => {
-      current = { ...current, meetingCreationStatus: 'FAILED', meetingCreationError: params.errorMessage };
-      return Promise.resolve();
-    }),
+    markMeetingSucceeded: jest
+      .fn()
+      .mockImplementation((_id: string, params: any) => {
+        current = {
+          ...current,
+          status: 'SCHEDULED',
+          meetingCreationStatus: 'SUCCEEDED',
+          meetingCreationError: null,
+          googleCalendarEventId: params.googleCalendarEventId,
+          googleMeetId: params.googleMeetId,
+          meetingUrl: params.meetingUrl,
+        };
+        return Promise.resolve();
+      }),
+    markMeetingStillPending: jest
+      .fn()
+      .mockImplementation((_id: string, params: any) => {
+        current = {
+          ...current,
+          googleCalendarEventId: params.googleCalendarEventId,
+        };
+        return Promise.resolve();
+      }),
+    markMeetingFailed: jest
+      .fn()
+      .mockImplementation((_id: string, params: any) => {
+        current = {
+          ...current,
+          meetingCreationStatus: 'FAILED',
+          meetingCreationError: params.errorMessage,
+        };
+        return Promise.resolve();
+      }),
     markLive: jest.fn().mockImplementation(() => {
       if (current.status !== 'SCHEDULED') return Promise.resolve(false);
       current = { ...current, status: 'LIVE', version: current.version + 1 };
@@ -161,12 +191,18 @@ function buildService(initialRow: OnlineClassDetail, opts: BuildOptions = {}) {
     }),
     markCompleted: jest.fn().mockImplementation(() => {
       if (current.status !== 'LIVE') return Promise.resolve(false);
-      current = { ...current, status: 'COMPLETED', version: current.version + 1 };
+      current = {
+        ...current,
+        status: 'COMPLETED',
+        version: current.version + 1,
+      };
       return Promise.resolve(true);
     }),
   } as any;
 
-  const rescheduleRepo = { create: jest.fn().mockResolvedValue('history-1') } as any;
+  const rescheduleRepo = {
+    create: jest.fn().mockResolvedValue('history-1'),
+  } as any;
 
   const staffRepo = {
     findByPersonId: jest.fn().mockResolvedValue({
@@ -190,7 +226,9 @@ function buildService(initialRow: OnlineClassDetail, opts: BuildOptions = {}) {
     }),
   } as any;
 
-  const unitOfWork = { run: jest.fn((work: (client: unknown) => Promise<unknown>) => work({})) } as any;
+  const unitOfWork = {
+    run: jest.fn((work: (client: unknown) => Promise<unknown>) => work({})),
+  } as any;
 
   const defaultConnection = {
     staffId: initialRow.facultyStaffId,
@@ -204,7 +242,9 @@ function buildService(initialRow: OnlineClassDetail, opts: BuildOptions = {}) {
   const googleConnectionRepo = {
     findByStaffId: jest
       .fn()
-      .mockResolvedValue(opts.connection === undefined ? defaultConnection : opts.connection),
+      .mockResolvedValue(
+        opts.connection === undefined ? defaultConnection : opts.connection,
+      ),
     markNeedsReauth: jest.fn().mockResolvedValue(undefined),
   } as any;
 
@@ -215,16 +255,26 @@ function buildService(initialRow: OnlineClassDetail, opts: BuildOptions = {}) {
     meetingUrl: 'https://meet.google.com/abc-defg-hij',
   };
   const googleCalendarService = {
-    createOrCheckMeeting: jest.fn().mockResolvedValue(opts.googleOutcome ?? defaultOutcome),
+    createOrCheckMeeting: jest
+      .fn()
+      .mockResolvedValue(opts.googleOutcome ?? defaultOutcome),
     updateEventTime: jest
       .fn()
-      .mockResolvedValue(opts.updateEventTimeOutcome ?? ({ outcome: 'SUCCEEDED' } as CalendarSyncOutcome)),
+      .mockResolvedValue(
+        opts.updateEventTimeOutcome ??
+          ({ outcome: 'SUCCEEDED' } as CalendarSyncOutcome),
+      ),
     cancelEvent: jest
       .fn()
-      .mockResolvedValue(opts.cancelEventOutcome ?? ({ outcome: 'SUCCEEDED' } as CalendarSyncOutcome)),
+      .mockResolvedValue(
+        opts.cancelEventOutcome ??
+          ({ outcome: 'SUCCEEDED' } as CalendarSyncOutcome),
+      ),
   } as any;
 
-  const schoolRepo = { getTimezone: jest.fn().mockResolvedValue('Asia/Kolkata') } as any;
+  const schoolRepo = {
+    getTimezone: jest.fn().mockResolvedValue('Asia/Kolkata'),
+  } as any;
 
   const service = new OnlineClassesService(
     onlineClassRepo,
@@ -258,12 +308,19 @@ const RESCHEDULE_DTO: RescheduleOnlineClassDto = {
 describe('OnlineClassesService — Phase 7 Google Calendar/Meet creation orchestration', () => {
   it('SUCCESS: creates the event, persists event/meet ids and URL, flips to SCHEDULED', async () => {
     const row = makeRow();
-    const { service, onlineClassRepo, googleCalendarService, googleConnectionRepo } = buildService(row);
+    const {
+      service,
+      onlineClassRepo,
+      googleCalendarService,
+      googleConnectionRepo,
+    } = buildService(row);
 
     const result = await service.schedule(ACTOR, DTO, 'key-success');
 
     expect(googleCalendarService.createOrCheckMeeting).toHaveBeenCalledTimes(1);
-    expect(googleConnectionRepo.findByStaffId).toHaveBeenCalledWith(row.facultyStaffId);
+    expect(googleConnectionRepo.findByStaffId).toHaveBeenCalledWith(
+      row.facultyStaffId,
+    );
     expect(onlineClassRepo.markMeetingSucceeded).toHaveBeenCalledWith(row.id, {
       googleCalendarEventId: 'evt-1',
       googleMeetId: 'abc-defg-hij',
@@ -278,7 +335,10 @@ describe('OnlineClassesService — Phase 7 Google Calendar/Meet creation orchest
   it('GOOGLE FAILURE: stays DRAFT, meeting_creation_status FAILED, never marked SCHEDULED', async () => {
     const row = makeRow();
     const { service, onlineClassRepo } = buildService(row, {
-      googleOutcome: { outcome: 'FAILED', message: 'Could not reach Google Calendar' },
+      googleOutcome: {
+        outcome: 'FAILED',
+        message: 'Could not reach Google Calendar',
+      },
     });
 
     const result = await service.schedule(ACTOR, DTO, 'key-failure');
@@ -294,16 +354,23 @@ describe('OnlineClassesService — Phase 7 Google Calendar/Meet creation orchest
 
   it('EXPIRED/REVOKED AUTHORIZATION: marks the connection NEEDS_REAUTH and the class FAILED, cleanly', async () => {
     const row = makeRow();
-    const { service, onlineClassRepo, googleConnectionRepo } = buildService(row, {
-      googleOutcome: { outcome: 'NEEDS_REAUTH' },
-    });
+    const { service, onlineClassRepo, googleConnectionRepo } = buildService(
+      row,
+      {
+        googleOutcome: { outcome: 'NEEDS_REAUTH' },
+      },
+    );
 
     const result = await service.schedule(ACTOR, DTO, 'key-reauth');
 
-    expect(googleConnectionRepo.markNeedsReauth).toHaveBeenCalledWith(row.facultyStaffId);
+    expect(googleConnectionRepo.markNeedsReauth).toHaveBeenCalledWith(
+      row.facultyStaffId,
+    );
     expect(onlineClassRepo.markMeetingFailed).toHaveBeenCalledWith(
       row.id,
-      expect.objectContaining({ errorMessage: expect.stringMatching(/reconnect/i) }),
+      expect.objectContaining({
+        errorMessage: expect.stringMatching(/reconnect/i),
+      }),
     );
     expect(result.status).toBe('DRAFT');
     expect(result.meetingCreationStatus).toBe('FAILED');
@@ -311,14 +378,19 @@ describe('OnlineClassesService — Phase 7 Google Calendar/Meet creation orchest
 
   it('NOT CONNECTED: fails without ever calling Google at all', async () => {
     const row = makeRow();
-    const { service, googleCalendarService, onlineClassRepo } = buildService(row, { connection: null });
+    const { service, googleCalendarService, onlineClassRepo } = buildService(
+      row,
+      { connection: null },
+    );
 
     const result = await service.schedule(ACTOR, DTO, 'key-not-connected');
 
     expect(googleCalendarService.createOrCheckMeeting).not.toHaveBeenCalled();
     expect(onlineClassRepo.markMeetingFailed).toHaveBeenCalledWith(
       row.id,
-      expect.objectContaining({ errorMessage: expect.stringMatching(/connect your google account/i) }),
+      expect.objectContaining({
+        errorMessage: expect.stringMatching(/connect your google account/i),
+      }),
     );
     expect(result.status).toBe('DRAFT');
   });
@@ -326,14 +398,20 @@ describe('OnlineClassesService — Phase 7 Google Calendar/Meet creation orchest
   it('PENDING (Google async conference): does not assume the Meet URL is ready — stays CREATING/DRAFT, stores the event id', async () => {
     const row = makeRow();
     const { service, onlineClassRepo } = buildService(row, {
-      googleOutcome: { outcome: 'PENDING', googleCalendarEventId: 'evt-pending-1' },
+      googleOutcome: {
+        outcome: 'PENDING',
+        googleCalendarEventId: 'evt-pending-1',
+      },
     });
 
     const result = await service.schedule(ACTOR, DTO, 'key-pending');
 
-    expect(onlineClassRepo.markMeetingStillPending).toHaveBeenCalledWith(row.id, {
-      googleCalendarEventId: 'evt-pending-1',
-    });
+    expect(onlineClassRepo.markMeetingStillPending).toHaveBeenCalledWith(
+      row.id,
+      {
+        googleCalendarEventId: 'evt-pending-1',
+      },
+    );
     expect(onlineClassRepo.markMeetingSucceeded).not.toHaveBeenCalled();
     expect(result.status).toBe('DRAFT');
     expect(result.meetingCreationStatus).toBe('CREATING');
@@ -343,15 +421,20 @@ describe('OnlineClassesService — Phase 7 Google Calendar/Meet creation orchest
 
   it('DUPLICATE/RETRY — concurrent in-flight attempt: a row already CREATING is not re-claimed, Google is never called twice', async () => {
     const row = makeRow({ meetingCreationStatus: 'CREATING' });
-    const { service, googleCalendarService, onlineClassRepo } = buildService(row, {
-      claimSucceeds: false,
-      existingIdempotencyMatch: row.id,
-    });
+    const { service, googleCalendarService, onlineClassRepo } = buildService(
+      row,
+      {
+        claimSucceeds: false,
+        existingIdempotencyMatch: row.id,
+      },
+    );
 
     const result = await service.schedule(ACTOR, DTO, 'key-duplicate');
 
     expect(onlineClassRepo.create).not.toHaveBeenCalled();
-    expect(onlineClassRepo.claimForMeetingCreation).toHaveBeenCalledWith(row.id);
+    expect(onlineClassRepo.claimForMeetingCreation).toHaveBeenCalledWith(
+      row.id,
+    );
     expect(googleCalendarService.createOrCheckMeeting).not.toHaveBeenCalled();
     expect(result.meetingCreationStatus).toBe('CREATING');
   });
@@ -364,9 +447,12 @@ describe('OnlineClassesService — Phase 7 Google Calendar/Meet creation orchest
       googleMeetId: 'xyz-meet',
       meetingUrl: 'https://meet.google.com/xyz-meet',
     });
-    const { service, onlineClassRepo, googleCalendarService } = buildService(row, {
-      existingIdempotencyMatch: row.id,
-    });
+    const { service, onlineClassRepo, googleCalendarService } = buildService(
+      row,
+      {
+        existingIdempotencyMatch: row.id,
+      },
+    );
 
     const result = await service.schedule(ACTOR, DTO, 'key-already-succeeded');
 
@@ -382,24 +468,36 @@ describe('OnlineClassesService — Phase 7 Google Calendar/Meet creation orchest
       meetingCreationError: 'Could not reach Google Calendar',
       googleCalendarEventId: 'evt-from-first-attempt',
     });
-    const { service, onlineClassRepo, googleCalendarService } = buildService(row, {
-      existingIdempotencyMatch: row.id,
-      googleOutcome: {
-        outcome: 'SUCCEEDED',
-        googleCalendarEventId: 'evt-from-first-attempt',
-        googleMeetId: 'abc-defg-hij',
-        meetingUrl: 'https://meet.google.com/abc-defg-hij',
+    const { service, onlineClassRepo, googleCalendarService } = buildService(
+      row,
+      {
+        existingIdempotencyMatch: row.id,
+        googleOutcome: {
+          outcome: 'SUCCEEDED',
+          googleCalendarEventId: 'evt-from-first-attempt',
+          googleMeetId: 'abc-defg-hij',
+          meetingUrl: 'https://meet.google.com/abc-defg-hij',
+        },
       },
-    });
+    );
 
-    const result = await service.schedule(ACTOR, DTO, 'key-retry-after-failure');
+    const result = await service.schedule(
+      ACTOR,
+      DTO,
+      'key-retry-after-failure',
+    );
 
     expect(googleCalendarService.createOrCheckMeeting).toHaveBeenCalledWith(
-      expect.objectContaining({ existingEventId: 'evt-from-first-attempt', requestId: row.id }),
+      expect.objectContaining({
+        existingEventId: 'evt-from-first-attempt',
+        requestId: row.id,
+      }),
     );
     expect(onlineClassRepo.markMeetingSucceeded).toHaveBeenCalledWith(
       row.id,
-      expect.objectContaining({ googleCalendarEventId: 'evt-from-first-attempt' }),
+      expect.objectContaining({
+        googleCalendarEventId: 'evt-from-first-attempt',
+      }),
     );
     expect(result.status).toBe('SCHEDULED');
   });
@@ -411,14 +509,17 @@ describe('OnlineClassesService — Phase 7 Google Calendar/Meet creation orchest
     await service.schedule(ACTOR, DTO, 'key-authz');
 
     expect(staffRepo.findByPersonId).toHaveBeenCalledWith(ACTOR.personId);
-    expect(googleConnectionRepo.findByStaffId).toHaveBeenCalledWith(row.facultyStaffId);
+    expect(googleConnectionRepo.findByStaffId).toHaveBeenCalledWith(
+      row.facultyStaffId,
+    );
   });
 });
 
 describe('OnlineClassesService — Google Calendar reschedule sync', () => {
   it('1-9: reschedules successfully — EOS updated, history created, version incremented, existing Google event UPDATED (not re-created), same event/meet/url preserved', async () => {
     const row = makeScheduledRow();
-    const { service, onlineClassRepo, rescheduleRepo, googleCalendarService } = buildService(row);
+    const { service, onlineClassRepo, rescheduleRepo, googleCalendarService } =
+      buildService(row);
 
     const result = await service.reschedule(ACTOR, row.id, RESCHEDULE_DTO);
 
@@ -445,7 +546,11 @@ describe('OnlineClassesService — Google Calendar reschedule sync', () => {
     // DTO gives "HH:mm" only, and passing that straight through produced a malformed
     // dateTime Google rejected with a 400.
     expect(googleCalendarService.updateEventTime).toHaveBeenCalledWith(
-      expect.objectContaining({ eventId: 'evt-original', startTime: '14:00:00', endTime: '15:00:00' }),
+      expect.objectContaining({
+        eventId: 'evt-original',
+        startTime: '14:00:00',
+        endTime: '15:00:00',
+      }),
     );
     expect(googleCalendarService.createOrCheckMeeting).not.toHaveBeenCalled();
     // 6-8: event id / meet id / url all unchanged
@@ -490,20 +595,27 @@ describe('OnlineClassesService — Google Calendar reschedule sync', () => {
 
   it('10: conflict validation still runs — an overlapping new time is rejected before any Google call', async () => {
     const row = makeScheduledRow();
-    const { service, onlineClassRepo, googleCalendarService } = buildService(row);
+    const { service, onlineClassRepo, googleCalendarService } =
+      buildService(row);
     onlineClassRepo.hasOverlap.mockResolvedValue(true);
 
-    await expect(service.reschedule(ACTOR, row.id, RESCHEDULE_DTO)).rejects.toMatchObject({
+    await expect(
+      service.reschedule(ACTOR, row.id, RESCHEDULE_DTO),
+    ).rejects.toMatchObject({
       status: 409,
     });
     expect(googleCalendarService.updateEventTime).not.toHaveBeenCalled();
   });
 
-  it('11: wrong faculty cannot reschedule someone else\'s class (404, and no Google call)', async () => {
+  it("11: wrong faculty cannot reschedule someone else's class (404, and no Google call)", async () => {
     const row = makeScheduledRow();
-    const { service, googleCalendarService } = buildService(row, { actorStaffId: 'staff-someone-else' });
+    const { service, googleCalendarService } = buildService(row, {
+      actorStaffId: 'staff-someone-else',
+    });
 
-    await expect(service.reschedule(ACTOR, row.id, RESCHEDULE_DTO)).rejects.toMatchObject({
+    await expect(
+      service.reschedule(ACTOR, row.id, RESCHEDULE_DTO),
+    ).rejects.toMatchObject({
       status: 404,
     });
     expect(googleCalendarService.updateEventTime).not.toHaveBeenCalled();
@@ -511,17 +623,24 @@ describe('OnlineClassesService — Google Calendar reschedule sync', () => {
 
   it('12: Google authentication failure (NEEDS_REAUTH) is handled safely — EOS reschedule still succeeds, connection flagged, error recorded, no throw', async () => {
     const row = makeScheduledRow();
-    const { service, onlineClassRepo, googleConnectionRepo } = buildService(row, {
-      updateEventTimeOutcome: { outcome: 'NEEDS_REAUTH' },
-    });
+    const { service, onlineClassRepo, googleConnectionRepo } = buildService(
+      row,
+      {
+        updateEventTimeOutcome: { outcome: 'NEEDS_REAUTH' },
+      },
+    );
 
     const result = await service.reschedule(ACTOR, row.id, RESCHEDULE_DTO);
 
-    expect(googleConnectionRepo.markNeedsReauth).toHaveBeenCalledWith(row.facultyStaffId);
+    expect(googleConnectionRepo.markNeedsReauth).toHaveBeenCalledWith(
+      row.facultyStaffId,
+    );
     expect(result.startTime).toBe('14:00:00'); // EOS side still updated
     expect(onlineClassRepo.markMeetingFailed).toHaveBeenCalledWith(
       row.id,
-      expect.objectContaining({ errorMessage: expect.stringMatching(/reconnect/i) }),
+      expect.objectContaining({
+        errorMessage: expect.stringMatching(/reconnect/i),
+      }),
     );
     expect(result.meetingCreationStatus).toBe('FAILED');
     // Never falsely claims sync succeeded, but never loses the EOS-side change either.
@@ -531,7 +650,10 @@ describe('OnlineClassesService — Google Calendar reschedule sync', () => {
   it('13: Google API failure is handled safely — EOS reschedule still succeeds, failure recorded, no throw', async () => {
     const row = makeScheduledRow();
     const { service, onlineClassRepo } = buildService(row, {
-      updateEventTimeOutcome: { outcome: 'FAILED', message: 'Could not reach Google Calendar' },
+      updateEventTimeOutcome: {
+        outcome: 'FAILED',
+        message: 'Could not reach Google Calendar',
+      },
     });
 
     const result = await service.reschedule(ACTOR, row.id, RESCHEDULE_DTO);
@@ -553,13 +675,19 @@ describe('OnlineClassesService — Google Calendar reschedule sync', () => {
 
     expect(onlineClassRepo.markMeetingFailed).toHaveBeenCalledWith(
       row.id,
-      expect.objectContaining({ errorMessage: expect.stringMatching(/could not be found/i) }),
+      expect.objectContaining({
+        errorMessage: expect.stringMatching(/could not be found/i),
+      }),
     );
     expect(result.status).toBe('SCHEDULED');
   });
 
   it('never calls Google at all when the class has no confirmed event yet (still DRAFT/no googleCalendarEventId)', async () => {
-    const row = makeRow({ status: 'DRAFT', meetingCreationStatus: 'FAILED', googleCalendarEventId: null });
+    const row = makeRow({
+      status: 'DRAFT',
+      meetingCreationStatus: 'FAILED',
+      googleCalendarEventId: null,
+    });
     const { service, googleCalendarService } = buildService(row);
 
     await service.reschedule(ACTOR, row.id, RESCHEDULE_DTO);
@@ -574,7 +702,8 @@ describe('OnlineClassesService — Google Calendar cancellation sync', () => {
 
   it('1-8: cancels successfully — status CANCELLED, reason/cancelledAt/version set, Google cancellation called, record retained with event/meet ids intact for history', async () => {
     const row = makeScheduledRow();
-    const { service, onlineClassRepo, googleCalendarService } = buildService(row);
+    const { service, onlineClassRepo, googleCalendarService } =
+      buildService(row);
 
     const result = await service.cancel(ACTOR, row.id, CANCEL_DTO);
 
@@ -598,7 +727,9 @@ describe('OnlineClassesService — Google Calendar cancellation sync', () => {
     await service.cancel(ACTOR, row.id, CANCEL_DTO);
     expect(googleCalendarService.cancelEvent).toHaveBeenCalledTimes(1);
 
-    await expect(service.cancel(ACTOR, row.id, CANCEL_DTO)).rejects.toMatchObject({ status: 409 });
+    await expect(
+      service.cancel(ACTOR, row.id, CANCEL_DTO),
+    ).rejects.toMatchObject({ status: 409 });
     expect(googleCalendarService.cancelEvent).toHaveBeenCalledTimes(1); // still just once
   });
 
@@ -606,7 +737,9 @@ describe('OnlineClassesService — Google Calendar cancellation sync', () => {
     const row = makeScheduledRow();
     // GoogleCalendarService itself maps 404/410 to SUCCEEDED (see cancelEvent) — this
     // asserts the service layer handles that outcome correctly, i.e. as a success.
-    const { service, onlineClassRepo } = buildService(row, { cancelEventOutcome: { outcome: 'SUCCEEDED' } });
+    const { service, onlineClassRepo } = buildService(row, {
+      cancelEventOutcome: { outcome: 'SUCCEEDED' },
+    });
 
     const result = await service.cancel(ACTOR, row.id, CANCEL_DTO);
 
@@ -616,24 +749,34 @@ describe('OnlineClassesService — Google Calendar cancellation sync', () => {
 
   it('11: Google authentication failure (NEEDS_REAUTH) is handled safely — cancellation still completes, connection flagged, error recorded', async () => {
     const row = makeScheduledRow();
-    const { service, onlineClassRepo, googleConnectionRepo } = buildService(row, {
-      cancelEventOutcome: { outcome: 'NEEDS_REAUTH' },
-    });
+    const { service, onlineClassRepo, googleConnectionRepo } = buildService(
+      row,
+      {
+        cancelEventOutcome: { outcome: 'NEEDS_REAUTH' },
+      },
+    );
 
     const result = await service.cancel(ACTOR, row.id, CANCEL_DTO);
 
     expect(result.status).toBe('CANCELLED'); // EOS cancellation is never blocked by Google
-    expect(googleConnectionRepo.markNeedsReauth).toHaveBeenCalledWith(row.facultyStaffId);
+    expect(googleConnectionRepo.markNeedsReauth).toHaveBeenCalledWith(
+      row.facultyStaffId,
+    );
     expect(onlineClassRepo.markMeetingFailed).toHaveBeenCalledWith(
       row.id,
-      expect.objectContaining({ errorMessage: expect.stringMatching(/reconnect/i) }),
+      expect.objectContaining({
+        errorMessage: expect.stringMatching(/reconnect/i),
+      }),
     );
   });
 
   it('12: Google API failure is handled safely — cancellation still completes, failure recorded, no throw', async () => {
     const row = makeScheduledRow();
     const { service, onlineClassRepo } = buildService(row, {
-      cancelEventOutcome: { outcome: 'FAILED', message: 'Could not reach Google Calendar' },
+      cancelEventOutcome: {
+        outcome: 'FAILED',
+        message: 'Could not reach Google Calendar',
+      },
     });
 
     const result = await service.cancel(ACTOR, row.id, CANCEL_DTO);
@@ -644,11 +787,15 @@ describe('OnlineClassesService — Google Calendar cancellation sync', () => {
     });
   });
 
-  it('13: wrong faculty cannot cancel someone else\'s class (404, and no Google call)', async () => {
+  it("13: wrong faculty cannot cancel someone else's class (404, and no Google call)", async () => {
     const row = makeScheduledRow();
-    const { service, googleCalendarService } = buildService(row, { actorStaffId: 'staff-someone-else' });
+    const { service, googleCalendarService } = buildService(row, {
+      actorStaffId: 'staff-someone-else',
+    });
 
-    await expect(service.cancel(ACTOR, row.id, CANCEL_DTO)).rejects.toMatchObject({ status: 404 });
+    await expect(
+      service.cancel(ACTOR, row.id, CANCEL_DTO),
+    ).rejects.toMatchObject({ status: 404 });
     expect(googleCalendarService.cancelEvent).not.toHaveBeenCalled();
   });
 
@@ -685,59 +832,83 @@ describe('OnlineClassesService — SCHEDULED -> LIVE -> COMPLETED', () => {
     const scheduled = makeScheduledRow();
     const live = makeScheduledRow({ status: 'LIVE' });
 
-    const { service: startService } = buildService(scheduled, { actorStaffId: 'someone-else' });
-    await expect(startService.startClass(ACTOR, scheduled.id)).rejects.toMatchObject({ status: 404 });
+    const { service: startService } = buildService(scheduled, {
+      actorStaffId: 'someone-else',
+    });
+    await expect(
+      startService.startClass(ACTOR, scheduled.id),
+    ).rejects.toMatchObject({ status: 404 });
 
-    const { service: completeService } = buildService(live, { actorStaffId: 'someone-else' });
-    await expect(completeService.completeClass(ACTOR, live.id)).rejects.toMatchObject({ status: 404 });
+    const { service: completeService } = buildService(live, {
+      actorStaffId: 'someone-else',
+    });
+    await expect(
+      completeService.completeClass(ACTOR, live.id),
+    ).rejects.toMatchObject({ status: 404 });
   });
 
   it('4: DRAFT cannot become LIVE', async () => {
     const row = makeRow({ status: 'DRAFT' });
     const { service } = buildService(row);
-    await expect(service.startClass(ACTOR, row.id)).rejects.toMatchObject({ status: 409 });
+    await expect(service.startClass(ACTOR, row.id)).rejects.toMatchObject({
+      status: 409,
+    });
   });
 
   it('5: DRAFT cannot become COMPLETED', async () => {
     const row = makeRow({ status: 'DRAFT' });
     const { service } = buildService(row);
-    await expect(service.completeClass(ACTOR, row.id)).rejects.toMatchObject({ status: 409 });
+    await expect(service.completeClass(ACTOR, row.id)).rejects.toMatchObject({
+      status: 409,
+    });
   });
 
   it('6: SCHEDULED cannot directly become COMPLETED', async () => {
     const row = makeScheduledRow();
     const { service } = buildService(row);
-    await expect(service.completeClass(ACTOR, row.id)).rejects.toMatchObject({ status: 409 });
+    await expect(service.completeClass(ACTOR, row.id)).rejects.toMatchObject({
+      status: 409,
+    });
   });
 
   it('7: LIVE cannot be started again', async () => {
     const row = makeScheduledRow({ status: 'LIVE' });
     const { service } = buildService(row);
-    await expect(service.startClass(ACTOR, row.id)).rejects.toMatchObject({ status: 409 });
+    await expect(service.startClass(ACTOR, row.id)).rejects.toMatchObject({
+      status: 409,
+    });
   });
 
   it('8: COMPLETED cannot be started again', async () => {
     const row = makeScheduledRow({ status: 'COMPLETED' });
     const { service } = buildService(row);
-    await expect(service.startClass(ACTOR, row.id)).rejects.toMatchObject({ status: 409 });
+    await expect(service.startClass(ACTOR, row.id)).rejects.toMatchObject({
+      status: 409,
+    });
   });
 
   it('9: COMPLETED cannot be completed again', async () => {
     const row = makeScheduledRow({ status: 'COMPLETED' });
     const { service } = buildService(row);
-    await expect(service.completeClass(ACTOR, row.id)).rejects.toMatchObject({ status: 409 });
+    await expect(service.completeClass(ACTOR, row.id)).rejects.toMatchObject({
+      status: 409,
+    });
   });
 
   it('10: CANCELLED cannot become LIVE', async () => {
     const row = makeScheduledRow({ status: 'CANCELLED' });
     const { service } = buildService(row);
-    await expect(service.startClass(ACTOR, row.id)).rejects.toMatchObject({ status: 409 });
+    await expect(service.startClass(ACTOR, row.id)).rejects.toMatchObject({
+      status: 409,
+    });
   });
 
   it('11: CANCELLED cannot become COMPLETED', async () => {
     const row = makeScheduledRow({ status: 'CANCELLED' });
     const { service } = buildService(row);
-    await expect(service.completeClass(ACTOR, row.id)).rejects.toMatchObject({ status: 409 });
+    await expect(service.completeClass(ACTOR, row.id)).rejects.toMatchObject({
+      status: 409,
+    });
   });
 
   it('12: version increments correctly across the full lifecycle', async () => {
@@ -754,14 +925,20 @@ describe('OnlineClassesService — SCHEDULED -> LIVE -> COMPLETED', () => {
   it('13: recording can now be added end-to-end after SCHEDULED -> LIVE -> COMPLETED, and not before', async () => {
     const row = makeScheduledRow();
     const { service } = buildService(row);
-    const recordingDto: AddRecordingDto = { recordingUrl: 'https://example.com/recording.mp4' };
+    const recordingDto: AddRecordingDto = {
+      recordingUrl: 'https://example.com/recording.mp4',
+    };
 
     // Cannot add recording while still SCHEDULED.
-    await expect(service.addRecording(ACTOR, row.id, recordingDto)).rejects.toMatchObject({ status: 409 });
+    await expect(
+      service.addRecording(ACTOR, row.id, recordingDto),
+    ).rejects.toMatchObject({ status: 409 });
 
     await service.startClass(ACTOR, row.id);
     // Still cannot add recording while LIVE.
-    await expect(service.addRecording(ACTOR, row.id, recordingDto)).rejects.toMatchObject({ status: 409 });
+    await expect(
+      service.addRecording(ACTOR, row.id, recordingDto),
+    ).rejects.toMatchObject({ status: 409 });
 
     await service.completeClass(ACTOR, row.id);
     const result = await service.addRecording(ACTOR, row.id, recordingDto);

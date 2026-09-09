@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -25,7 +34,10 @@ export class SportsController {
 
   @Post('sports')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateSportDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateSportDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.sportsService.create(dto, actor.personId) };
   }
 
@@ -50,7 +62,9 @@ export class SportsController {
     @Body() dto: CreateSportCategoryDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.sportsService.createCategory(id, dto, actor.personId) };
+    return {
+      data: await this.sportsService.createCategory(id, dto, actor.personId),
+    };
   }
 
   @Patch('sport-categories/:categoryId')
@@ -59,6 +73,12 @@ export class SportsController {
     @Body() dto: UpdateSportCategoryDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.sportsService.updateCategory(categoryId, dto, actor.personId) };
+    return {
+      data: await this.sportsService.updateCategory(
+        categoryId,
+        dto,
+        actor.personId,
+      ),
+    };
   }
 }

@@ -6,10 +6,17 @@
 // (student.community_category, not an invented "quota" field — see schema.prisma).
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
-import { PageQuery, toOffsetLimit } from '../../../../common/pagination/pagination.util';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PageQuery,
+  toOffsetLimit,
+} from '../../../../common/pagination/pagination.util';
 
-export type DueStatus = 'PAID' | 'PARTIAL' | 'OVERDUE' | 'PENDING' | 'NO_DEMAND';
+export type DueStatus =
+  'PAID' | 'PARTIAL' | 'OVERDUE' | 'PENDING' | 'NO_DEMAND';
 
 export interface StudentLedgerRow {
   id: string;
@@ -109,7 +116,11 @@ export class StudentLookupRepository {
         AND ($2::uuid IS NULL OR grade_id = $2)
         AND ($3::text IS NULL OR due_status = $3)
     `;
-    const params = [filter.search ?? null, filter.gradeId ?? null, filter.dueStatus ?? null];
+    const params = [
+      filter.search ?? null,
+      filter.gradeId ?? null,
+      filter.dueStatus ?? null,
+    ];
 
     const { rows: countRows } = await executor.query(
       `${LEDGER_CTE} SELECT COUNT(*)::int AS total FROM ledger ${whereClause}`,
@@ -122,8 +133,14 @@ export class StudentLookupRepository {
     return { rows: rows.map(mapRow), total: countRows[0].total };
   }
 
-  async getById(id: string, executor: Queryable = this.postgres): Promise<StudentLedgerRow | null> {
-    const { rows } = await executor.query(`${LEDGER_CTE} SELECT * FROM ledger WHERE id = $1`, [id]);
+  async getById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StudentLedgerRow | null> {
+    const { rows } = await executor.query(
+      `${LEDGER_CTE} SELECT * FROM ledger WHERE id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 }

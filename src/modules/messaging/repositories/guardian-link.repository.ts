@@ -29,6 +29,22 @@ export interface StudentGuardianPair {
   parentPersonId: string;
 }
 
+export interface StudentActiveGuardian {
+  personId: string;
+  firstName: string;
+  lastName: string;
+  displayName: string | null;
+}
+
+export interface StudentActiveContext {
+  studentId: string;
+  studentFirstName: string;
+  studentLastName: string;
+  academicYearId: string;
+  sectionId: string;
+  guardians: StudentActiveGuardian[];
+}
+
 const WARD_ENROLMENT_SELECT = `
   SELECT st.id AS student_id, p.first_name AS student_first_name, p.last_name AS student_last_name,
          ay.id AS academic_year_id, ay.name AS academic_year_name,
@@ -148,5 +164,62 @@ export class GuardianLinkRepository {
       sectionId: row.section_id,
       parentPersonId: row.parent_person_id,
     }));
+  }
+
+  /** For the Principal "message a student" flow -- resolves an ARBITRARY student
+   * (not scoped to any parent or pre-authorized section list, unlike every other
+   * method here) to their current ACTIVE enrolment plus every currently ACTIVE
+   * guardian. Returns null if the student has no current ACTIVE enrolment (nothing
+   * for a Principal to message about yet). A student with zero ACTIVE guardians
+   * still resolves (empty `guardians` array) -- the caller decides what to do with
+   * that, this method only reports live DB state. */
+  async findActiveContextForStudent(
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StudentActiveContext | null> {
+    const { rows: enrolmentRows } = await executor.query<{
+      student_id: string;
+      student_first_name: string;
+      student_last_name: string;
+      academic_year_id: string;
+      section_id: string;
+    }>(
+      `SELECT st.id AS student_id, p.first_name AS student_first_name, p.last_name AS student_last_name,
+              se.academic_year_id, se.section_id
+       FROM student st
+       JOIN person p ON p.id = st.person_id
+       JOIN student_enrolment se ON se.student_id = st.id AND se.status = 'ACTIVE'
+       WHERE st.id = $1`,
+      [studentId],
+    );
+    if (enrolmentRows.length === 0) return null;
+    const enrolment = enrolmentRows[0];
+
+    const { rows: guardianRows } = await executor.query<{
+      person_id: string;
+      first_name: string;
+      last_name: string;
+      display_name: string | null;
+    }>(
+      `SELECT p.id AS person_id, p.first_name, p.last_name, p.display_name
+       FROM guardian_link gl
+       JOIN person p ON p.id = gl.person_id
+       WHERE gl.student_id = $1 AND gl.status = 'ACTIVE'`,
+      [studentId],
+    );
+
+    return {
+      studentId: enrolment.student_id,
+      studentFirstName: enrolment.student_first_name,
+      studentLastName: enrolment.student_last_name,
+      academicYearId: enrolment.academic_year_id,
+      sectionId: enrolment.section_id,
+      guardians: guardianRows.map((row) => ({
+        personId: row.person_id,
+        firstName: row.first_name,
+        lastName: row.last_name,
+        displayName: row.display_name,
+      })),
+    };
   }
 }

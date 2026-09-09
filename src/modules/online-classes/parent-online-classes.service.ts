@@ -5,7 +5,11 @@
 // addition: nothing here is imported by, or shares mutable state with, the Faculty
 // service.
 
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { ONLINE_CLASS_ERRORS } from '../../common/errors/error-codes';
 import { GuardianLinkRepository } from './repositories/guardian-link.repository';
@@ -20,7 +24,10 @@ import {
 // The only two statuses a parent may ever join. Not exported/shared with any
 // Faculty-side status list — this is Join's own business rule, not a general lifecycle
 // concept.
-const JOINABLE_STATUSES: ReadonlySet<OnlineClassStatus> = new Set(['SCHEDULED', 'LIVE']);
+const JOINABLE_STATUSES: ReadonlySet<OnlineClassStatus> = new Set([
+  'SCHEDULED',
+  'LIVE',
+]);
 
 export interface ParentJoinResult {
   meetingUrl: string;
@@ -34,26 +41,42 @@ export class ParentOnlineClassesService {
     private readonly onlineClassRepo: OnlineClassRepository,
   ) {}
 
-  async list(actor: AuthenticatedUser, view: OnlineClassView): Promise<ParentOnlineClassView[]> {
+  async list(
+    actor: AuthenticatedUser,
+    view: OnlineClassView,
+  ): Promise<ParentOnlineClassView[]> {
     // Fast path only — never the authorization decision for any specific class (that's
     // always the self-contained JOIN in listForParent). A parent with zero active
     // wards has nothing to find either way; this just avoids running that JOIN for
     // nothing in the common "not a parent of anyone (yet)" case.
-    const wardStudentIds = await this.guardianLinkRepo.findActiveWardStudentIds(actor.personId);
+    const wardStudentIds = await this.guardianLinkRepo.findActiveWardStudentIds(
+      actor.personId,
+    );
     if (wardStudentIds.length === 0) {
       return [];
     }
 
-    return this.onlineClassRepo.listForParent(actor.personId, VIEW_STATUSES[view]);
+    return this.onlineClassRepo.listForParent(
+      actor.personId,
+      VIEW_STATUSES[view],
+    );
   }
 
-  async detail(actor: AuthenticatedUser, id: string): Promise<ParentOnlineClassView> {
-    const wardStudentIds = await this.guardianLinkRepo.findActiveWardStudentIds(actor.personId);
+  async detail(
+    actor: AuthenticatedUser,
+    id: string,
+  ): Promise<ParentOnlineClassView> {
+    const wardStudentIds = await this.guardianLinkRepo.findActiveWardStudentIds(
+      actor.personId,
+    );
     if (wardStudentIds.length === 0) {
       throw new NotFoundException(ONLINE_CLASS_ERRORS.NOT_FOUND);
     }
 
-    const detail = await this.onlineClassRepo.findParentDetailById(id, actor.personId);
+    const detail = await this.onlineClassRepo.findParentDetailById(
+      id,
+      actor.personId,
+    );
     if (!detail) {
       // "Doesn't exist" and "exists but belongs to someone else's ward" are the same
       // 404 here too — findParentDetailById returns null for both, and this is the

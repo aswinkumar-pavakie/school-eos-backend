@@ -3,7 +3,10 @@
 // timezone rather than a hard-coded string.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 const FALLBACK_TIMEZONE = 'Asia/Kolkata';
 

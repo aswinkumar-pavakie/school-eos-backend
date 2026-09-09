@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface AttendanceRecordRow {
   id: string;
@@ -74,7 +77,10 @@ export class AttendanceRecordRepository {
     return (await this.findById(rows[0].id, executor))!;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<AttendanceRecordRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<AttendanceRecordRow | null> {
     const { rows } = await executor.query<AttendanceRecordRow>(
       `SELECT ${COLUMNS} FROM attendance_record ar ${LATEST_CORRECTION_JOIN} WHERE ar.id = $1`,
       [id],
@@ -128,7 +134,10 @@ export class AttendanceRecordRepository {
     studentId: string,
     executor: Queryable = this.postgres,
   ): Promise<{ presentCount: number; totalCount: number }> {
-    const { rows } = await executor.query<{ present_count: string; total_count: string }>(
+    const { rows } = await executor.query<{
+      present_count: string;
+      total_count: string;
+    }>(
       `SELECT
          count(*) FILTER (WHERE COALESCE(latest_correction.new_status, ar.status) IN ('PRESENT', 'LATE', 'HALF_DAY')) AS present_count,
          count(*) AS total_count
@@ -141,6 +150,38 @@ export class AttendanceRecordRepository {
       presentCount: parseInt(rows[0].present_count, 10),
       totalCount: parseInt(rows[0].total_count, 10),
     };
+  }
+
+  /** Which of these students have an effective status of ABSENT for this exact
+   * calendar date, across whatever section(s) they were enrolled in that day --
+   * feeds the Hostel module's Class Absence Alert (a student marked absent in class
+   * while hostel records show them as a resident boarder). Read-only: never writes
+   * to attendance_record/attendance_session, and reuses the same effective-status
+   * derivation (post-correction) as every other read in this repository, rather than
+   * a second module re-deriving it from attendance_correction itself. */
+  async findAbsentStudentIdsForDate(
+    studentIds: string[],
+    date: string,
+    executor: Queryable = this.postgres,
+  ): Promise<
+    Array<{ studentId: string; recordId: string; sectionId: string }>
+  > {
+    if (studentIds.length === 0) return [];
+    const { rows } = await executor.query<{
+      studentId: string;
+      recordId: string;
+      sectionId: string;
+    }>(
+      `SELECT ar.student_id AS "studentId", ar.id AS "recordId", ats.section_id AS "sectionId"
+       FROM attendance_record ar
+       ${LATEST_CORRECTION_JOIN}
+       JOIN attendance_session ats ON ats.id = ar.session_id
+       WHERE ar.student_id = ANY($1)
+         AND ats.session_date = $2
+         AND COALESCE(latest_correction.new_status, ar.status) = 'ABSENT'`,
+      [studentIds, date],
+    );
+    return rows;
   }
 
   /** Direct edit -- only valid while the record's own session is still unlocked

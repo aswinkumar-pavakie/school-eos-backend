@@ -5,7 +5,19 @@
 // items in its own category, never every department's asset register the way
 // Admin's own /inventory-items does.
 
-import { BadRequestException, Body, Controller, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -64,7 +76,10 @@ export class MediaInventoryController {
         available: items.filter((i) => i.status === 'AVAILABLE').length,
         assigned: items.filter((i) => i.status === 'ASSIGNED').length,
         underRepair: items.filter((i) => i.status === 'DAMAGED').length,
-        bookValuePaise: items.reduce((sum, i) => sum + Number(i.acquisitionCostPaise ?? 0), 0),
+        bookValuePaise: items.reduce(
+          (sum, i) => sum + Number(i.acquisitionCostPaise ?? 0),
+          0,
+        ),
       },
     };
   }
@@ -72,9 +87,13 @@ export class MediaInventoryController {
   // A Media Room login must never see or touch another department's asset by
   // guessing/knowing its id -- every :id route below re-checks the item's own
   // categoryId, not just the list filter above.
-  private async assertOwnedByMedia(id: string, categoryId: string): Promise<void> {
+  private async assertOwnedByMedia(
+    id: string,
+    categoryId: string,
+  ): Promise<void> {
     const item = await this.itemsService.get(id);
-    if (item.categoryId !== categoryId) throw new NotFoundException('Inventory item not found');
+    if (item.categoryId !== categoryId)
+      throw new NotFoundException('Inventory item not found');
   }
 
   @Get(':id')
@@ -87,14 +106,26 @@ export class MediaInventoryController {
   @Post()
   @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateInventoryItemDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateInventoryItemDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const categoryId = await this.mediaCategoryId();
-    return { data: await this.itemsService.create({ ...dto, categoryId }, actor.personId) };
+    return {
+      data: await this.itemsService.create(
+        { ...dto, categoryId },
+        actor.personId,
+      ),
+    };
   }
 
   @Patch(':id')
   @Roles('MEDIA_ROOM', 'ADMIN')
-  async update(@Param('id') id: string, @Body() dto: UpdateInventoryItemDto, @CurrentActor() actor: AuthenticatedUser) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateInventoryItemDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const categoryId = await this.mediaCategoryId();
     await this.assertOwnedByMedia(id, categoryId);
     // categoryId is never accepted from the client here -- a Media Room login can
@@ -106,7 +137,11 @@ export class MediaInventoryController {
   @Post(':id/issue')
   @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
-  async issue(@Param('id') id: string, @Body() dto: IssueInventoryItemDto, @CurrentActor() actor: AuthenticatedUser) {
+  async issue(
+    @Param('id') id: string,
+    @Body() dto: IssueInventoryItemDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const categoryId = await this.mediaCategoryId();
     await this.assertOwnedByMedia(id, categoryId);
     return { data: await this.itemsService.issue(id, dto, actor.personId) };
@@ -115,7 +150,10 @@ export class MediaInventoryController {
   @Post(':id/return')
   @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
-  async returnItem(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async returnItem(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const categoryId = await this.mediaCategoryId();
     await this.assertOwnedByMedia(id, categoryId);
     return { data: await this.itemsService.returnItem(id, actor.personId) };
@@ -124,16 +162,26 @@ export class MediaInventoryController {
   @Post(':id/mark-damaged')
   @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
-  async markDamaged(@Param('id') id: string, @Body() dto: InventoryItemNoteDto, @CurrentActor() actor: AuthenticatedUser) {
+  async markDamaged(
+    @Param('id') id: string,
+    @Body() dto: InventoryItemNoteDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const categoryId = await this.mediaCategoryId();
     await this.assertOwnedByMedia(id, categoryId);
-    return { data: await this.itemsService.markDamaged(id, dto, actor.personId) };
+    return {
+      data: await this.itemsService.markDamaged(id, dto, actor.personId),
+    };
   }
 
   @Post(':id/mark-lost')
   @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
-  async markLost(@Param('id') id: string, @Body() dto: InventoryItemNoteDto, @CurrentActor() actor: AuthenticatedUser) {
+  async markLost(
+    @Param('id') id: string,
+    @Body() dto: InventoryItemNoteDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const categoryId = await this.mediaCategoryId();
     await this.assertOwnedByMedia(id, categoryId);
     return { data: await this.itemsService.markLost(id, dto, actor.personId) };
@@ -142,7 +190,11 @@ export class MediaInventoryController {
   @Post(':id/retire')
   @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
-  async retire(@Param('id') id: string, @Body() dto: InventoryItemNoteDto, @CurrentActor() actor: AuthenticatedUser) {
+  async retire(
+    @Param('id') id: string,
+    @Body() dto: InventoryItemNoteDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const categoryId = await this.mediaCategoryId();
     await this.assertOwnedByMedia(id, categoryId);
     return { data: await this.itemsService.retire(id, dto, actor.personId) };

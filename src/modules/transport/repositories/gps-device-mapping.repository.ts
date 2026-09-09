@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface GpsDeviceMappingRow {
   id: string;
@@ -49,7 +52,8 @@ export class GpsDeviceMappingRepository {
       conditions.push(`vehicle_id = $${params.length}`);
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { rows } = await executor.query<GpsDeviceMappingRow>(
       `SELECT ${COLUMNS} FROM gps_device_mapping ${where} ORDER BY mapped_from DESC`,
       params,
@@ -76,7 +80,12 @@ export class GpsDeviceMappingRepository {
       `INSERT INTO gps_device_mapping (device_id, vehicle_id, mapped_from, mapped_to)
        VALUES ($1, $2, $3, $4)
        RETURNING ${COLUMNS}`,
-      [input.deviceId, input.vehicleId, input.mappedFrom, input.mappedTo ?? null],
+      [
+        input.deviceId,
+        input.vehicleId,
+        input.mappedFrom,
+        input.mappedTo ?? null,
+      ],
     );
     return rows[0];
   }

@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { GpsDeviceRepository } from './repositories/gps-device.repository';
 import { CreateGpsDeviceDto } from './dto/create-gps-device.dto';
@@ -35,7 +39,10 @@ export class GpsDevicesService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A GPS device with this device_uid already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A GPS device with this device_uid already exists.',
+        );
       throw err;
     }
   }
@@ -56,7 +63,10 @@ export class GpsDevicesService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A GPS device with this device_uid already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A GPS device with this device_uid already exists.',
+        );
       throw err;
     }
   }

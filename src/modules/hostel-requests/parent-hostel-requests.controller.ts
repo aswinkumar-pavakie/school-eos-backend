@@ -1,4 +1,11 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -17,8 +24,13 @@ export class ParentGatePassController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateOutingRequestDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.service.create(actor.personId, 'GATE_PASS', dto) };
+  async create(
+    @Body() dto: CreateOutingRequestDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.create(actor.personId, 'GATE_PASS', dto),
+    };
   }
 }
 
@@ -29,12 +41,19 @@ export class ParentEmergencyExitController {
 
   @Get()
   async list(@CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.service.listMine(actor.personId, 'EMERGENCY_EXIT') };
+    return {
+      data: await this.service.listMine(actor.personId, 'EMERGENCY_EXIT'),
+    };
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateOutingRequestDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.service.create(actor.personId, 'EMERGENCY_EXIT', dto) };
+  async create(
+    @Body() dto: CreateOutingRequestDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.create(actor.personId, 'EMERGENCY_EXIT', dto),
+    };
   }
 }

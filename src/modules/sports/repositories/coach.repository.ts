@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface CoachRow {
   id: string;
@@ -43,16 +46,27 @@ export class CoachRepository {
   constructor(private readonly postgres: PostgresService) {}
 
   async findMany(executor: Queryable = this.postgres): Promise<CoachRow[]> {
-    const { rows } = await executor.query<CoachRow>(`SELECT ${COLUMNS} FROM coach ORDER BY full_name`);
+    const { rows } = await executor.query<CoachRow>(
+      `SELECT ${COLUMNS} FROM coach ORDER BY full_name`,
+    );
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<CoachRow | null> {
-    const { rows } = await executor.query<CoachRow>(`SELECT ${COLUMNS} FROM coach WHERE id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<CoachRow | null> {
+    const { rows } = await executor.query<CoachRow>(
+      `SELECT ${COLUMNS} FROM coach WHERE id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
-  async create(input: CreateCoachInput, executor: Queryable = this.postgres): Promise<CoachRow> {
+  async create(
+    input: CreateCoachInput,
+    executor: Queryable = this.postgres,
+  ): Promise<CoachRow> {
     const { rows } = await executor.query<CoachRow>(
       `INSERT INTO coach
          (person_id, full_name, is_external, contact_phone, qualification, police_verification_ref, verification_expiry, status)

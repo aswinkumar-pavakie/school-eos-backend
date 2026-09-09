@@ -1,4 +1,14 @@
-import { IsIn, IsInt, IsISO8601, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsISO8601,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  Min,
+} from 'class-validator';
 
 export class CreatePurchaseRequestDto {
   @IsIn(['GOODS', 'SERVICE'])
@@ -22,7 +32,9 @@ export class CreatePurchaseRequestDto {
   vendorName?: string;
 
   @IsOptional()
-  @Matches(/^[1-9][0-9]*$/, { message: 'estimatedAmountPaise must be a positive integer string' })
+  @Matches(/^[1-9][0-9]*$/, {
+    message: 'estimatedAmountPaise must be a positive integer string',
+  })
   estimatedAmountPaise?: string;
 
   @IsOptional()

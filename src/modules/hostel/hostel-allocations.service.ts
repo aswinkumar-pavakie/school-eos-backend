@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { StudentRepository } from '../people/repositories/student.repository';
@@ -39,18 +44,29 @@ export class HostelAllocationsService {
   async create(dto: CreateHostelAllocationDto, actorPersonId: string) {
     try {
       return await this.unitOfWork.run(async (client) => {
-        const bed = await this.hostelBedRepo.findByIdForUpdate(dto.bedId, client);
+        const bed = await this.hostelBedRepo.findByIdForUpdate(
+          dto.bedId,
+          client,
+        );
         if (!bed) throw new NotFoundException('Hostel bed not found');
         if (bed.status !== 'VACANT') {
-          throw new ConflictException(`This bed is currently ${bed.status.toLowerCase()}, not vacant.`);
+          throw new ConflictException(
+            `This bed is currently ${bed.status.toLowerCase()}, not vacant.`,
+          );
         }
 
         // A MALE/FEMALE hostel only ever takes students of that same gender --
         // only a MIXED hostel accepts everyone. Checked here (not just filtered in
         // the UI) so a direct API call can't bypass it either.
-        const hostelGender = await this.hostelBedRepo.findHostelGenderForBed(dto.bedId, client);
+        const hostelGender = await this.hostelBedRepo.findHostelGenderForBed(
+          dto.bedId,
+          client,
+        );
         if (hostelGender && hostelGender !== 'MIXED') {
-          const studentGender = await this.studentRepo.findGenderById(dto.studentId, client);
+          const studentGender = await this.studentRepo.findGenderById(
+            dto.studentId,
+            client,
+          );
           if (studentGender !== hostelGender) {
             throw new BadRequestException(
               studentGender
@@ -91,7 +107,9 @@ export class HostelAllocationsService {
         );
       }
       if (isForeignKeyViolation(err)) {
-        throw new NotFoundException('studentId, bedId, or academicYearId does not refer to an existing record.');
+        throw new NotFoundException(
+          'studentId, bedId, or academicYearId does not refer to an existing record.',
+        );
       }
       throw err;
     }
@@ -99,15 +117,24 @@ export class HostelAllocationsService {
 
   /** Vacating must also atomically free the bed back to VACANT in the same
    * transaction as the status flip, so the two never observably disagree. */
-  async vacate(id: string, dto: VacateHostelAllocationDto, actorPersonId: string) {
+  async vacate(
+    id: string,
+    dto: VacateHostelAllocationDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.get(id);
     if (existing.status !== 'ACTIVE') {
       throw new ConflictException('This allocation is not currently active.');
     }
-    const allocatedTo = dto.allocatedTo ?? new Date().toISOString().slice(0, 10);
+    const allocatedTo =
+      dto.allocatedTo ?? new Date().toISOString().slice(0, 10);
 
     return this.unitOfWork.run(async (client) => {
-      const updated = await this.hostelAllocationRepo.vacate(id, allocatedTo, client);
+      const updated = await this.hostelAllocationRepo.vacate(
+        id,
+        allocatedTo,
+        client,
+      );
       await this.hostelBedRepo.setStatus(existing.bedId, 'VACANT', client);
       await this.auditService.record(
         {

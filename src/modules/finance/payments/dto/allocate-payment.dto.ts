@@ -1,11 +1,19 @@
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsUUID, Matches, ValidateNested } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsUUID,
+  Matches,
+  ValidateNested,
+} from 'class-validator';
 
 export class AllocationLineDto {
   @IsUUID()
   feeDemandId!: string;
 
-  @Matches(/^[1-9][0-9]*$/, { message: 'amountPaise must be a positive integer string' })
+  @Matches(/^[1-9][0-9]*$/, {
+    message: 'amountPaise must be a positive integer string',
+  })
   amountPaise!: string;
 }
 

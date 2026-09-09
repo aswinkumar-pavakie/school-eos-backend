@@ -4,7 +4,10 @@
 // sampling real rows). Read-only: a Parent never writes either table.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface HealthProfileRow {
   bloodGroup: string | null;
@@ -33,7 +36,10 @@ export interface InfirmaryVisitRow {
 export class ParentHealthRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async getProfile(studentId: string, executor: Queryable = this.postgres): Promise<HealthProfileRow | null> {
+  async getProfile(
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<HealthProfileRow | null> {
     const { rows } = await executor.query(
       `SELECT blood_group, height_cm, weight_kg, measured_on, family_doctor, doctor_phone, insurance_ref, notes
        FROM health_profile WHERE student_id = $1`,
@@ -53,7 +59,10 @@ export class ParentHealthRepository {
     };
   }
 
-  async findVisits(studentId: string, executor: Queryable = this.postgres): Promise<InfirmaryVisitRow[]> {
+  async findVisits(
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<InfirmaryVisitRow[]> {
     const { rows } = await executor.query(
       `SELECT v.id, v.visited_at, v.complaint, v.vitals, v.observation, v.action, v.outcome, v.parent_notified_at,
               (p.first_name || COALESCE(' ' || p.last_name, '')) AS attended_by_name

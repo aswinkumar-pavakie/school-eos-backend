@@ -9,7 +9,10 @@ import {
 import { HostelWardenRequestsService } from './hostel-warden-requests.service';
 import { ParentCallRequestsController } from './parent-call-requests.controller';
 import { ParentCallRequestsService } from './parent-call-requests.service';
-import { ParentEmergencyExitController, ParentGatePassController } from './parent-hostel-requests.controller';
+import {
+  ParentEmergencyExitController,
+  ParentGatePassController,
+} from './parent-hostel-requests.controller';
 import { ParentHostelRequestsService } from './parent-hostel-requests.service';
 import { CallRequestRepository } from './repositories/call-request.repository';
 import { HostelScopeRepository } from './repositories/hostel-scope.repository';

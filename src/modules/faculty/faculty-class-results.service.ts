@@ -33,8 +33,14 @@ export class FacultyClassResultsService {
   ) {}
 
   private async assertAdvisor(personId: string, sectionId: string) {
-    const isAdvisor = await this.scopeRepo.isAdvisorForSection(personId, sectionId);
-    if (!isAdvisor) throw new ForbiddenException('You are not the class advisor for this section.');
+    const isAdvisor = await this.scopeRepo.isAdvisorForSection(
+      personId,
+      sectionId,
+    );
+    if (!isAdvisor)
+      throw new ForbiddenException(
+        'You are not the class advisor for this section.',
+      );
   }
 
   async listExams(personId: string, sectionId: string) {
@@ -44,7 +50,10 @@ export class FacultyClassResultsService {
 
   async getResults(personId: string, sectionId: string, examId: string) {
     await this.assertAdvisor(personId, sectionId);
-    const rows = await this.marksRepo.findResultsForExamAndSection(sectionId, examId);
+    const rows = await this.marksRepo.findResultsForExamAndSection(
+      sectionId,
+      examId,
+    );
 
     const byStudent = new Map<
       string,
@@ -52,7 +61,13 @@ export class FacultyClassResultsService {
         studentId: string;
         studentName: string;
         rollNo: number | null;
-        subjects: { subjectName: string; marksObtained: number | null; maxMarks: number; passMarks: number | null; isAbsent: boolean }[];
+        subjects: {
+          subjectName: string;
+          marksObtained: number | null;
+          maxMarks: number;
+          passMarks: number | null;
+          isAbsent: boolean;
+        }[];
       }
     >();
     for (const row of rows) {
@@ -78,15 +93,29 @@ export class FacultyClassResultsService {
     const students = [...byStudent.values()].map((entry) => {
       // Rounded to 2dp -- summing several numeric(5,2) marks in floating point
       // otherwise produces display artifacts like 497.90000000000003.
-      const totalObtained = Math.round(entry.subjects.reduce((sum, s) => sum + (s.marksObtained ?? 0), 0) * 100) / 100;
+      const totalObtained =
+        Math.round(
+          entry.subjects.reduce((sum, s) => sum + (s.marksObtained ?? 0), 0) *
+            100,
+        ) / 100;
       const totalMax = entry.subjects.reduce((sum, s) => sum + s.maxMarks, 0);
-      const percent = totalMax > 0 ? Math.round((totalObtained / totalMax) * 100) : null;
-      const passed = entry.subjects.every((s) => !s.isAbsent && (s.passMarks === null || (s.marksObtained ?? 0) >= s.passMarks));
+      const percent =
+        totalMax > 0 ? Math.round((totalObtained / totalMax) * 100) : null;
+      const passed = entry.subjects.every(
+        (s) =>
+          !s.isAbsent &&
+          (s.passMarks === null || (s.marksObtained ?? 0) >= s.passMarks),
+      );
       return {
         studentId: entry.studentId,
         studentName: entry.studentName,
         rollNo: entry.rollNo,
-        subjects: entry.subjects.map((s) => ({ subjectName: s.subjectName, marksObtained: s.marksObtained, maxMarks: s.maxMarks, isAbsent: s.isAbsent })),
+        subjects: entry.subjects.map((s) => ({
+          subjectName: s.subjectName,
+          marksObtained: s.marksObtained,
+          maxMarks: s.maxMarks,
+          isAbsent: s.isAbsent,
+        })),
         totalObtained,
         totalMax,
         percent,
@@ -96,9 +125,18 @@ export class FacultyClassResultsService {
     });
 
     const withPercent = students.filter((s) => s.percent !== null);
-    const classAvg = withPercent.length > 0 ? Math.round(withPercent.reduce((sum, s) => sum + s.percent!, 0) / withPercent.length) : null;
+    const classAvg =
+      withPercent.length > 0
+        ? Math.round(
+            withPercent.reduce((sum, s) => sum + s.percent!, 0) /
+              withPercent.length,
+          )
+        : null;
     const passCount = students.filter((s) => s.passed).length;
-    const topper = withPercent.length > 0 ? Math.max(...withPercent.map((s) => s.percent!)) : null;
+    const topper =
+      withPercent.length > 0
+        ? Math.max(...withPercent.map((s) => s.percent!))
+        : null;
 
     const gradeDistribution = GRADE_BANDS.map((band) => {
       const inBand = withPercent.filter((s) => s.grade === band.grade);
@@ -106,7 +144,10 @@ export class FacultyClassResultsService {
         grade: band.grade,
         label: band.label,
         count: inBand.length,
-        percentOfClass: withPercent.length > 0 ? Math.round((inBand.length / withPercent.length) * 100) : 0,
+        percentOfClass:
+          withPercent.length > 0
+            ? Math.round((inBand.length / withPercent.length) * 100)
+            : 0,
         students: inBand
           .sort((a, b) => b.percent! - a.percent!)
           .map((s) => ({ studentName: s.studentName, percent: s.percent })),

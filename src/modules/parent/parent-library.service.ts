@@ -35,13 +35,18 @@ export class ParentLibraryService {
 
   private async assertGuardian(personId: string, studentId: string) {
     const link = await this.guardianRepo.findActiveLink(personId, studentId);
-    if (!link) throw new ForbiddenException('You are not a registered guardian of this student.');
+    if (!link)
+      throw new ForbiddenException(
+        'You are not a registered guardian of this student.',
+      );
   }
 
   async getSummary(personId: string, studentId: string) {
     await this.assertGuardian(personId, studentId);
     const childPersonId = await this.academicRepo.getPersonId(studentId);
-    const member = childPersonId ? await this.memberRepo.findByPersonId(childPersonId) : null;
+    const member = childPersonId
+      ? await this.memberRepo.findByPersonId(childPersonId)
+      : null;
     if (!member) {
       return {
         hasLibraryCard: false,
@@ -51,25 +56,50 @@ export class ParentLibraryService {
       };
     }
 
-    const { data: rows } = await this.circulationService.list({ memberId: member.id, limit: 200, page: 1 });
-    const borrowed = rows.filter((r) => r.status === 'ISSUED' || r.status === 'OVERDUE');
-    const history = rows.filter((r) => r.status === 'RETURNED' || r.status === 'LOST');
+    const { data: rows } = await this.circulationService.list({
+      memberId: member.id,
+      limit: 200,
+      page: 1,
+    });
+    const borrowed = rows.filter(
+      (r) => r.status === 'ISSUED' || r.status === 'OVERDUE',
+    );
+    const history = rows.filter(
+      (r) => r.status === 'RETURNED' || r.status === 'LOST',
+    );
     const soon = addDays(new Date().toISOString().slice(0, 10), 3);
-    const dueSoonCount = borrowed.filter((r) => r.status === 'ISSUED' && r.dueDate <= soon).length;
+    const dueSoonCount = borrowed.filter(
+      (r) => r.status === 'ISSUED' && r.dueDate <= soon,
+    ).length;
 
-    const { rows: pendingFines } = await this.fineRepo.findMany({ memberId: member.id, status: 'PENDING', limit: 200, offset: 0 });
-    const pendingFinePaise = pendingFines.reduce((sum, f) => sum + BigInt(f.amountPaise), BigInt(0)).toString();
+    const { rows: pendingFines } = await this.fineRepo.findMany({
+      memberId: member.id,
+      status: 'PENDING',
+      limit: 200,
+      offset: 0,
+    });
+    const pendingFinePaise = pendingFines
+      .reduce((sum, f) => sum + BigInt(f.amountPaise), BigInt(0))
+      .toString();
 
     return {
       hasLibraryCard: true,
-      member: { id: member.id, maxBooksAllowed: member.maxBooksAllowed, status: member.status },
+      member: {
+        id: member.id,
+        maxBooksAllowed: member.maxBooksAllowed,
+        status: member.status,
+      },
       stats: { issuedCount: borrowed.length, dueSoonCount, pendingFinePaise },
       borrowed,
       history,
     };
   }
 
-  async searchCatalog(personId: string, studentId: string, query: BookQueryDto) {
+  async searchCatalog(
+    personId: string,
+    studentId: string,
+    query: BookQueryDto,
+  ) {
     await this.assertGuardian(personId, studentId);
     return this.booksService.list(query);
   }
@@ -79,7 +109,11 @@ export class ParentLibraryService {
     return this.booksService.get(bookId);
   }
 
-  async listCategories(personId: string, studentId: string, query: CategoryQueryDto) {
+  async listCategories(
+    personId: string,
+    studentId: string,
+    query: CategoryQueryDto,
+  ) {
     await this.assertGuardian(personId, studentId);
     return this.categoriesService.list(query);
   }

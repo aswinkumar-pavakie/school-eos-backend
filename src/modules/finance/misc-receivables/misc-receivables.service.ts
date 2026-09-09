@@ -6,7 +6,12 @@
 // calls create()/get() (to read status back); only Finance ever calls
 // collectPayment().
 
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../../common/audit/audit.service';
 import { UnitOfWork } from '../../../common/transactions/unit-of-work';
 import { CollectPaymentDto } from './dto/collect-payment.dto';
@@ -60,22 +65,38 @@ export class MiscReceivablesService {
     return this.receivableRepo.create(input);
   }
 
-  async collectPayment(id: string, dto: CollectPaymentDto, actorPersonId: string) {
+  async collectPayment(
+    id: string,
+    dto: CollectPaymentDto,
+    actorPersonId: string,
+  ) {
     return this.unitOfWork.run(async (client) => {
       const locked = await this.receivableRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Receivable not found');
-      if (locked.status === 'PAID') throw new ConflictException('This receivable is already fully paid.');
+      if (locked.status === 'PAID')
+        throw new ConflictException('This receivable is already fully paid.');
       if (locked.status === 'WAIVED' || locked.status === 'CANCELLED') {
-        throw new ConflictException(`This receivable is ${locked.status.toLowerCase()} -- no further payment can be collected.`);
+        throw new ConflictException(
+          `This receivable is ${locked.status.toLowerCase()} -- no further payment can be collected.`,
+        );
       }
 
       try {
         await this.receivableRepo.recordPayment(
           id,
-          { amountPaise: dto.amountPaise, mode: dto.mode, collectedBy: actorPersonId, idempotencyKey: dto.idempotencyKey },
+          {
+            amountPaise: dto.amountPaise,
+            mode: dto.mode,
+            collectedBy: actorPersonId,
+            idempotencyKey: dto.idempotencyKey,
+          },
           client,
         );
-        const updated = await this.receivableRepo.applyPayment(id, dto.amountPaise, client);
+        const updated = await this.receivableRepo.applyPayment(
+          id,
+          dto.amountPaise,
+          client,
+        );
         await this.auditService.record(
           {
             actorPersonId,
@@ -84,14 +105,22 @@ export class MiscReceivablesService {
             objectId: id,
             outcome: 'SUCCESS',
             beforeData: locked,
-            afterData: { ...updated, amountCollectedPaise: dto.amountPaise, mode: dto.mode },
+            afterData: {
+              ...updated,
+              amountCollectedPaise: dto.amountPaise,
+              mode: dto.mode,
+            },
           },
           client,
         );
         return updated;
       } catch (err) {
-        if (isUniqueViolation(err)) throw new ConflictException('This payment was already recorded.');
-        if (isCheckViolation(err)) throw new BadRequestException('This payment would exceed the outstanding amount.');
+        if (isUniqueViolation(err))
+          throw new ConflictException('This payment was already recorded.');
+        if (isCheckViolation(err))
+          throw new BadRequestException(
+            'This payment would exceed the outstanding amount.',
+          );
         throw err;
       }
     });

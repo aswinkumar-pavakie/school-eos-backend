@@ -3,7 +3,14 @@ import { IsIn, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 
 export class FineQueryDto {
   @IsOptional()
-  @IsIn(['PENDING', 'SENT_TO_FINANCE', 'PARTIALLY_PAID', 'PAID', 'WAIVED', 'CANCELLED'])
+  @IsIn([
+    'PENDING',
+    'SENT_TO_FINANCE',
+    'PARTIALLY_PAID',
+    'PAID',
+    'WAIVED',
+    'CANCELLED',
+  ])
   status?: string;
 
   @IsOptional()

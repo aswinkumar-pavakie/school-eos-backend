@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CategoryQueryDto } from './dto/category-query.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -30,7 +34,10 @@ export class CategoriesService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A category with this name already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A category with this name already exists.',
+        );
       throw err;
     }
   }
@@ -51,7 +58,10 @@ export class CategoriesService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A category with this name already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A category with this name already exists.',
+        );
       throw err;
     }
   }

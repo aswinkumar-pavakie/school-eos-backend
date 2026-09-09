@@ -9,7 +9,12 @@
 // actually happens to student_leave_request + attendance the moment that
 // decision lands.
 
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ApprovalsService } from '../approvals/approvals.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
@@ -36,12 +41,18 @@ export class FacultyStudentLeaveService {
   async get(personId: string, id: string) {
     const request = await this.leaveRepo.findById(id);
     if (!request) throw new NotFoundException('Leave request not found');
-    const isMine = await this.isRequestInAdvisorScope(personId, request.studentId);
+    const isMine = await this.isRequestInAdvisorScope(
+      personId,
+      request.studentId,
+    );
     if (!isMine) throw new NotFoundException('Leave request not found');
     return request;
   }
 
-  private async isRequestInAdvisorScope(personId: string, studentId: string): Promise<boolean> {
+  private async isRequestInAdvisorScope(
+    personId: string,
+    studentId: string,
+  ): Promise<boolean> {
     const sections = await this.scopeRepo.getAdvisorSections(personId);
     const sectionIds = new Set(sections.map((s) => s.sectionId));
     const rows = await this.leaveRepo.findBySections([...sectionIds]);
@@ -51,8 +62,14 @@ export class FacultyStudentLeaveService {
   /** Parent's own "History" tab -- every request they themselves can see for
    * this exact child, guardian-checked the same way create() below is. */
   async listForStudent(actorPersonId: string, studentId: string) {
-    const isGuardian = await this.leaveRepo.isActiveGuardian(actorPersonId, studentId);
-    if (!isGuardian) throw new ForbiddenException('You are not a registered guardian of this student.');
+    const isGuardian = await this.leaveRepo.isActiveGuardian(
+      actorPersonId,
+      studentId,
+    );
+    if (!isGuardian)
+      throw new ForbiddenException(
+        'You are not a registered guardian of this student.',
+      );
     return this.leaveRepo.findByStudent(studentId);
   }
 
@@ -72,18 +89,31 @@ export class FacultyStudentLeaveService {
     if (new Date(input.toDate).getTime() < new Date(input.fromDate).getTime()) {
       throw new ConflictException('toDate must be on or after fromDate.');
     }
-    const isGuardian = await this.leaveRepo.isActiveGuardian(actorPersonId, input.studentId);
-    if (!isGuardian) throw new ForbiddenException('You are not a registered guardian of this student.');
+    const isGuardian = await this.leaveRepo.isActiveGuardian(
+      actorPersonId,
+      input.studentId,
+    );
+    if (!isGuardian)
+      throw new ForbiddenException(
+        'You are not a registered guardian of this student.',
+      );
 
     return this.unitOfWork.run(async (client) => {
-      const id = await this.leaveRepo.create({ ...input, requestedBy: actorPersonId }, client);
+      const id = await this.leaveRepo.create(
+        { ...input, requestedBy: actorPersonId },
+        client,
+      );
       await this.approvalsService.createRequest(
         {
           requestType: 'STUDENT_LEAVE_REQUEST',
           subjectObjectType: 'student_leave_request',
           subjectObjectId: id,
           requestedBy: actorPersonId,
-          payload: { studentId: input.studentId, fromDate: input.fromDate, toDate: input.toDate },
+          payload: {
+            studentId: input.studentId,
+            fromDate: input.fromDate,
+            toDate: input.toDate,
+          },
         },
         client,
       );

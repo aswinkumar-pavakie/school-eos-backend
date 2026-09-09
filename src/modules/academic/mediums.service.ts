@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { MediumRepository } from './repositories/medium.repository';
 import { CreateMediumDto } from './dto/create-medium.dto';
@@ -36,7 +40,9 @@ export class MediumsService {
       return created;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A medium with this name or code already exists.');
+        throw new ConflictException(
+          'A medium with this name or code already exists.',
+        );
       }
       throw err;
     }
@@ -59,7 +65,9 @@ export class MediumsService {
       return updated;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A medium with this name or code already exists.');
+        throw new ConflictException(
+          'A medium with this name or code already exists.',
+        );
       }
       throw err;
     }

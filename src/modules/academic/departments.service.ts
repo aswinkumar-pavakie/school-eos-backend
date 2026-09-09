@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { DepartmentRepository } from './repositories/department.repository';
 import { CreateDepartmentDto } from './dto/create-department.dto';
@@ -36,9 +40,12 @@ export class DepartmentsService {
       return created;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A department with this name or code already exists.');
+        throw new ConflictException(
+          'A department with this name or code already exists.',
+        );
       }
-      if (isForeignKeyViolation(err)) throw new ConflictException('hodStaffId does not exist.');
+      if (isForeignKeyViolation(err))
+        throw new ConflictException('hodStaffId does not exist.');
       throw err;
     }
   }
@@ -60,9 +67,12 @@ export class DepartmentsService {
       return updated;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A department with this name or code already exists.');
+        throw new ConflictException(
+          'A department with this name or code already exists.',
+        );
       }
-      if (isForeignKeyViolation(err)) throw new ConflictException('hodStaffId does not exist.');
+      if (isForeignKeyViolation(err))
+        throw new ConflictException('hodStaffId does not exist.');
       throw err;
     }
   }

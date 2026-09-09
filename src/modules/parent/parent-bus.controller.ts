@@ -10,7 +10,12 @@ export class ParentBusController {
   constructor(private readonly service: ParentBusService) {}
 
   @Get()
-  async getAllocation(@Param('studentId', ParseUUIDPipe) studentId: string, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.service.getAllocation(actor.personId, studentId) };
+  async getAllocation(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.getAllocation(actor.personId, studentId),
+    };
   }
 }

@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -25,7 +34,10 @@ export class IdCardsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateIdCardDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateIdCardDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.idCardsService.create(dto, actor) };
   }
 
@@ -51,7 +63,10 @@ export class IdCardsController {
 
   @Post(':id/unblock')
   @HttpCode(HttpStatus.OK)
-  async unblock(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async unblock(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.idCardsService.unblock(id, actor.personId) };
   }
 }

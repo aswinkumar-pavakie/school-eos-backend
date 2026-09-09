@@ -6,7 +6,12 @@
 // what actually happens to staff_leave_request + staff_attendance_event the
 // moment that decision lands.
 
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { ApprovalsService } from '../approvals/approvals.service';
@@ -31,19 +36,35 @@ export class FacultyStaffLeaveService {
     const staffId = await this.scopeRepo.getStaffId(personId);
     if (!staffId) return [];
     const requests = await this.leaveRepo.findByStaffId(staffId);
-    return Promise.all(requests.map(async (r) => ({ ...r, approvalTrail: await getApprovalTrail(this.stepRepo, r.approvalRequestId) })));
+    return Promise.all(
+      requests.map(async (r) => ({
+        ...r,
+        approvalTrail: await getApprovalTrail(
+          this.stepRepo,
+          r.approvalRequestId,
+        ),
+      })),
+    );
   }
 
   async get(personId: string, id: string) {
     const staffId = await this.scopeRepo.getStaffId(personId);
     const request = await this.leaveRepo.findById(id);
-    if (!request || !staffId || request.staffId !== staffId) throw new NotFoundException('Leave request not found');
-    return { ...request, approvalTrail: await getApprovalTrail(this.stepRepo, request.approvalRequestId) };
+    if (!request || !staffId || request.staffId !== staffId)
+      throw new NotFoundException('Leave request not found');
+    return {
+      ...request,
+      approvalTrail: await getApprovalTrail(
+        this.stepRepo,
+        request.approvalRequestId,
+      ),
+    };
   }
 
   async create(personId: string, dto: CreateStaffLeaveDto) {
     const staffId = await this.scopeRepo.getStaffId(personId);
-    if (!staffId) throw new ForbiddenException('No active staff record for this account.');
+    if (!staffId)
+      throw new ForbiddenException('No active staff record for this account.');
     if (new Date(dto.toDate).getTime() < new Date(dto.fromDate).getTime()) {
       throw new BadRequestException('toDate must be on or after fromDate.');
     }
@@ -67,7 +88,11 @@ export class FacultyStaffLeaveService {
           subjectObjectType: 'staff_leave_request',
           subjectObjectId: id,
           requestedBy: personId,
-          payload: { leaveType: dto.leaveType, fromDate: dto.fromDate, toDate: dto.toDate },
+          payload: {
+            leaveType: dto.leaveType,
+            fromDate: dto.fromDate,
+            toDate: dto.toDate,
+          },
         },
         client,
       );

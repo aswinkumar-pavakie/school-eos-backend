@@ -6,20 +6,35 @@
 // the Admin-only room-allocation board).
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 @Injectable()
 export class HostelScopeRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async getStaffId(personId: string, executor: Queryable = this.postgres): Promise<string | null> {
-    const { rows } = await executor.query(`SELECT id FROM staff WHERE person_id = $1 AND status = 'ACTIVE'`, [personId]);
+  async getStaffId(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string | null> {
+    const { rows } = await executor.query(
+      `SELECT id FROM staff WHERE person_id = $1 AND status = 'ACTIVE'`,
+      [personId],
+    );
     return rows.length ? rows[0].id : null;
   }
 
   /** Every hostel this staff member is the assigned warden of. */
-  async getWardenHostelIds(staffId: string, executor: Queryable = this.postgres): Promise<string[]> {
-    const { rows } = await executor.query(`SELECT id FROM hostel WHERE warden_staff_id = $1 AND status = 'ACTIVE'`, [staffId]);
+  async getWardenHostelIds(
+    staffId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string[]> {
+    const { rows } = await executor.query(
+      `SELECT id FROM hostel WHERE warden_staff_id = $1 AND status = 'ACTIVE'`,
+      [staffId],
+    );
     return rows.map((r: any) => r.id);
   }
 
@@ -42,6 +57,8 @@ export class HostelScopeRepository {
        LIMIT 1`,
       [studentId],
     );
-    return rows.length ? { allocationId: rows[0].allocation_id, hostelId: rows[0].hostel_id } : null;
+    return rows.length
+      ? { allocationId: rows[0].allocation_id, hostelId: rows[0].hostel_id }
+      : null;
   }
 }

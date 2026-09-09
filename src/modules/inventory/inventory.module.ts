@@ -31,6 +31,11 @@ import { InventoryItemRepository } from './repositories/inventory-item.repositor
   // RequestsApprovalsModule (issue/transfer, both already row-locked + audited).
   // InventoryCategoryRepository/InventoryCategoriesService are reused as-is by
   // MediaModule's own scoped inventory view (Media & AV Equipment category only).
-  exports: [InventoryItemRepository, InventoryItemsService, InventoryCategoryRepository, InventoryCategoriesService],
+  exports: [
+    InventoryItemRepository,
+    InventoryItemsService,
+    InventoryCategoryRepository,
+    InventoryCategoriesService,
+  ],
 })
 export class InventoryModule {}

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface AttendantRow {
   id: string;
@@ -43,7 +46,10 @@ export class AttendantRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<AttendantRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<AttendantRow | null> {
     const { rows } = await executor.query<AttendantRow>(
       `SELECT ${COLUMNS} FROM attendant WHERE id = $1`,
       [id],

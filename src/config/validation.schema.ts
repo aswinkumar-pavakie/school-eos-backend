@@ -22,7 +22,9 @@ class EnvironmentVariables {
   SUPABASE_SERVICE_ROLE_KEY!: string;
 }
 
-export function validate(config: Record<string, unknown>): Record<string, unknown> {
+export function validate(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
   const validated = plainToInstance(EnvironmentVariables, config, {
     enableImplicitConversion: true,
   });
@@ -30,7 +32,9 @@ export function validate(config: Record<string, unknown>): Record<string, unknow
 
   if (errors.length > 0) {
     const missing = errors.map((e) => e.property).join(', ');
-    throw new Error(`Missing/invalid required environment variables: ${missing}`);
+    throw new Error(
+      `Missing/invalid required environment variables: ${missing}`,
+    );
   }
 
   return config;

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface LibraryReservationRow {
   id: string;
@@ -49,7 +52,10 @@ const FROM = `library_reservation r
 export class LibraryReservationRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findMany(filter: ReservationFilter, executor: Queryable = this.postgres): Promise<LibraryReservationRow[]> {
+  async findMany(
+    filter: ReservationFilter,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryReservationRow[]> {
     const conditions: string[] = [];
     const params: unknown[] = [];
     if (filter.status) {
@@ -70,7 +76,8 @@ export class LibraryReservationRepository {
         `(lower(p.first_name) LIKE $${params.length} OR lower(coalesce(p.last_name, '')) LIKE $${params.length} OR lower(b.title) LIKE $${params.length})`,
       );
     }
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { rows } = await executor.query<LibraryReservationRow>(
       `SELECT ${COLUMNS} FROM ${FROM} ${where} ORDER BY r.reserved_at`,
       params,
@@ -78,14 +85,23 @@ export class LibraryReservationRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<LibraryReservationRow | null> {
-    const { rows } = await executor.query<LibraryReservationRow>(`SELECT ${COLUMNS} FROM ${FROM} WHERE r.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryReservationRow | null> {
+    const { rows } = await executor.query<LibraryReservationRow>(
+      `SELECT ${COLUMNS} FROM ${FROM} WHERE r.id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
   /** Row-locking read, for use right before a status transition that must not
    * race with a concurrent cancel/fulfil/expire on the same reservation. */
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<LibraryReservationRow | null> {
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<LibraryReservationRow | null> {
     const { rows } = await executor.query<LibraryReservationRow>(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE r.id = $1 FOR UPDATE OF r`,
       [id],
@@ -95,7 +111,10 @@ export class LibraryReservationRepository {
 
   /** Oldest pending reservation for a book -- FIFO fulfilment order. This is
    * the *next in line*, not yet holding a copy. */
-  async findOldestPendingForBook(bookId: string, executor: Queryable = this.postgres): Promise<LibraryReservationRow | null> {
+  async findOldestPendingForBook(
+    bookId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryReservationRow | null> {
     const { rows } = await executor.query<LibraryReservationRow>(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE r.book_id = $1 AND r.status = 'PENDING' ORDER BY r.reserved_at LIMIT 1`,
       [bookId],
@@ -104,7 +123,10 @@ export class LibraryReservationRepository {
   }
 
   /** The (at most one) reservation currently holding a copy for a book. */
-  async findReadyForBook(bookId: string, executor: Queryable = this.postgres): Promise<LibraryReservationRow | null> {
+  async findReadyForBook(
+    bookId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryReservationRow | null> {
     const { rows } = await executor.query<LibraryReservationRow>(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE r.book_id = $1 AND r.status = 'READY' LIMIT 1`,
       [bookId],
@@ -116,7 +138,9 @@ export class LibraryReservationRepository {
    * has already passed -- the self-healing lazy-expire set, same idea as
    * library-issue.repository.ts's flipOverdueRows(). Row-locked since the
    * caller expires each one inside a transaction alongside its copy. */
-  async findExpiredReady(executor: Queryable = this.postgres): Promise<LibraryReservationRow[]> {
+  async findExpiredReady(
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryReservationRow[]> {
     const { rows } = await executor.query<LibraryReservationRow>(
       `SELECT ${COLUMNS} FROM ${FROM}
        CROSS JOIN library_config cfg
@@ -141,7 +165,11 @@ export class LibraryReservationRepository {
     return rows[0] ?? null;
   }
 
-  async create(bookId: string, memberId: string, executor: Queryable = this.postgres): Promise<LibraryReservationRow> {
+  async create(
+    bookId: string,
+    memberId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryReservationRow> {
     const { rows } = await executor.query<{ id: string }>(
       `INSERT INTO library_reservation (book_id, member_id) VALUES ($1, $2) RETURNING id`,
       [bookId, memberId],
@@ -152,7 +180,10 @@ export class LibraryReservationRepository {
   /** PENDING -> READY: the copy is now held for this reservation specifically.
    * expires_at is set from the current library_config.reservation_hold_days so
    * it never has to be recomputed client-side. */
-  async markReady(id: string, executor: Queryable): Promise<LibraryReservationRow | null> {
+  async markReady(
+    id: string,
+    executor: Queryable,
+  ): Promise<LibraryReservationRow | null> {
     await executor.query(
       `UPDATE library_reservation r SET
          status = 'READY',

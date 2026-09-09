@@ -1,4 +1,10 @@
-import { IsArray, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  IsArray,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateLmsFolderDto {
   @IsOptional()

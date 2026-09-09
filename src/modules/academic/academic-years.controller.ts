@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -32,8 +41,13 @@ export class AcademicYearsController {
   @Post()
   @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateAcademicYearDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.academicYearsService.create(dto, actor.personId) };
+  async create(
+    @Body() dto: CreateAcademicYearDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.academicYearsService.create(dto, actor.personId),
+    };
   }
 
   @Patch(':id')
@@ -43,20 +57,30 @@ export class AcademicYearsController {
     @Body() dto: UpdateAcademicYearDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.academicYearsService.update(id, dto, actor.personId) };
+    return {
+      data: await this.academicYearsService.update(id, dto, actor.personId),
+    };
   }
 
   @Post(':id/set-current')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
-  async setCurrent(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.academicYearsService.setCurrent(id, actor.personId) };
+  async setCurrent(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.academicYearsService.setCurrent(id, actor.personId),
+    };
   }
 
   @Post(':id/close')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
-  async close(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async close(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.academicYearsService.close(id, actor.personId) };
   }
 }

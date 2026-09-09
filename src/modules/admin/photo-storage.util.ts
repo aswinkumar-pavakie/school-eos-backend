@@ -23,9 +23,16 @@ export const PHOTO_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 export const photoMulterOptions = {
   storage: memoryStorage(),
   limits: { fileSize: PHOTO_MAX_SIZE_BYTES },
-  fileFilter: (_req: unknown, file: Express.Multer.File, cb: (error: Error | null, accept: boolean) => void) => {
+  fileFilter: (
+    _req: unknown,
+    file: Express.Multer.File,
+    cb: (error: Error | null, accept: boolean) => void,
+  ) => {
     if (!ALLOWED_MIME_TO_EXT[file.mimetype]) {
-      cb(new BadRequestException('Photo must be a JPEG, PNG, or WEBP image.'), false);
+      cb(
+        new BadRequestException('Photo must be a JPEG, PNG, or WEBP image.'),
+        false,
+      );
       return;
     }
     cb(null, true);
@@ -33,6 +40,7 @@ export const photoMulterOptions = {
 };
 
 export function photoObjectKeyFor(file: Express.Multer.File): string {
-  const ext = ALLOWED_MIME_TO_EXT[file.mimetype] ?? extname(file.originalname) ?? '';
+  const ext =
+    ALLOWED_MIME_TO_EXT[file.mimetype] ?? extname(file.originalname) ?? '';
   return `photos/${randomUUID()}${ext}`;
 }

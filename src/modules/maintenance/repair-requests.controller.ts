@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -46,8 +56,13 @@ export class RepairRequestsController {
   @Post()
   @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateRepairRequestDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.repairRequestsService.create(dto, actor.personId) };
+  async create(
+    @Body() dto: CreateRepairRequestDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.repairRequestsService.create(dto, actor.personId),
+    };
   }
 
   @Patch(':id')
@@ -57,7 +72,9 @@ export class RepairRequestsController {
     @Body() dto: UpdateRepairRequestDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.repairRequestsService.update(id, dto, actor.personId) };
+    return {
+      data: await this.repairRequestsService.update(id, dto, actor.personId),
+    };
   }
 
   @Post(':id/assign')
@@ -68,13 +85,18 @@ export class RepairRequestsController {
     @Body() dto: AssignRepairRequestDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.repairRequestsService.assign(id, dto, actor.personId) };
+    return {
+      data: await this.repairRequestsService.assign(id, dto, actor.personId),
+    };
   }
 
   @Post(':id/start')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
-  async start(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async start(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.repairRequestsService.start(id, actor.personId) };
   }
 
@@ -86,7 +108,9 @@ export class RepairRequestsController {
     @Body() dto: CompleteRepairRequestDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.repairRequestsService.complete(id, dto, actor.personId) };
+    return {
+      data: await this.repairRequestsService.complete(id, dto, actor.personId),
+    };
   }
 
   @Post(':id/cancel')
@@ -97,6 +121,8 @@ export class RepairRequestsController {
     @Body() dto: CancelRepairRequestDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.repairRequestsService.cancel(id, dto, actor.personId) };
+    return {
+      data: await this.repairRequestsService.cancel(id, dto, actor.personId),
+    };
   }
 }

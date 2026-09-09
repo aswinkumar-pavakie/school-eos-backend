@@ -1,4 +1,10 @@
-import { IsDateString, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  IsDateString,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 import { TIME_PATTERN, TIME_PATTERN_MESSAGE } from '../time-format.util';
 
 export class RescheduleOnlineClassDto {

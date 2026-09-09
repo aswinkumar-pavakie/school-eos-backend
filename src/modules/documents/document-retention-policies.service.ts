@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CreateDocumentRetentionPolicyDto } from './dto/create-document-retention-policy.dto';
 import { UpdateDocumentRetentionPolicyDto } from './dto/update-document-retention-policy.dto';
@@ -18,18 +23,26 @@ export class DocumentRetentionPoliciesService {
 
   async get(category: string) {
     const policy = await this.retentionPolicyRepo.findByCategory(category);
-    if (!policy) throw new NotFoundException('Document retention policy not found');
+    if (!policy)
+      throw new NotFoundException('Document retention policy not found');
     return policy;
   }
 
   /** Exactly one of "permanent" or "has a retention_years number" must hold -- the
    * DB enforces this as `is_permanent = (retention_years IS NULL)`. */
-  private assertExclusivity(isPermanent: boolean | undefined, retentionYears: number | undefined): void {
+  private assertExclusivity(
+    isPermanent: boolean | undefined,
+    retentionYears: number | undefined,
+  ): void {
     if (isPermanent === true && retentionYears !== undefined) {
-      throw new BadRequestException('A policy cannot both be permanent and have a retentionYears value.');
+      throw new BadRequestException(
+        'A policy cannot both be permanent and have a retentionYears value.',
+      );
     }
     if (isPermanent === false && retentionYears === undefined) {
-      throw new BadRequestException('retentionYears is required when isPermanent is false.');
+      throw new BadRequestException(
+        'retentionYears is required when isPermanent is false.',
+      );
     }
   }
 
@@ -52,24 +65,38 @@ export class DocumentRetentionPoliciesService {
       return created;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A retention policy for this category already exists.');
+        throw new ConflictException(
+          'A retention policy for this category already exists.',
+        );
       }
       throw err;
     }
   }
 
-  async update(category: string, dto: UpdateDocumentRetentionPolicyDto, actorPersonId: string) {
+  async update(
+    category: string,
+    dto: UpdateDocumentRetentionPolicyDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.get(category);
-    const touchesPermanence = dto.isPermanent !== undefined || dto.retentionYears !== undefined;
+    const touchesPermanence =
+      dto.isPermanent !== undefined || dto.retentionYears !== undefined;
     if (touchesPermanence) {
       this.assertExclusivity(dto.isPermanent, dto.retentionYears);
     }
     const updated = await this.retentionPolicyRepo.update(category, {
       ...dto,
-      isPermanent: touchesPermanence ? (dto.isPermanent ?? dto.retentionYears === undefined) : undefined,
-      retentionYears: touchesPermanence ? (dto.isPermanent ? null : dto.retentionYears) : undefined,
+      isPermanent: touchesPermanence
+        ? (dto.isPermanent ?? dto.retentionYears === undefined)
+        : undefined,
+      retentionYears: touchesPermanence
+        ? dto.isPermanent
+          ? null
+          : dto.retentionYears
+        : undefined,
     });
-    if (!updated) throw new NotFoundException('Document retention policy not found');
+    if (!updated)
+      throw new NotFoundException('Document retention policy not found');
     await this.auditService.record({
       actorPersonId,
       action: 'DOCUMENT_RETENTION_POLICY_UPDATED',

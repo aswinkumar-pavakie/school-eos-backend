@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { CampusRepository } from './repositories/campus.repository';
@@ -37,7 +41,8 @@ export class CampusesService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A campus with this code already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException('A campus with this code already exists.');
       throw err;
     }
   }
@@ -58,7 +63,8 @@ export class CampusesService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A campus with this code already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException('A campus with this code already exists.');
       throw err;
     }
   }

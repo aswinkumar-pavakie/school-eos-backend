@@ -7,8 +7,13 @@
 import { ROLES_KEY } from '../../common/auth/roles.decorator';
 import { OnlineClassesController } from './online-classes.controller';
 
-function rolesFor(methodName: keyof OnlineClassesController): string[] | undefined {
-  return Reflect.getMetadata(ROLES_KEY, OnlineClassesController.prototype[methodName]);
+function rolesFor(
+  methodName: keyof OnlineClassesController,
+): string[] | undefined {
+  return Reflect.getMetadata(
+    ROLES_KEY,
+    OnlineClassesController.prototype[methodName],
+  );
 }
 
 describe('OnlineClassesController — route roles', () => {

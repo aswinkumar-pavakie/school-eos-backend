@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -19,7 +28,10 @@ export class FacultyPayslipController {
 
   @Post('request')
   @HttpCode(HttpStatus.CREATED)
-  async requestAccess(@Body() dto: RequestPayslipAccessDto, @CurrentActor() actor: AuthenticatedUser) {
+  async requestAccess(
+    @Body() dto: RequestPayslipAccessDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.requestAccess(actor.personId, dto.note) };
   }
 
@@ -29,7 +41,10 @@ export class FacultyPayslipController {
   }
 
   @Get(':id')
-  async get(@Param('id', ParseUUIDPipe) id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async get(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.get(actor.personId, id) };
   }
 }

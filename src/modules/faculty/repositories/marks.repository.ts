@@ -15,7 +15,10 @@
 // settled" is the parent exam's own state, not each individual mark row's.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface ExamSubjectRow {
   examSubjectId: string;
@@ -69,7 +72,10 @@ export class MarksRepository {
 
   /** Every real exam_subject for this subject_offering -- the actual, dynamic
    * "switch exam" tab list (however many real tests exist, not a fixed 3). */
-  async findExamSubjectsForOffering(subjectOfferingId: string, executor: Queryable = this.postgres): Promise<ExamSubjectRow[]> {
+  async findExamSubjectsForOffering(
+    subjectOfferingId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ExamSubjectRow[]> {
     const { rows } = await executor.query(
       `SELECT es.id AS exam_subject_id, es.exam_id, es.max_marks, es.pass_marks,
               e.name AS exam_name, e.exam_type, e.term, e.state AS exam_state
@@ -89,7 +95,9 @@ export class MarksRepository {
   async findExamSubjectById(
     examSubjectId: string,
     executor: Queryable = this.postgres,
-  ): Promise<(ExamSubjectRow & { subjectOfferingId: string; sectionId: string }) | null> {
+  ): Promise<
+    (ExamSubjectRow & { subjectOfferingId: string; sectionId: string }) | null
+  > {
     const { rows } = await executor.query(
       `SELECT es.id AS exam_subject_id, es.exam_id, es.subject_offering_id, so.section_id, es.max_marks, es.pass_marks,
               e.name AS exam_name, e.exam_type, e.term, e.state AS exam_state
@@ -100,12 +108,20 @@ export class MarksRepository {
       [examSubjectId],
     );
     if (!rows.length) return null;
-    return { ...mapExamSubject(rows[0]), subjectOfferingId: rows[0].subject_offering_id, sectionId: rows[0].section_id };
+    return {
+      ...mapExamSubject(rows[0]),
+      subjectOfferingId: rows[0].subject_offering_id,
+      sectionId: rows[0].section_id,
+    };
   }
 
   /** Every student currently enrolled in this section, left-joined to their
    * mark row for this exam_subject (null mark = not yet entered). */
-  async findRosterWithMarks(sectionId: string, examSubjectId: string, executor: Queryable = this.postgres): Promise<MarkRow[]> {
+  async findRosterWithMarks(
+    sectionId: string,
+    examSubjectId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<MarkRow[]> {
     const { rows } = await executor.query(
       `SELECT s.id AS student_id, p.first_name, p.last_name, se.roll_no,
               m.id AS mark_id, m.marks_obtained, m.is_absent, m.is_exempted, m.state
@@ -122,7 +138,8 @@ export class MarksRepository {
       studentId: row.student_id,
       studentName: [row.first_name, row.last_name].filter(Boolean).join(' '),
       rollNo: row.roll_no,
-      marksObtained: row.marks_obtained === null ? null : Number(row.marks_obtained),
+      marksObtained:
+        row.marks_obtained === null ? null : Number(row.marks_obtained),
       isAbsent: row.is_absent ?? false,
       isExempted: row.is_exempted ?? false,
       state: row.state,
@@ -132,7 +149,10 @@ export class MarksRepository {
   /** Every real, PUBLISHED mark for this one student across every subject --
    * Subject Records' own single-subject view and Class Results' whole-class
    * aggregation both build on this same base query, scoped differently. */
-  async findPublishedMarksForStudent(studentId: string, executor: Queryable = this.postgres) {
+  async findPublishedMarksForStudent(
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ) {
     const { rows } = await executor.query(
       `SELECT m.marks_obtained, m.is_absent, es.max_marks, es.id AS exam_subject_id,
               e.id AS exam_id, e.name AS exam_name, e.exam_type,
@@ -153,7 +173,11 @@ export class MarksRepository {
    * for every student currently in the section -- Subject Records' real,
    * per-subject breakdown (each exam a separate mini-stat, exactly like the
    * design's expandable student rows). */
-  async findPublishedMarksForOffering(sectionId: string, subjectOfferingId: string, executor: Queryable = this.postgres) {
+  async findPublishedMarksForOffering(
+    sectionId: string,
+    subjectOfferingId: string,
+    executor: Queryable = this.postgres,
+  ) {
     const { rows } = await executor.query(
       `SELECT s.id AS student_id, p.first_name, p.last_name, se.roll_no,
               e.id AS exam_id, e.name AS exam_name, es.max_marks,
@@ -175,7 +199,10 @@ export class MarksRepository {
    * to this section -- Class Results' own dynamic "switch exam" list (a class
    * advisor's whole-class results view, across every subject at once, not
    * one subject_offering at a time like Marks Entry/Subject Records). */
-  async findExamsForSection(sectionId: string, executor: Queryable = this.postgres): Promise<ExamSummaryRow[]> {
+  async findExamsForSection(
+    sectionId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ExamSummaryRow[]> {
     const { rows } = await executor.query(
       `SELECT DISTINCT e.id AS exam_id, e.name AS exam_name, e.exam_type, e.term, e.state AS exam_state, e.created_at
        FROM exam_subject es
@@ -241,14 +268,21 @@ export class MarksRepository {
       subjectName: row.subject_name,
       maxMarks: Number(row.max_marks),
       passMarks: row.pass_marks === null ? null : Number(row.pass_marks),
-      marksObtained: row.marks_obtained === null ? null : Number(row.marks_obtained),
+      marksObtained:
+        row.marks_obtained === null ? null : Number(row.marks_obtained),
       isAbsent: row.is_absent ?? false,
       isExempted: row.is_exempted ?? false,
     }));
   }
 
   async upsertMark(
-    input: { examSubjectId: string; studentId: string; marksObtained: number | null; isAbsent: boolean; enteredBy: string },
+    input: {
+      examSubjectId: string;
+      studentId: string;
+      marksObtained: number | null;
+      isAbsent: boolean;
+      enteredBy: string;
+    },
     executor: Queryable,
   ): Promise<void> {
     await executor.query(
@@ -257,14 +291,23 @@ export class MarksRepository {
        ON CONFLICT (exam_subject_id, student_id) DO UPDATE SET
          marks_obtained = EXCLUDED.marks_obtained, is_absent = EXCLUDED.is_absent,
          entered_by = EXCLUDED.entered_by, entered_at = now(), state = 'ENTERED'`,
-      [input.examSubjectId, input.studentId, input.marksObtained, input.isAbsent, input.enteredBy],
+      [
+        input.examSubjectId,
+        input.studentId,
+        input.marksObtained,
+        input.isAbsent,
+        input.enteredBy,
+      ],
     );
   }
 
   /** Bulk-publish every ENTERED mark for this exam_subject at once -- matches
    * the design's own single "Save"/whole-class action, not a per-student
    * publish. */
-  async publishMarks(examSubjectId: string, executor: Queryable): Promise<number> {
+  async publishMarks(
+    examSubjectId: string,
+    executor: Queryable,
+  ): Promise<number> {
     const { rowCount } = await executor.query(
       `UPDATE mark SET state = 'PUBLISHED' WHERE exam_subject_id = $1 AND state = 'ENTERED'`,
       [examSubjectId],

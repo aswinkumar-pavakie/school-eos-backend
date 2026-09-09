@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { GpsDeviceMappingRepository } from './repositories/gps-device-mapping.repository';
 import { CreateGpsDeviceMappingDto } from './dto/create-gps-device-mapping.dto';
@@ -36,12 +40,17 @@ export class GpsDeviceMappingsService {
       });
       return created;
     } catch (err) {
-      if (isForeignKeyViolation(err)) throw new ConflictException('deviceId or vehicleId does not exist.');
+      if (isForeignKeyViolation(err))
+        throw new ConflictException('deviceId or vehicleId does not exist.');
       throw err;
     }
   }
 
-  async update(id: string, dto: UpdateGpsDeviceMappingDto, actorPersonId: string) {
+  async update(
+    id: string,
+    dto: UpdateGpsDeviceMappingDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.get(id);
     const updated = await this.mappingRepo.update(id, dto);
     if (!updated) throw new NotFoundException('GPS device mapping not found');

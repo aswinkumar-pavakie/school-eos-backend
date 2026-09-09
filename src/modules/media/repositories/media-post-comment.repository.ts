@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface MediaPostCommentRow {
   id: string;
@@ -31,7 +34,10 @@ function mapRow(row: any): MediaPostCommentRow {
 export class MediaPostCommentRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async listByPost(mediaPostId: string, executor: Queryable = this.postgres): Promise<MediaPostCommentRow[]> {
+  async listByPost(
+    mediaPostId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<MediaPostCommentRow[]> {
     const { rows } = await executor.query(
       `SELECT * FROM media_post_comment WHERE media_post_id = $1 ORDER BY created_at ASC`,
       [mediaPostId],
@@ -39,7 +45,9 @@ export class MediaPostCommentRepository {
     return rows.map(mapRow);
   }
 
-  async countByPost(executor: Queryable = this.postgres): Promise<Record<string, { total: number; unanswered: number }>> {
+  async countByPost(
+    executor: Queryable = this.postgres,
+  ): Promise<Record<string, { total: number; unanswered: number }>> {
     const { rows } = await executor.query(
       `SELECT media_post_id,
          COUNT(*)::int AS total,
@@ -47,12 +55,22 @@ export class MediaPostCommentRepository {
        FROM media_post_comment GROUP BY media_post_id`,
     );
     const result: Record<string, { total: number; unanswered: number }> = {};
-    for (const row of rows) result[row.media_post_id] = { total: row.total, unanswered: row.unanswered };
+    for (const row of rows)
+      result[row.media_post_id] = {
+        total: row.total,
+        unanswered: row.unanswered,
+      };
     return result;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<MediaPostCommentRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM media_post_comment WHERE id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<MediaPostCommentRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM media_post_comment WHERE id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 

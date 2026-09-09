@@ -5,7 +5,10 @@
 // engine knowing anything about Finance's tables.
 
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { simpleStateColumnHandler, SubjectStateRegistry } from '../approvals/subject-state.registry';
+import {
+  simpleStateColumnHandler,
+  SubjectStateRegistry,
+} from '../approvals/subject-state.registry';
 import { PurchaseOrderRepository } from './purchase-requests/repositories/purchase-order.repository';
 import { PurchaseRequestRepository } from './purchase-requests/repositories/purchase-request.repository';
 
@@ -26,20 +29,35 @@ export class FinanceApprovalHandlers implements OnModuleInit {
     // step). onRejected IS terminal, so it does set processed_at.
     this.registry.register('refund', {
       onApproved: async (id, executor, _decidedBy) => {
-        await executor.query(`UPDATE refund SET state = 'APPROVED' WHERE id = $1`, [id]);
+        await executor.query(
+          `UPDATE refund SET state = 'APPROVED' WHERE id = $1`,
+          [id],
+        );
       },
       onRejected: async (id, executor, _decidedBy) => {
-        await executor.query(`UPDATE refund SET state = 'REJECTED', processed_at = now() WHERE id = $1`, [id]);
+        await executor.query(
+          `UPDATE refund SET state = 'REJECTED', processed_at = now() WHERE id = $1`,
+          [id],
+        );
       },
     });
     this.registry.register('expense', simpleStateColumnHandler('expense'));
-    this.registry.register('concession', simpleStateColumnHandler('concession'));
+    this.registry.register(
+      'concession',
+      simpleStateColumnHandler('concession'),
+    );
     this.registry.register('fee_structure', {
       onApproved: async (id, executor, _decidedBy) => {
-        await executor.query(`UPDATE fee_structure SET state = 'ACTIVE' WHERE id = $1`, [id]);
+        await executor.query(
+          `UPDATE fee_structure SET state = 'ACTIVE' WHERE id = $1`,
+          [id],
+        );
       },
       onRejected: async (id, executor, _decidedBy) => {
-        await executor.query(`UPDATE fee_structure SET state = 'DRAFT' WHERE id = $1`, [id]);
+        await executor.query(
+          `UPDATE fee_structure SET state = 'DRAFT' WHERE id = $1`,
+          [id],
+        );
       },
     });
 

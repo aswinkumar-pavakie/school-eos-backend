@@ -38,7 +38,9 @@ export class MediaPostsScheduler {
           },
           client,
         );
-        this.logger.log(`Auto-published media_post ${post.id} (was scheduled for ${post.publishAt?.toISOString()})`);
+        this.logger.log(
+          `Auto-published media_post ${post.id} (was scheduled for ${post.publishAt?.toISOString()})`,
+        );
       }
     });
   }

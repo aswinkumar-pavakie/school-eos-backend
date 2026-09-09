@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -19,13 +28,19 @@ export class ParentPermissionsController {
   }
 
   @Get(':id')
-  async get(@Param('id', ParseUUIDPipe) id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async get(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.get(id, actor.personId) };
   }
 
   @Post(':id/reject')
   @HttpCode(HttpStatus.OK)
-  async reject(@Param('id', ParseUUIDPipe) id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async reject(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.service.reject(id, actor.personId);
     return { data: { state: 'REJECTED' } };
   }
@@ -42,7 +57,10 @@ export class ParentPermissionsController {
   }
 
   @Get(':id/permission-letter')
-  async getPermissionLetter(@Param('id', ParseUUIDPipe) id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async getPermissionLetter(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.getPermissionLetter(id, actor.personId) };
   }
 }

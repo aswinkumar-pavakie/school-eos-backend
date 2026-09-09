@@ -34,7 +34,10 @@ export class RoleRepository {
   }
 
   async exists(code: string): Promise<boolean> {
-    const { rows } = await this.postgres.query(`SELECT 1 FROM role WHERE code = $1`, [code]);
+    const { rows } = await this.postgres.query(
+      `SELECT 1 FROM role WHERE code = $1`,
+      [code],
+    );
     return rows.length > 0;
   }
 }
@@ -70,17 +73,44 @@ export const ROLE_MODULE_ACCESS: Record<string, string[]> = {
     'Reports & Analytics',
     'Audit',
   ],
-  VICE_PRINCIPAL: ['Dashboard', 'Timetable & Substitution', 'Attendance', 'Assessment & Examination'],
+  VICE_PRINCIPAL: [
+    'Dashboard',
+    'Timetable & Substitution',
+    'Attendance',
+    'Assessment & Examination',
+  ],
   FINANCE: ['Dashboard', 'Finance & Fees', 'Payroll', 'Reports & Analytics'],
-  FACULTY: ['Dashboard', 'Attendance', 'Homework & LMS', 'Assessment & Examination'],
+  FACULTY: [
+    'Dashboard',
+    'Attendance',
+    'Homework & LMS',
+    'Assessment & Examination',
+  ],
   ACADEMIC_COORDINATOR: ['Assessment & Examination (verification)'],
-  CLASS_ADVISOR: ['Student Records (own section)', 'Timetable & Substitution (own section)'],
+  CLASS_ADVISOR: [
+    'Student Records (own section)',
+    'Timetable & Substitution (own section)',
+  ],
   COMMUNITY_INCHARGE: ['Communities (own community)'],
   HEALTH_INCHARGE: ['Health & Infirmary'],
   SPORTS_FACULTY: ['Sports (own team)'],
-  PARENT: ['Dashboard', 'Attendance', 'Homework & LMS', 'Finance & Fees', 'Transport'],
+  PARENT: [
+    'Dashboard',
+    'Attendance',
+    'Homework & LMS',
+    'Finance & Fees',
+    'Transport',
+  ],
   HOSTEL_WARDEN: ['Hostel'],
+  TRANSPORT_MANAGER: ['Dashboard', 'Transport', 'Reports & Analytics'],
   BUS_ATTENDANT: ['Transport (device, boarding only)'],
   CANTEEN_VENDOR: ['Finance & Fees (device, wallet sales only)'],
-  MEDIA_ROOM: ['Dashboard', 'Social Media Publishing', 'Shoot Assignments', 'Inventory (Media & AV Equipment)', 'Raise Indent', 'Media Team'],
+  MEDIA_ROOM: [
+    'Dashboard',
+    'Social Media Publishing',
+    'Shoot Assignments',
+    'Inventory (Media & AV Equipment)',
+    'Raise Indent',
+    'Media Team',
+  ],
 };

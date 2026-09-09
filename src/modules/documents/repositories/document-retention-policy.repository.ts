@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface DocumentRetentionPolicyRow {
   category: string;
@@ -41,7 +44,9 @@ const COLUMNS = `category, description, retention_years AS "retentionYears", anc
 export class DocumentRetentionPolicyRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findMany(executor: Queryable = this.postgres): Promise<DocumentRetentionPolicyRow[]> {
+  async findMany(
+    executor: Queryable = this.postgres,
+  ): Promise<DocumentRetentionPolicyRow[]> {
     const { rows } = await executor.query<DocumentRetentionPolicyRow>(
       `SELECT ${COLUMNS} FROM document_retention_policy ORDER BY category`,
     );
@@ -89,7 +94,8 @@ export class DocumentRetentionPolicyRepository {
     // retention_years/is_permanent are set directly (not COALESCEd against each
     // other) whenever either is provided, so the pair always lands consistent --
     // see the interface doc above.
-    const touchesPermanence = input.retentionYears !== undefined || input.isPermanent !== undefined;
+    const touchesPermanence =
+      input.retentionYears !== undefined || input.isPermanent !== undefined;
     const { rows } = await executor.query<DocumentRetentionPolicyRow>(
       `UPDATE document_retention_policy SET
          description = COALESCE($2, description),

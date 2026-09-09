@@ -4,7 +4,10 @@
 // name.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
 
 export interface SchoolProfileRow {
   name: string;
@@ -40,8 +43,12 @@ function mapRow(row: any): SchoolProfileRow {
 export class SchoolProfileRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async get(executor: Queryable = this.postgres): Promise<SchoolProfileRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM school ORDER BY id ASC LIMIT 1`);
+  async get(
+    executor: Queryable = this.postgres,
+  ): Promise<SchoolProfileRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM school ORDER BY id ASC LIMIT 1`,
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 }

@@ -10,22 +10,36 @@ export class ParentAcademicController {
   constructor(private readonly service: ParentAcademicService) {}
 
   @Get('timetable')
-  async getTimetable(@Param('studentId', ParseUUIDPipe) studentId: string, @CurrentActor() actor: AuthenticatedUser) {
+  async getTimetable(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.getTimetable(actor.personId, studentId) };
   }
 
   @Get('calendar')
-  async getCalendar(@Param('studentId', ParseUUIDPipe) studentId: string, @CurrentActor() actor: AuthenticatedUser) {
+  async getCalendar(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.getCalendar(actor.personId, studentId) };
   }
 
   @Get('announcements')
-  async listAnnouncements(@Param('studentId', ParseUUIDPipe) studentId: string, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.service.listAnnouncements(actor.personId, studentId) };
+  async listAnnouncements(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.listAnnouncements(actor.personId, studentId),
+    };
   }
 
   @Get('profile')
-  async getProfile(@Param('studentId', ParseUUIDPipe) studentId: string, @CurrentActor() actor: AuthenticatedUser) {
+  async getProfile(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.getProfile(actor.personId, studentId) };
   }
 
@@ -35,12 +49,19 @@ export class ParentAcademicController {
     @Query('month') month: string | undefined,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.service.getAttendance(actor.personId, studentId, month) };
+    return {
+      data: await this.service.getAttendance(actor.personId, studentId, month),
+    };
   }
 
   @Get('results/exams')
-  async listExamsForResults(@Param('studentId', ParseUUIDPipe) studentId: string, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.service.listExamsForResults(actor.personId, studentId) };
+  async listExamsForResults(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.listExamsForResults(actor.personId, studentId),
+    };
   }
 
   @Get('results/exams/:examId')
@@ -49,22 +70,37 @@ export class ParentAcademicController {
     @Param('examId', ParseUUIDPipe) examId: string,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.service.getResults(actor.personId, studentId, examId) };
+    return {
+      data: await this.service.getResults(actor.personId, studentId, examId),
+    };
   }
 
   @Get('exams')
-  async getExamSchedule(@Param('studentId', ParseUUIDPipe) studentId: string, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.service.getExamSchedule(actor.personId, studentId) };
+  async getExamSchedule(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.getExamSchedule(actor.personId, studentId),
+    };
   }
 
   @Get('subjects')
-  async listSubjects(@Param('studentId', ParseUUIDPipe) studentId: string, @CurrentActor() actor: AuthenticatedUser) {
+  async listSubjects(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.listSubjects(actor.personId, studentId) };
   }
 
   @Get('term')
-  async listCurrentTerm(@Param('studentId', ParseUUIDPipe) studentId: string, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.service.listCurrentTerm(actor.personId, studentId) };
+  async listCurrentTerm(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.listCurrentTerm(actor.personId, studentId),
+    };
   }
 
   @Get('term/subjects/:subjectOfferingId')
@@ -73,7 +109,13 @@ export class ParentAcademicController {
     @Param('subjectOfferingId', ParseUUIDPipe) subjectOfferingId: string,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.service.getSubjectDetail(actor.personId, studentId, subjectOfferingId) };
+    return {
+      data: await this.service.getSubjectDetail(
+        actor.personId,
+        studentId,
+        subjectOfferingId,
+      ),
+    };
   }
 
   @Get('term/subjects/:subjectOfferingId/folders/:folderId')
@@ -83,7 +125,14 @@ export class ParentAcademicController {
     @Param('folderId', ParseUUIDPipe) folderId: string,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.service.getFolderFiles(actor.personId, studentId, subjectOfferingId, folderId) };
+    return {
+      data: await this.service.getFolderFiles(
+        actor.personId,
+        studentId,
+        subjectOfferingId,
+        folderId,
+      ),
+    };
   }
 
   @Get('term/subjects/:subjectOfferingId/files/:fileId/url')
@@ -93,6 +142,15 @@ export class ParentAcademicController {
     @Param('fileId', ParseUUIDPipe) fileId: string,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: { url: await this.service.getFileUrl(actor.personId, studentId, subjectOfferingId, fileId) } };
+    return {
+      data: {
+        url: await this.service.getFileUrl(
+          actor.personId,
+          studentId,
+          subjectOfferingId,
+          fileId,
+        ),
+      },
+    };
   }
 }

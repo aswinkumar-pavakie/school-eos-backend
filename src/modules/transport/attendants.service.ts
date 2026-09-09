@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { AttendantRepository } from './repositories/attendant.repository';
 import { CreateAttendantDto } from './dto/create-attendant.dto';
@@ -35,7 +39,8 @@ export class AttendantsService {
       });
       return created;
     } catch (err) {
-      if (isForeignKeyViolation(err)) throw new ConflictException('personId does not exist.');
+      if (isForeignKeyViolation(err))
+        throw new ConflictException('personId does not exist.');
       throw err;
     }
   }
@@ -56,7 +61,8 @@ export class AttendantsService {
       });
       return updated;
     } catch (err) {
-      if (isForeignKeyViolation(err)) throw new ConflictException('personId does not exist.');
+      if (isForeignKeyViolation(err))
+        throw new ConflictException('personId does not exist.');
       throw err;
     }
   }

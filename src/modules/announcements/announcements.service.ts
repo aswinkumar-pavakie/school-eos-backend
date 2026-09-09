@@ -1,10 +1,18 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { AnnouncementQueryDto } from './dto/announcement-query.dto';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 import { isForeignKeyViolation } from './pg-error.util';
-import { AnnouncementRepository, type AudienceRow } from './repositories/announcement.repository';
+import {
+  AnnouncementRepository,
+  type AudienceRow,
+} from './repositories/announcement.repository';
 
 @Injectable()
 export class AnnouncementsService {
@@ -40,16 +48,32 @@ export class AnnouncementsService {
   /** Announcements a Faculty member can manage (edit/delete) -- their own,
    * regardless of audience. */
   listCreatedBy(personId: string) {
-    return this.announcementRepo.findMany({ createdBy: personId, includeArchived: true });
+    return this.announcementRepo.findMany({
+      createdBy: personId,
+      includeArchived: true,
+    });
   }
 
-  private buildAudiences(dto: { audienceType: string; targetRoles?: string[]; targetSectionIds?: string[] }): AudienceRow[] {
+  private buildAudiences(dto: {
+    audienceType: string;
+    targetRoles?: string[];
+    targetSectionIds?: string[];
+  }): AudienceRow[] {
     if (dto.audienceType === 'SCHOOL') {
-      return [{ audienceType: 'SCHOOL', targetId: null, targetStage: null, targetRole: null }];
+      return [
+        {
+          audienceType: 'SCHOOL',
+          targetId: null,
+          targetStage: null,
+          targetRole: null,
+        },
+      ];
     }
     if (dto.audienceType === 'SECTION') {
       if (!dto.targetSectionIds || dto.targetSectionIds.length === 0) {
-        throw new BadRequestException('targetSectionIds is required when audienceType is SECTION.');
+        throw new BadRequestException(
+          'targetSectionIds is required when audienceType is SECTION.',
+        );
       }
       return dto.targetSectionIds.map((sectionId) => ({
         audienceType: 'SECTION',
@@ -59,7 +83,9 @@ export class AnnouncementsService {
       }));
     }
     if (!dto.targetRoles || dto.targetRoles.length === 0) {
-      throw new BadRequestException('targetRoles is required when audienceType is ROLE.');
+      throw new BadRequestException(
+        'targetRoles is required when audienceType is ROLE.',
+      );
     }
     return dto.targetRoles.map((role) => ({
       audienceType: 'ROLE',
@@ -94,7 +120,9 @@ export class AnnouncementsService {
       return created;
     } catch (err) {
       if (isForeignKeyViolation(err)) {
-        throw new BadRequestException('One of the target roles/sections is not real.');
+        throw new BadRequestException(
+          'One of the target roles/sections is not real.',
+        );
       }
       throw err;
     }
@@ -118,14 +146,21 @@ export class AnnouncementsService {
 
   /** `restrictToOwnerId`, when given, enforces that only the announcement's own
    * creator may edit it (the Faculty CRUD boundary -- ADMIN callers omit it). */
-  async update(id: string, dto: UpdateAnnouncementDto, actorPersonId: string, restrictToOwnerId?: string) {
+  async update(
+    id: string,
+    dto: UpdateAnnouncementDto,
+    actorPersonId: string,
+    restrictToOwnerId?: string,
+  ) {
     const existing = await this.announcementRepo.findById(id);
     if (!existing) throw new NotFoundException('Announcement not found');
     if (restrictToOwnerId && existing.createdBy !== restrictToOwnerId) {
       throw new ForbiddenException('You can only edit your own announcements.');
     }
 
-    const audiences = dto.audienceType ? this.buildAudiences(dto as CreateAnnouncementDto) : undefined;
+    const audiences = dto.audienceType
+      ? this.buildAudiences(dto as CreateAnnouncementDto)
+      : undefined;
 
     try {
       const updated = await this.announcementRepo.update(id, {
@@ -149,7 +184,9 @@ export class AnnouncementsService {
       return updated;
     } catch (err) {
       if (isForeignKeyViolation(err)) {
-        throw new BadRequestException('One of the target roles/sections is not real.');
+        throw new BadRequestException(
+          'One of the target roles/sections is not real.',
+        );
       }
       throw err;
     }
@@ -160,7 +197,9 @@ export class AnnouncementsService {
     const existing = await this.announcementRepo.findById(id);
     if (!existing) throw new NotFoundException('Announcement not found');
     if (restrictToOwnerId && existing.createdBy !== restrictToOwnerId) {
-      throw new ForbiddenException('You can only delete your own announcements.');
+      throw new ForbiddenException(
+        'You can only delete your own announcements.',
+      );
     }
     await this.announcementRepo.delete(id);
     await this.auditService.record({

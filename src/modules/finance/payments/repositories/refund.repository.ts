@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
 
 export interface RefundRow {
   id: string;
@@ -34,7 +37,12 @@ export class RefundRepository {
   constructor(private readonly postgres: PostgresService) {}
 
   async create(
-    input: { paymentId: string | null; studentId: string; amountPaise: string; reason: string },
+    input: {
+      paymentId: string | null;
+      studentId: string;
+      amountPaise: string;
+      reason: string;
+    },
     executor: Queryable,
   ): Promise<RefundRow> {
     const { rows } = await executor.query(
@@ -46,12 +54,21 @@ export class RefundRepository {
     return mapRow(rows[0]);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<RefundRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM refund WHERE id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<RefundRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM refund WHERE id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
-  async listByPayment(paymentId: string, executor: Queryable = this.postgres): Promise<RefundRow[]> {
+  async listByPayment(
+    paymentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<RefundRow[]> {
     const { rows } = await executor.query(
       `SELECT * FROM refund WHERE payment_id = $1 ORDER BY created_at DESC`,
       [paymentId],
@@ -59,25 +76,40 @@ export class RefundRepository {
     return rows.map(mapRow);
   }
 
-  async linkApprovalRequest(id: string, approvalRequestId: string, executor: Queryable): Promise<void> {
-    await executor.query(`UPDATE refund SET approval_request_id = $2 WHERE id = $1`, [
-      id,
-      approvalRequestId,
-    ]);
+  async linkApprovalRequest(
+    id: string,
+    approvalRequestId: string,
+    executor: Queryable,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE refund SET approval_request_id = $2 WHERE id = $1`,
+      [id, approvalRequestId],
+    );
   }
 
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<RefundRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM refund WHERE id = $1 FOR UPDATE`, [id]);
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<RefundRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM refund WHERE id = $1 FOR UPDATE`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
   /** Below-threshold direct path: Finance's own authority clears it immediately (still not PROCESSED — that's a separate payout-confirmation step). */
   async autoApprove(id: string, executor: Queryable): Promise<void> {
-    await executor.query(`UPDATE refund SET state = 'APPROVED' WHERE id = $1`, [id]);
+    await executor.query(`UPDATE refund SET state = 'APPROVED' WHERE id = $1`, [
+      id,
+    ]);
   }
 
   async markRejected(id: string, executor: Queryable): Promise<void> {
-    await executor.query(`UPDATE refund SET state = 'REJECTED', processed_at = now() WHERE id = $1`, [id]);
+    await executor.query(
+      `UPDATE refund SET state = 'REJECTED', processed_at = now() WHERE id = $1`,
+      [id],
+    );
   }
 
   /** APPROVED -> PROCESSED: Finance confirms the money has actually been sent back. */

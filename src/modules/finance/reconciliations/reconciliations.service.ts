@@ -3,14 +3,21 @@
 // pass; Resolve is the manual step for whatever it couldn't match; Close locks the
 // period only once nothing is left unmatched/unresolved.
 
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../../common/audit/audit.service';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
 import { FINANCE_ERRORS } from '../../../common/errors/error-codes';
 import { PageQuery } from '../../../common/pagination/pagination.util';
 import { UnitOfWork } from '../../../common/transactions/unit-of-work';
 import { PaymentRepository } from '../payments/repositories/payment.repository';
-import { ReconciliationRepository, ReconciliationRow } from './repositories/reconciliation.repository';
+import {
+  ReconciliationRepository,
+  ReconciliationRow,
+} from './repositories/reconciliation.repository';
 
 @Injectable()
 export class ReconciliationsService {
@@ -27,13 +34,19 @@ export class ReconciliationsService {
 
   async getById(id: string) {
     const reconciliation = await this.repo.findById(id);
-    if (!reconciliation) throw new NotFoundException(FINANCE_ERRORS.RECONCILIATION_NOT_FOUND);
+    if (!reconciliation)
+      throw new NotFoundException(FINANCE_ERRORS.RECONCILIATION_NOT_FOUND);
     const entries = await this.repo.listEntries(id);
     return { reconciliation, entries };
   }
 
   async create(
-    input: { gateway: string; periodFrom: string; periodTo: string; settlementObjectKey?: string },
+    input: {
+      gateway: string;
+      periodFrom: string;
+      periodTo: string;
+      settlementObjectKey?: string;
+    },
     actor: AuthenticatedUser,
   ): Promise<ReconciliationRow> {
     return this.repo.create({
@@ -48,18 +61,25 @@ export class ReconciliationsService {
   async delete(id: string): Promise<void> {
     return this.unitOfWork.run(async (client) => {
       const reconciliation = await this.repo.findByIdForUpdate(id, client);
-      if (!reconciliation) throw new NotFoundException(FINANCE_ERRORS.RECONCILIATION_NOT_FOUND);
+      if (!reconciliation)
+        throw new NotFoundException(FINANCE_ERRORS.RECONCILIATION_NOT_FOUND);
       if (reconciliation.state !== 'DRAFT') {
-        throw new ConflictException('Only a not-yet-run reconciliation can be deleted');
+        throw new ConflictException(
+          'Only a not-yet-run reconciliation can be deleted',
+        );
       }
       await this.repo.delete(id, client);
     });
   }
 
-  async run(id: string, settlementRows: { gatewayRef: string; amountPaise: string }[]) {
+  async run(
+    id: string,
+    settlementRows: { gatewayRef: string; amountPaise: string }[],
+  ) {
     return this.unitOfWork.run(async (client) => {
       const reconciliation = await this.repo.findByIdForUpdate(id, client);
-      if (!reconciliation) throw new NotFoundException(FINANCE_ERRORS.RECONCILIATION_NOT_FOUND);
+      if (!reconciliation)
+        throw new NotFoundException(FINANCE_ERRORS.RECONCILIATION_NOT_FOUND);
       if (!['DRAFT', 'NEEDS_REVIEW'].includes(reconciliation.state)) {
         throw new ConflictException(FINANCE_ERRORS.RECONCILIATION_WRONG_STATE);
       }
@@ -67,7 +87,11 @@ export class ReconciliationsService {
       await this.repo.setState(id, 'RUNNING', client);
 
       for (const row of settlementRows) {
-        const payment = await this.paymentRepo.findByGatewayRef(reconciliation.gateway, row.gatewayRef, client);
+        const payment = await this.paymentRepo.findByGatewayRef(
+          reconciliation.gateway,
+          row.gatewayRef,
+          client,
+        );
         if (!payment) {
           await this.repo.createEntry(
             {
@@ -82,7 +106,10 @@ export class ReconciliationsService {
           );
           continue;
         }
-        if (payment.amountPaise !== row.amountPaise || payment.state !== 'CONFIRMED') {
+        if (
+          payment.amountPaise !== row.amountPaise ||
+          payment.state !== 'CONFIRMED'
+        ) {
           await this.repo.createEntry(
             {
               reconciliationId: id,
@@ -128,11 +155,15 @@ export class ReconciliationsService {
   ) {
     return this.unitOfWork.run(async (client) => {
       const reconciliation = await this.repo.findByIdForUpdate(id, client);
-      if (!reconciliation) throw new NotFoundException(FINANCE_ERRORS.RECONCILIATION_NOT_FOUND);
+      if (!reconciliation)
+        throw new NotFoundException(FINANCE_ERRORS.RECONCILIATION_NOT_FOUND);
       if (reconciliation.state !== 'NEEDS_REVIEW') {
         throw new ConflictException(FINANCE_ERRORS.RECONCILIATION_WRONG_STATE);
       }
-      const entry = await this.repo.findEntryByIdForUpdate(input.entryId, client);
+      const entry = await this.repo.findEntryByIdForUpdate(
+        input.entryId,
+        client,
+      );
       if (!entry || entry.reconciliationId !== id) {
         throw new NotFoundException('Reconciliation entry not found');
       }
@@ -140,7 +171,12 @@ export class ReconciliationsService {
         throw new ConflictException('Entry is not in a resolvable state');
       }
 
-      await this.repo.resolveEntry(input.entryId, actor.personId, input.resolutionNote, client);
+      await this.repo.resolveEntry(
+        input.entryId,
+        actor.personId,
+        input.resolutionNote,
+        client,
+      );
       await this.repo.recomputeCounts(id, client);
       await this.audit.record(
         {
@@ -150,7 +186,10 @@ export class ReconciliationsService {
           objectType: 'reconciliation_entry',
           objectId: input.entryId,
           outcome: 'SUCCESS',
-          afterData: { status: 'RESOLVED', resolutionNote: input.resolutionNote },
+          afterData: {
+            status: 'RESOLVED',
+            resolutionNote: input.resolutionNote,
+          },
         },
         client,
       );
@@ -159,14 +198,21 @@ export class ReconciliationsService {
     });
   }
 
-  async close(id: string, actor: AuthenticatedUser): Promise<ReconciliationRow> {
+  async close(
+    id: string,
+    actor: AuthenticatedUser,
+  ): Promise<ReconciliationRow> {
     return this.unitOfWork.run(async (client) => {
       const reconciliation = await this.repo.findByIdForUpdate(id, client);
-      if (!reconciliation) throw new NotFoundException(FINANCE_ERRORS.RECONCILIATION_NOT_FOUND);
+      if (!reconciliation)
+        throw new NotFoundException(FINANCE_ERRORS.RECONCILIATION_NOT_FOUND);
       if (reconciliation.state !== 'NEEDS_REVIEW') {
         throw new ConflictException(FINANCE_ERRORS.RECONCILIATION_WRONG_STATE);
       }
-      if (reconciliation.unmatchedCount > 0 || reconciliation.discrepancyCount > 0) {
+      if (
+        reconciliation.unmatchedCount > 0 ||
+        reconciliation.discrepancyCount > 0
+      ) {
         throw new ConflictException(
           'Every unmatched entry and discrepancy must be resolved before closing',
         );

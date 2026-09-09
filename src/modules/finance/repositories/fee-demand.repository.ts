@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface FeeDemandRow {
   id: string;
@@ -55,7 +58,10 @@ const FROM = `fee_demand fd
 export class FeeDemandRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findMany(filter: FeeDemandFilter, executor: Queryable = this.postgres): Promise<{ rows: FeeDemandRow[]; total: number }> {
+  async findMany(
+    filter: FeeDemandFilter,
+    executor: Queryable = this.postgres,
+  ): Promise<{ rows: FeeDemandRow[]; total: number }> {
     const conditions: string[] = [];
     const params: unknown[] = [];
 
@@ -82,9 +88,13 @@ export class FeeDemandRepository {
       );
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const countResult = await this.postgres.query<{ count: string }>(`SELECT count(*) FROM ${FROM} ${where}`, params);
+    const countResult = await this.postgres.query<{ count: string }>(
+      `SELECT count(*) FROM ${FROM} ${where}`,
+      params,
+    );
     const rowParams = [...params, filter.limit, filter.offset];
     const { rows } = await executor.query<FeeDemandRow>(
       `SELECT ${COLUMNS} FROM ${FROM} ${where}

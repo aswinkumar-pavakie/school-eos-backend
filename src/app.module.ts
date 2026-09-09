@@ -30,7 +30,8 @@ import { FacultyModule } from './modules/faculty/faculty.module';
 import { AdminFinanceModule } from './modules/finance/admin-finance.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { HostelModule } from './modules/hostel/hostel.module';
-import { HostelRequestsModule } from './modules/hostel-requests/hostel-requests.module';
+import { HostelWardenModule } from './modules/hostel-warden/hostel-warden.module';
+import { HostelWardenPendingModule } from './modules/hostel-warden/hostel-warden-pending.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { LibraryModule } from './modules/library/library.module';
@@ -49,6 +50,7 @@ import { StaffAttendanceModule } from './modules/staff-attendance/staff-attendan
 import { StudentEventsModule } from './modules/student-events/student-events.module';
 import { TimetableModule } from './modules/timetable/timetable.module';
 import { TransportModule } from './modules/transport/transport.module';
+import { TransportOpsModule } from './modules/transport-ops/transport-ops.module';
 
 @Module({
   imports: [
@@ -72,8 +74,10 @@ import { TransportModule } from './modules/transport/transport.module';
     AcademicModule,
     PeopleModule,
     TransportModule,
+    TransportOpsModule,
     HostelModule,
-    HostelRequestsModule,
+    HostelWardenModule,
+    HostelWardenPendingModule,
     SportsModule,
     DevicesModule,
     DocumentsModule,

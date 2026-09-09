@@ -11,7 +11,9 @@ export class FacultyBusController {
 
   @Get()
   async get(@CurrentActor() actor: AuthenticatedUser) {
-    const assignment = await this.busRepo.findAssignmentForPerson(actor.personId);
+    const assignment = await this.busRepo.findAssignmentForPerson(
+      actor.personId,
+    );
     return { data: assignment };
   }
 }

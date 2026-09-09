@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { AddStockDto } from './dto/add-stock.dto';
@@ -47,7 +51,11 @@ export class InventoryItemsService {
   async create(dto: CreateInventoryItemDto, actorPersonId: string) {
     if (!dto.categoryId) throw new ConflictException('categoryId is required.');
     try {
-      const created = await this.itemRepo.create({ ...dto, categoryId: dto.categoryId, createdBy: actorPersonId });
+      const created = await this.itemRepo.create({
+        ...dto,
+        categoryId: dto.categoryId,
+        createdBy: actorPersonId,
+      });
       await this.auditService.record({
         actorPersonId,
         action: 'INVENTORY_ITEM_CREATED',
@@ -58,8 +66,14 @@ export class InventoryItemsService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('An item with this asset code already exists.');
-      if (isForeignKeyViolation(err)) throw new NotFoundException('categoryId does not refer to an existing category.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'An item with this asset code already exists.',
+        );
+      if (isForeignKeyViolation(err))
+        throw new NotFoundException(
+          'categoryId does not refer to an existing category.',
+        );
       throw err;
     }
   }
@@ -80,8 +94,14 @@ export class InventoryItemsService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('An item with this asset code already exists.');
-      if (isForeignKeyViolation(err)) throw new NotFoundException('categoryId does not refer to an existing category.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'An item with this asset code already exists.',
+        );
+      if (isForeignKeyViolation(err))
+        throw new NotFoundException(
+          'categoryId does not refer to an existing category.',
+        );
       throw err;
     }
   }
@@ -95,7 +115,9 @@ export class InventoryItemsService {
       const locked = await this.itemRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Inventory item not found');
       if (locked.status === 'RETIRED') {
-        throw new ConflictException('This item is retired -- it can no longer be restocked.');
+        throw new ConflictException(
+          'This item is retired -- it can no longer be restocked.',
+        );
       }
       const updated = (await this.itemRepo.addStock(id, dto.quantity, client))!;
       await this.auditService.record(
@@ -118,7 +140,11 @@ export class InventoryItemsService {
     return this.unitOfWork.run(async (client) => {
       const locked = await this.itemRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Inventory item not found');
-      const updated = (await this.itemRepo.setQuantity(id, dto.quantity, client))!;
+      const updated = (await this.itemRepo.setQuantity(
+        id,
+        dto.quantity,
+        client,
+      ))!;
       await this.auditService.record(
         {
           actorPersonId,
@@ -165,7 +191,10 @@ export class InventoryItemsService {
         );
         return updated;
       } catch (err) {
-        if (isForeignKeyViolation(err)) throw new NotFoundException('assignedToPersonId does not refer to an existing person.');
+        if (isForeignKeyViolation(err))
+          throw new NotFoundException(
+            'assignedToPersonId does not refer to an existing person.',
+          );
         throw err;
       }
     });
@@ -176,7 +205,9 @@ export class InventoryItemsService {
       const locked = await this.itemRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Inventory item not found');
       if (locked.status !== 'ASSIGNED') {
-        throw new ConflictException('This item is not currently assigned to anyone.');
+        throw new ConflictException(
+          'This item is not currently assigned to anyone.',
+        );
       }
       const updated = (await this.itemRepo.returnItem(id, client))!;
       await this.auditService.record(
@@ -195,7 +226,11 @@ export class InventoryItemsService {
     });
   }
 
-  async transfer(id: string, dto: TransferInventoryItemDto, actorPersonId: string) {
+  async transfer(
+    id: string,
+    dto: TransferInventoryItemDto,
+    actorPersonId: string,
+  ) {
     return this.unitOfWork.run(async (client) => {
       const locked = await this.itemRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Inventory item not found');
@@ -216,12 +251,20 @@ export class InventoryItemsService {
     });
   }
 
-  private async markStatus(id: string, status: string, action: string, dto: InventoryItemNoteDto, actorPersonId: string) {
+  private async markStatus(
+    id: string,
+    status: string,
+    action: string,
+    dto: InventoryItemNoteDto,
+    actorPersonId: string,
+  ) {
     return this.unitOfWork.run(async (client) => {
       const locked = await this.itemRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Inventory item not found');
       if (locked.status === 'RETIRED') {
-        throw new ConflictException('This item is retired -- its status can no longer change.');
+        throw new ConflictException(
+          'This item is retired -- its status can no longer change.',
+        );
       }
       const updated = (await this.itemRepo.setStatus(id, status, client))!;
       await this.auditService.record(
@@ -241,14 +284,32 @@ export class InventoryItemsService {
   }
 
   markDamaged(id: string, dto: InventoryItemNoteDto, actorPersonId: string) {
-    return this.markStatus(id, 'DAMAGED', 'INVENTORY_ITEM_MARKED_DAMAGED', dto, actorPersonId);
+    return this.markStatus(
+      id,
+      'DAMAGED',
+      'INVENTORY_ITEM_MARKED_DAMAGED',
+      dto,
+      actorPersonId,
+    );
   }
 
   markLost(id: string, dto: InventoryItemNoteDto, actorPersonId: string) {
-    return this.markStatus(id, 'LOST', 'INVENTORY_ITEM_MARKED_LOST', dto, actorPersonId);
+    return this.markStatus(
+      id,
+      'LOST',
+      'INVENTORY_ITEM_MARKED_LOST',
+      dto,
+      actorPersonId,
+    );
   }
 
   retire(id: string, dto: InventoryItemNoteDto, actorPersonId: string) {
-    return this.markStatus(id, 'RETIRED', 'INVENTORY_ITEM_RETIRED', dto, actorPersonId);
+    return this.markStatus(
+      id,
+      'RETIRED',
+      'INVENTORY_ITEM_RETIRED',
+      dto,
+      actorPersonId,
+    );
   }
 }

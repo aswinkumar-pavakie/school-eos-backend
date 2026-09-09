@@ -1,8 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
-import { PageQuery, toOffsetLimit } from '../../../../common/pagination/pagination.util';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PageQuery,
+  toOffsetLimit,
+} from '../../../../common/pagination/pagination.util';
 
-export type PurchaseOrderStage = 'ORDERED' | 'DISPATCHED' | 'IN_TRANSIT' | 'DELIVERED' | 'PART_DELIVERED' | 'CANCELLED';
+export type PurchaseOrderStage =
+  | 'ORDERED'
+  | 'DISPATCHED'
+  | 'IN_TRANSIT'
+  | 'DELIVERED'
+  | 'PART_DELIVERED'
+  | 'CANCELLED';
 
 export interface PurchaseOrderRow {
   id: string;
@@ -86,7 +98,11 @@ function mapEventRow(row: any): PurchaseOrderEventRow {
 }
 
 function isUniqueViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as { code?: string }).code === '23505';
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as { code?: string }).code === '23505'
+  );
 }
 
 // Every read joins back to the originating purchase_request (+ its requester/department)
@@ -109,19 +125,32 @@ export class PurchaseOrderRepository {
 
   /** Created the moment a purchase_request is approved — never before. */
   async create(
-    input: { purchaseRequestId: string; quantityOrdered: number; expectedOn?: string | null; createdBy: string },
+    input: {
+      purchaseRequestId: string;
+      quantityOrdered: number;
+      expectedOn?: string | null;
+      createdBy: string;
+    },
     executor: Queryable,
   ): Promise<PurchaseOrderRow> {
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
-        const { rows: countRows } = await executor.query(`SELECT COUNT(*)::int AS count FROM purchase_order`);
+        const { rows: countRows } = await executor.query(
+          `SELECT COUNT(*)::int AS count FROM purchase_order`,
+        );
         const seq = countRows[0].count + 1 + attempt;
         const orderNo = `PO-${new Date().getUTCFullYear()}-${String(seq).padStart(4, '0')}`;
         const { rows } = await executor.query(
           `INSERT INTO purchase_order (purchase_request_id, order_no, quantity_ordered, expected_on, created_by)
            VALUES ($1, $2, $3, $4, $5)
            RETURNING *`,
-          [input.purchaseRequestId, orderNo, input.quantityOrdered, input.expectedOn ?? null, input.createdBy],
+          [
+            input.purchaseRequestId,
+            orderNo,
+            input.quantityOrdered,
+            input.expectedOn ?? null,
+            input.createdBy,
+          ],
         );
         return mapRow(rows[0]);
       } catch (err) {
@@ -131,18 +160,36 @@ export class PurchaseOrderRepository {
     throw new Error('Could not allocate a unique purchase order number');
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<PurchaseOrderRow | null> {
-    const { rows } = await executor.query(`${SELECT_WITH_JOINS} WHERE po.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<PurchaseOrderRow | null> {
+    const { rows } = await executor.query(
+      `${SELECT_WITH_JOINS} WHERE po.id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<PurchaseOrderRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM purchase_order WHERE id = $1 FOR UPDATE`, [id]);
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<PurchaseOrderRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM purchase_order WHERE id = $1 FOR UPDATE`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
-  async findByPurchaseRequestId(purchaseRequestId: string, executor: Queryable = this.postgres): Promise<PurchaseOrderRow | null> {
-    const { rows } = await executor.query(`${SELECT_WITH_JOINS} WHERE po.purchase_request_id = $1`, [purchaseRequestId]);
+  async findByPurchaseRequestId(
+    purchaseRequestId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<PurchaseOrderRow | null> {
+    const { rows } = await executor.query(
+      `${SELECT_WITH_JOINS} WHERE po.purchase_request_id = $1`,
+      [purchaseRequestId],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
@@ -178,7 +225,10 @@ export class PurchaseOrderRepository {
   }
 
   /** Real, DB-computed aggregates for the POP/SOP tracking board's KPI cards. */
-  async summary(requestType: 'GOODS' | 'SERVICE', executor: Queryable = this.postgres): Promise<PurchaseOrderSummary> {
+  async summary(
+    requestType: 'GOODS' | 'SERVICE',
+    executor: Queryable = this.postgres,
+  ): Promise<PurchaseOrderSummary> {
     const { rows } = await executor.query(
       `SELECT
          COUNT(*)::int AS total_orders,
@@ -215,7 +265,11 @@ export class PurchaseOrderRepository {
     return (await this.findById(id, executor))!;
   }
 
-  async addAllotted(id: string, quantity: number, executor: Queryable): Promise<PurchaseOrderRow> {
+  async addAllotted(
+    id: string,
+    quantity: number,
+    executor: Queryable,
+  ): Promise<PurchaseOrderRow> {
     await executor.query(
       `UPDATE purchase_order SET quantity_allotted = quantity_allotted + $2, updated_at = now()
        WHERE id = $1`,
@@ -225,14 +279,26 @@ export class PurchaseOrderRepository {
   }
 
   async createEvent(
-    input: { purchaseOrderId: string; stage: PurchaseOrderStage; quantityDelivered?: number | null; note?: string | null; recordedBy: string },
+    input: {
+      purchaseOrderId: string;
+      stage: PurchaseOrderStage;
+      quantityDelivered?: number | null;
+      note?: string | null;
+      recordedBy: string;
+    },
     executor: Queryable,
   ): Promise<PurchaseOrderEventRow> {
     const { rows } = await executor.query(
       `INSERT INTO purchase_order_event (purchase_order_id, stage, quantity_delivered, note, recorded_by)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [input.purchaseOrderId, input.stage, input.quantityDelivered ?? null, input.note ?? null, input.recordedBy],
+      [
+        input.purchaseOrderId,
+        input.stage,
+        input.quantityDelivered ?? null,
+        input.note ?? null,
+        input.recordedBy,
+      ],
     );
     const row = rows[0];
     // Falls back to display_name — not every seeded person row has an email set, and
@@ -242,10 +308,16 @@ export class PurchaseOrderRepository {
       `SELECT COALESCE(email, display_name) AS identifier FROM person WHERE id = $1`,
       [input.recordedBy],
     );
-    return mapEventRow({ ...row, recorded_by_email: personRows[0]?.identifier ?? null });
+    return mapEventRow({
+      ...row,
+      recorded_by_email: personRows[0]?.identifier ?? null,
+    });
   }
 
-  async listEvents(purchaseOrderId: string, executor: Queryable = this.postgres): Promise<PurchaseOrderEventRow[]> {
+  async listEvents(
+    purchaseOrderId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<PurchaseOrderEventRow[]> {
     const { rows } = await executor.query(
       `SELECT poe.*, COALESCE(p.email, p.display_name) AS recorded_by_email
        FROM purchase_order_event poe

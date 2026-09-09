@@ -10,7 +10,10 @@ export class ParentHealthController {
   constructor(private readonly service: ParentHealthService) {}
 
   @Get()
-  async getOverview(@Param('studentId', ParseUUIDPipe) studentId: string, @CurrentActor() actor: AuthenticatedUser) {
+  async getOverview(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.getOverview(actor.personId, studentId) };
   }
 }

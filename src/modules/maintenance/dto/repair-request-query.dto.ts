@@ -1,5 +1,13 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class RepairRequestQueryDto {
   @IsOptional()
@@ -15,7 +23,14 @@ export class RepairRequestQueryDto {
   priority?: string;
 
   @IsOptional()
-  @IsIn(['ELECTRICAL', 'PLUMBING', 'CIVIL', 'IT_EQUIPMENT', 'FURNITURE', 'OTHER'])
+  @IsIn([
+    'ELECTRICAL',
+    'PLUMBING',
+    'CIVIL',
+    'IT_EQUIPMENT',
+    'FURNITURE',
+    'OTHER',
+  ])
   issueType?: string;
 
   @IsOptional()

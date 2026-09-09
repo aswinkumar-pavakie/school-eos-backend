@@ -1,4 +1,12 @@
-import { IsBoolean, IsDateString, IsIn, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateCalendarEventDto {
   @IsOptional()
@@ -11,7 +19,17 @@ export class UpdateCalendarEventDto {
   description?: string;
 
   @IsOptional()
-  @IsIn(['HOLIDAY', 'TERM_START', 'TERM_END', 'EXAM_WINDOW', 'PTM', 'FUNCTION', 'COMPETITION', 'WORKING_SATURDAY', 'OTHER'])
+  @IsIn([
+    'HOLIDAY',
+    'TERM_START',
+    'TERM_END',
+    'EXAM_WINDOW',
+    'PTM',
+    'FUNCTION',
+    'COMPETITION',
+    'WORKING_SATURDAY',
+    'OTHER',
+  ])
   eventType?: string;
 
   @IsOptional()

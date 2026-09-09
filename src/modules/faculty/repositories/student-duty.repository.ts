@@ -3,7 +3,10 @@
 // scoped strictly to the class advisor's own section, current academic year.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface StudentDutyRow {
   id: string;
@@ -48,7 +51,9 @@ export class StudentDutyRepository {
     sectionId: string,
     query: string,
     executor: Queryable = this.postgres,
-  ): Promise<{ studentId: string; studentName: string; rollNo: number | null }[]> {
+  ): Promise<
+    { studentId: string; studentName: string; rollNo: number | null }[]
+  > {
     const { rows } = await executor.query(
       `SELECT s.id AS student_id, p.first_name, p.last_name, se.roll_no
        FROM student_enrolment se
@@ -69,7 +74,10 @@ export class StudentDutyRepository {
 
   /** Every ACTIVE duty assignment in this section, current academic year --
    * the "CLASS OFFICERS" list at the bottom of the dashboard. */
-  async findActiveForSection(sectionId: string, executor: Queryable = this.postgres): Promise<StudentDutyRow[]> {
+  async findActiveForSection(
+    sectionId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StudentDutyRow[]> {
     const { rows } = await executor.query(
       `SELECT ${COLUMNS} ${FROM}
        WHERE sda.section_id = $1 AND sda.status = 'ACTIVE'
@@ -80,21 +88,39 @@ export class StudentDutyRepository {
     return rows.map(mapRow);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<(StudentDutyRow & { sectionId: string }) | null> {
-    const { rows } = await executor.query(`SELECT ${COLUMNS}, sda.section_id ${FROM} WHERE sda.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<(StudentDutyRow & { sectionId: string }) | null> {
+    const { rows } = await executor.query(
+      `SELECT ${COLUMNS}, sda.section_id ${FROM} WHERE sda.id = $1`,
+      [id],
+    );
     if (!rows.length) return null;
     return { ...mapRow(rows[0]), sectionId: rows[0].section_id };
   }
 
   async create(
-    input: { studentId: string; sectionId: string; title: string; duties: string | null; assignedBy: string },
+    input: {
+      studentId: string;
+      sectionId: string;
+      title: string;
+      duties: string | null;
+      assignedBy: string;
+    },
     executor: Queryable = this.postgres,
   ): Promise<string> {
     const { rows } = await executor.query(
       `INSERT INTO student_duty_assignment (student_id, section_id, academic_year_id, title, duties, status, assigned_by)
        VALUES ($1, $2, (SELECT id FROM academic_year WHERE is_current LIMIT 1), $3, $4, 'ACTIVE', $5)
        RETURNING id`,
-      [input.studentId, input.sectionId, input.title, input.duties, input.assignedBy],
+      [
+        input.studentId,
+        input.sectionId,
+        input.title,
+        input.duties,
+        input.assignedBy,
+      ],
     );
     return rows[0].id;
   }
@@ -115,10 +141,15 @@ export class StudentDutyRepository {
     if (input.status !== undefined) push('status', input.status);
     if (sets.length === 0) return;
     params.push(id);
-    await executor.query(`UPDATE student_duty_assignment SET ${sets.join(', ')}, updated_at = now() WHERE id = $${params.length}`, params);
+    await executor.query(
+      `UPDATE student_duty_assignment SET ${sets.join(', ')}, updated_at = now() WHERE id = $${params.length}`,
+      params,
+    );
   }
 
   async delete(id: string, executor: Queryable = this.postgres): Promise<void> {
-    await executor.query(`DELETE FROM student_duty_assignment WHERE id = $1`, [id]);
+    await executor.query(`DELETE FROM student_duty_assignment WHERE id = $1`, [
+      id,
+    ]);
   }
 }

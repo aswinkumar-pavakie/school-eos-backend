@@ -21,7 +21,9 @@ function resolveKey(keyId: string, keys: Record<string, string>): Buffer {
   }
   const key = Buffer.from(base64Key, 'base64');
   if (key.length !== 32) {
-    throw new Error(`Encryption key "${keyId}" must decode to exactly 32 bytes for AES-256-GCM`);
+    throw new Error(
+      `Encryption key "${keyId}" must decode to exactly 32 bytes for AES-256-GCM`,
+    );
   }
   return key;
 }
@@ -35,11 +37,16 @@ export function encryptRefreshToken(
   const key = resolveKey(currentKeyId, keys);
   const iv = randomBytes(IV_LENGTH_BYTES);
   const cipher = createCipheriv(ALGORITHM, key, iv);
-  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const encrypted = Buffer.concat([
+    cipher.update(plaintext, 'utf8'),
+    cipher.final(),
+  ]);
   const authTag = cipher.getAuthTag();
   // iv.authTag.ciphertext, each base64 — self-describing enough to decrypt without
   // guessing lengths.
-  const ciphertext = [iv, authTag, encrypted].map((b) => b.toString('base64')).join('.');
+  const ciphertext = [iv, authTag, encrypted]
+    .map((b) => b.toString('base64'))
+    .join('.');
   return { ciphertext, keyId: currentKeyId };
 }
 
@@ -53,7 +60,11 @@ export function decryptRefreshToken(
   if (!ivB64 || !authTagB64 || !dataB64) {
     throw new Error('Malformed encrypted token payload');
   }
-  const decipher = createDecipheriv(ALGORITHM, key, Buffer.from(ivB64, 'base64'));
+  const decipher = createDecipheriv(
+    ALGORITHM,
+    key,
+    Buffer.from(ivB64, 'base64'),
+  );
   decipher.setAuthTag(Buffer.from(authTagB64, 'base64'));
   const decrypted = Buffer.concat([
     decipher.update(Buffer.from(dataB64, 'base64')),

@@ -1,4 +1,12 @@
-import { IsBoolean, IsDateString, IsIn, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 export class CreateCalendarEventDto {
   @IsUUID()
@@ -12,7 +20,17 @@ export class CreateCalendarEventDto {
   @IsString()
   description?: string;
 
-  @IsIn(['HOLIDAY', 'TERM_START', 'TERM_END', 'EXAM_WINDOW', 'PTM', 'FUNCTION', 'COMPETITION', 'WORKING_SATURDAY', 'OTHER'])
+  @IsIn([
+    'HOLIDAY',
+    'TERM_START',
+    'TERM_END',
+    'EXAM_WINDOW',
+    'PTM',
+    'FUNCTION',
+    'COMPETITION',
+    'WORKING_SATURDAY',
+    'OTHER',
+  ])
   eventType!: string;
 
   @IsOptional()

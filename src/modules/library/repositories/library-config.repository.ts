@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 const CONFIG_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -38,7 +41,11 @@ export class LibraryConfigRepository {
     return rows[0];
   }
 
-  async update(input: UpdateConfigInput, updatedBy: string, executor: Queryable = this.postgres): Promise<LibraryConfigRow> {
+  async update(
+    input: UpdateConfigInput,
+    updatedBy: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryConfigRow> {
     await executor.query(
       `UPDATE library_config SET
          loan_period_days = COALESCE($2, loan_period_days),

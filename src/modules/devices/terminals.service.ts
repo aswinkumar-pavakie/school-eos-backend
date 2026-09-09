@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CreateTerminalDto } from './dto/create-terminal.dto';
 import { UpdateTerminalDto } from './dto/update-terminal.dto';
@@ -31,10 +36,17 @@ export class TerminalsService {
       throw new BadRequestException('A BUS terminal cannot have a vendorId.');
     }
     if (dto.terminalType === 'CANTEEN' && dto.vehicleId) {
-      throw new BadRequestException('A CANTEEN terminal cannot have a vehicleId.');
+      throw new BadRequestException(
+        'A CANTEEN terminal cannot have a vehicleId.',
+      );
     }
-    if ((dto.terminalType === 'GATE' || dto.terminalType === 'LIBRARY') && (dto.vehicleId || dto.vendorId)) {
-      throw new BadRequestException('A GATE or LIBRARY terminal cannot have a vehicleId or vendorId.');
+    if (
+      (dto.terminalType === 'GATE' || dto.terminalType === 'LIBRARY') &&
+      (dto.vehicleId || dto.vendorId)
+    ) {
+      throw new BadRequestException(
+        'A GATE or LIBRARY terminal cannot have a vehicleId or vendorId.',
+      );
     }
   }
 
@@ -53,10 +65,14 @@ export class TerminalsService {
       return created;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A terminal with this terminalUid already exists.');
+        throw new ConflictException(
+          'A terminal with this terminalUid already exists.',
+        );
       }
       if (isForeignKeyViolation(err)) {
-        throw new NotFoundException('vehicleId or vendorId does not refer to an existing record.');
+        throw new NotFoundException(
+          'vehicleId or vendorId does not refer to an existing record.',
+        );
       }
       throw err;
     }

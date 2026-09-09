@@ -55,7 +55,9 @@ export class ParentsService {
       : undefined;
     // An explicit id selection must never be truncated by the default page
     // size -- it's a hand-picked set (e.g. checkbox selection), not a browse.
-    const limit = ids ? Math.max(ids.length, 1) : Math.min(query.limit ?? 50, 200);
+    const limit = ids
+      ? Math.max(ids.length, 1)
+      : Math.min(query.limit ?? 50, 200);
     const offset = (page - 1) * limit;
 
     const conditions = [
@@ -126,11 +128,16 @@ export class ParentsService {
       mobile: row.mobile,
       status: row.status,
       childrenCount: parseInt(row.children_count, 10),
-      photoUrl: row.photo_object_key ? personPhotoPublicUrl(row.photo_object_key) : null,
+      photoUrl: row.photo_object_key
+        ? personPhotoPublicUrl(row.photo_object_key)
+        : null,
       occupation: row.occupations,
     }));
 
-    return { data: rows, meta: { page, limit, total: parseInt(countResult.rows[0].count, 10) } };
+    return {
+      data: rows,
+      meta: { page, limit, total: parseInt(countResult.rows[0].count, 10) },
+    };
   }
 
   async get(id: string) {
@@ -152,7 +159,9 @@ export class ParentsService {
     ]);
     return {
       ...person,
-      photoUrl: person.photoObjectKey ? personPhotoPublicUrl(person.photoObjectKey) : null,
+      photoUrl: person.photoObjectKey
+        ? personPhotoPublicUrl(person.photoObjectKey)
+        : null,
       children,
       loginIdentifiers,
       // Only meaningful for a Parent (the only role with a self-service reset

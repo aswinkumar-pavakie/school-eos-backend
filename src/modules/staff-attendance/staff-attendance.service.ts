@@ -13,7 +13,10 @@ export class StaffAttendanceService {
 
   getDailyRoster(query: StaffAttendanceQueryDto) {
     return this.staffAttendanceRepo.findDailyRoster(query.date, {
-      isTeaching: query.isTeaching === undefined ? undefined : query.isTeaching === 'true',
+      isTeaching:
+        query.isTeaching === undefined
+          ? undefined
+          : query.isTeaching === 'true',
       gradeId: query.gradeId,
       sectionId: query.sectionId,
       subjectId: query.subjectId,
@@ -21,11 +24,13 @@ export class StaffAttendanceService {
   }
 
   async getAttendanceSummaryForStaff(staffId: string) {
-    const { presentCount, totalCount } = await this.staffAttendanceRepo.getAttendanceSummaryForStaff(staffId);
+    const { presentCount, totalCount } =
+      await this.staffAttendanceRepo.getAttendanceSummaryForStaff(staffId);
     return {
       presentCount,
       totalCount,
-      percentage: totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : null,
+      percentage:
+        totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : null,
     };
   }
 
@@ -75,7 +80,12 @@ export class StaffAttendanceService {
       objectType: 'staff_attendance_event',
       objectId: dto.date,
       outcome: 'SUCCESS',
-      afterData: { staffIds: dto.staffIds, date: dto.date, status: dto.status, reason: dto.reason },
+      afterData: {
+        staffIds: dto.staffIds,
+        date: dto.date,
+        status: dto.status,
+        reason: dto.reason,
+      },
     });
 
     return { marked: dto.staffIds.length, status: dto.status };

@@ -11,7 +11,10 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh.dto';
 import { generateOpaqueToken, hashToken } from './identity.util';
 import { LoginIdentifierRepository } from './repositories/login-identifier.repository';
-import { PersonAuthView, PersonRepository } from './repositories/person.repository';
+import {
+  PersonAuthView,
+  PersonRepository,
+} from './repositories/person.repository';
 import {
   ActiveRoleAssignment,
   RoleAssignmentRepository,
@@ -61,13 +64,17 @@ export class IdentityService {
   async login(dto: LoginDto, device: DeviceContext): Promise<LoginResult> {
     // 1. Identifier must exist and be verified. Not found -> same error as wrong
     // password; never reveal whether the identifier exists.
-    const identifier = await this.loginIdentifierRepo.findVerifiedByValue(dto.identifier);
+    const identifier = await this.loginIdentifierRepo.findVerifiedByValue(
+      dto.identifier,
+    );
     if (!identifier) {
       throw new UnauthorizedException(AUTH_ERRORS.INVALID_CREDENTIALS);
     }
 
     // 2. Load credentials for that person.
-    const credential = await this.userCredentialRepo.findByPersonId(identifier.personId);
+    const credential = await this.userCredentialRepo.findByPersonId(
+      identifier.personId,
+    );
     if (!credential) {
       throw new UnauthorizedException(AUTH_ERRORS.INVALID_CREDENTIALS);
     }
@@ -92,7 +99,10 @@ export class IdentityService {
 
     // 3. Lockout check BEFORE any password hashing — never spend a hash-check on an
     // already-locked account.
-    if (credential.lockedUntil && credential.lockedUntil.getTime() > Date.now()) {
+    if (
+      credential.lockedUntil &&
+      credential.lockedUntil.getTime() > Date.now()
+    ) {
       await this.auditFailure(identifier.personId, device);
       throw new UnauthorizedException(AUTH_ERRORS.ACCOUNT_LOCKED);
     }
@@ -117,14 +127,21 @@ export class IdentityService {
 
     return this.unitOfWork.run(async (client) => {
       // 6. Correct password: reset lockout state, stamp last_login_at.
-      await this.userCredentialRepo.recordSuccessfulLogin(identifier.personId, client);
+      await this.userCredentialRepo.recordSuccessfulLogin(
+        identifier.personId,
+        client,
+      );
 
       // 7. Active role assignments.
-      const roles = await this.roleAssignmentRepo.findActiveByPersonId(identifier.personId, client);
+      const roles = await this.roleAssignmentRepo.findActiveByPersonId(
+        identifier.personId,
+        client,
+      );
 
       // 8-9. Issue tokens.
       const accessToken = this.signAccessToken(identifier.personId, roles);
-      const { refreshToken, refreshTokenHash, expiresAt } = this.issueRefreshToken();
+      const { refreshToken, refreshTokenHash, expiresAt } =
+        this.issueRefreshToken();
 
       await this.sessionRepo.create(
         {
@@ -170,14 +187,21 @@ export class IdentityService {
     const incomingHash = hashToken(dto.refreshToken);
     const session = await this.sessionRepo.findByRefreshTokenHash(incomingHash);
 
-    if (!session || session.revokedAt || session.expiresAt.getTime() <= Date.now()) {
+    if (
+      !session ||
+      session.revokedAt ||
+      session.expiresAt.getTime() <= Date.now()
+    ) {
       // Not found or expired -> force full re-login.
       throw new UnauthorizedException(AUTH_ERRORS.INVALID_REFRESH_TOKEN);
     }
 
-    const roles = await this.roleAssignmentRepo.findActiveByPersonId(session.personId);
+    const roles = await this.roleAssignmentRepo.findActiveByPersonId(
+      session.personId,
+    );
     const accessToken = this.signAccessToken(session.personId, roles);
-    const { refreshToken, refreshTokenHash, expiresAt } = this.issueRefreshToken();
+    const { refreshToken, refreshTokenHash, expiresAt } =
+      this.issueRefreshToken();
 
     await this.unitOfWork.run(async (client) => {
       // Rotation, not optional: delete the old row, insert the new one. A stolen
@@ -205,20 +229,33 @@ export class IdentityService {
     // Deletes the matching row if present; no-op otherwise. The access token is left
     // to expire naturally (<=15 min) — expected, not a bug: it's never invalidated
     // server-side.
-    await this.sessionRepo.deleteByRefreshTokenHash(hashToken(dto.refreshToken));
+    await this.sessionRepo.deleteByRefreshTokenHash(
+      hashToken(dto.refreshToken),
+    );
   }
 
-  async me(personId: string): Promise<{ person: PersonSummary; roles: RoleSummary[] }> {
+  async me(
+    personId: string,
+  ): Promise<{ person: PersonSummary; roles: RoleSummary[] }> {
     const person = await this.personRepo.findById(personId);
     if (!person) {
       throw new UnauthorizedException();
     }
     const roles = await this.roleAssignmentRepo.findActiveByPersonId(personId);
-    return { person: this.toPersonSummary(person), roles: roles.map(this.toRoleSummary) };
+    return {
+      person: this.toPersonSummary(person),
+      roles: roles.map(this.toRoleSummary),
+    };
   }
 
-  private signAccessToken(personId: string, roles: ActiveRoleAssignment[]): string {
-    return this.jwtService.sign({ sub: personId, roles: roles.map((r) => r.roleCode) });
+  private signAccessToken(
+    personId: string,
+    roles: ActiveRoleAssignment[],
+  ): string {
+    return this.jwtService.sign({
+      sub: personId,
+      roles: roles.map((r) => r.roleCode),
+    });
   }
 
   private issueRefreshToken(): {
@@ -245,13 +282,20 @@ export class IdentityService {
   }
 
   private toRoleSummary(role: ActiveRoleAssignment): RoleSummary {
-    return { role_code: role.roleCode, scope_type: role.scopeType, scope_id: role.scopeId };
+    return {
+      role_code: role.roleCode,
+      scope_type: role.scopeType,
+      scope_id: role.scopeId,
+    };
   }
 
   /** Only called once the identifier is already confirmed to exist -- never audit-log
    * a lookup for an identifier that doesn't, or the audit trail itself becomes an
    * enumeration side-channel. */
-  private async auditFailure(personId: string, device: DeviceContext): Promise<void> {
+  private async auditFailure(
+    personId: string,
+    device: DeviceContext,
+  ): Promise<void> {
     await this.auditService.record({
       actorPersonId: personId,
       action: 'LOGIN_FAILURE',

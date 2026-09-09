@@ -5,10 +5,15 @@
 // this repository only ever leaves them at their PENDING/null defaults.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
-export type OnlineClassStatus = 'DRAFT' | 'SCHEDULED' | 'LIVE' | 'COMPLETED' | 'CANCELLED';
-export type MeetingCreationStatus = 'PENDING' | 'CREATING' | 'SUCCEEDED' | 'FAILED';
+export type OnlineClassStatus =
+  'DRAFT' | 'SCHEDULED' | 'LIVE' | 'COMPLETED' | 'CANCELLED';
+export type MeetingCreationStatus =
+  'PENDING' | 'CREATING' | 'SUCCEEDED' | 'FAILED';
 export type OnlineClassView = 'upcoming' | 'completed' | 'cancelled';
 
 export const VIEW_STATUSES: Record<OnlineClassView, OnlineClassStatus[]> = {
@@ -266,7 +271,10 @@ export class OnlineClassRepository {
     id: string,
     executor: Queryable = this.postgres,
   ): Promise<OnlineClassDetail | null> {
-    const { rows } = await executor.query<DetailRow>(`${DETAIL_SELECT} WHERE oc.id = $1`, [id]);
+    const { rows } = await executor.query<DetailRow>(
+      `${DETAIL_SELECT} WHERE oc.id = $1`,
+      [id],
+    );
     return rows.length === 0 ? null : toDetail(rows[0]);
   }
 
@@ -311,7 +319,12 @@ export class OnlineClassRepository {
 
   async updateSchedule(
     id: string,
-    params: { scheduledDate: string; startTime: string; endTime: string; updatedBy: string },
+    params: {
+      scheduledDate: string;
+      startTime: string;
+      endTime: string;
+      updatedBy: string;
+    },
     executor: Queryable = this.postgres,
   ): Promise<void> {
     await executor.query(
@@ -319,7 +332,13 @@ export class OnlineClassRepository {
        SET scheduled_date = $2, start_time = $3, end_time = $4,
            updated_by = $5, updated_at = now(), version = version + 1
        WHERE id = $1`,
-      [id, params.scheduledDate, params.startTime, params.endTime, params.updatedBy],
+      [
+        id,
+        params.scheduledDate,
+        params.startTime,
+        params.endTime,
+        params.updatedBy,
+      ],
     );
   }
 
@@ -380,7 +399,11 @@ export class OnlineClassRepository {
 
   async markMeetingSucceeded(
     id: string,
-    params: { googleCalendarEventId: string; googleMeetId: string; meetingUrl: string },
+    params: {
+      googleCalendarEventId: string;
+      googleMeetId: string;
+      meetingUrl: string;
+    },
     executor: Queryable = this.postgres,
   ): Promise<void> {
     await executor.query(
@@ -389,7 +412,12 @@ export class OnlineClassRepository {
            google_calendar_event_id = $2, google_meet_id = $3, meeting_url = $4,
            updated_at = now()
        WHERE id = $1`,
-      [id, params.googleCalendarEventId, params.googleMeetId, params.meetingUrl],
+      [
+        id,
+        params.googleCalendarEventId,
+        params.googleMeetId,
+        params.meetingUrl,
+      ],
     );
   }
 

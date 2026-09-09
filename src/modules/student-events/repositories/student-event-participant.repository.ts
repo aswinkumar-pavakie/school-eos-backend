@@ -2,7 +2,10 @@
 // student/section/class-teacher joins throughout -- nothing here is free text.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface ParticipantRow {
   id: string;
@@ -94,17 +97,25 @@ function mapLetterRow(row: any): LetterData {
     eventPurpose: row.event_purpose,
     eventStartsAt: row.event_starts_at,
     eventEndsAt: row.event_ends_at,
-    monitoringTeacherName: [row.teacher_first_name, row.teacher_last_name].filter(Boolean).join(' '),
+    monitoringTeacherName: [row.teacher_first_name, row.teacher_last_name]
+      .filter(Boolean)
+      .join(' '),
     monitoringTeacherDesignation: row.teacher_designation,
-    studentName: [row.student_first_name, row.student_last_name].filter(Boolean).join(' '),
+    studentName: [row.student_first_name, row.student_last_name]
+      .filter(Boolean)
+      .join(' '),
     admissionNo: row.admission_no,
     rollNo: row.roll_no,
     gradeName: row.grade_name,
     sectionName: row.section_name,
     classTeacherName: row.class_teacher_first_name
-      ? [row.class_teacher_first_name, row.class_teacher_last_name].filter(Boolean).join(' ')
+      ? [row.class_teacher_first_name, row.class_teacher_last_name]
+          .filter(Boolean)
+          .join(' ')
       : null,
-    parentName: row.parent_first_name ? [row.parent_first_name, row.parent_last_name].filter(Boolean).join(' ') : null,
+    parentName: row.parent_first_name
+      ? [row.parent_first_name, row.parent_last_name].filter(Boolean).join(' ')
+      : null,
     parentAddressLine1: row.parent_address_line1,
     parentAddressLine2: row.parent_address_line2,
     parentCity: row.parent_city,
@@ -128,20 +139,37 @@ export class StudentEventParticipantRepository {
     return (await this.findById(rows[0].id, executor))!;
   }
 
-  async findByEventId(eventId: string, executor: Queryable = this.postgres): Promise<ParticipantRow[]> {
-    const { rows } = await executor.query(`${`SELECT ${COLUMNS}`} ${FROM} WHERE ep.event_id = $1 ORDER BY ep.added_at`, [eventId]);
+  async findByEventId(
+    eventId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ParticipantRow[]> {
+    const { rows } = await executor.query(
+      `${`SELECT ${COLUMNS}`} ${FROM} WHERE ep.event_id = $1 ORDER BY ep.added_at`,
+      [eventId],
+    );
     return rows.map(mapRow);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<ParticipantRow | null> {
-    const { rows } = await executor.query(`${`SELECT ${COLUMNS}`} ${FROM} WHERE ep.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ParticipantRow | null> {
+    const { rows } = await executor.query(
+      `${`SELECT ${COLUMNS}`} ${FROM} WHERE ep.id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
   async findByIdForUpdate(
     id: string,
     executor: Queryable,
-  ): Promise<{ id: string; eventId: string; studentId: string; state: string } | null> {
+  ): Promise<{
+    id: string;
+    eventId: string;
+    studentId: string;
+    state: string;
+  } | null> {
     const { rows } = await executor.query(
       `SELECT id, event_id AS "eventId", student_id AS "studentId", state FROM student_event_participant WHERE id = $1 FOR UPDATE`,
       [id],
@@ -153,7 +181,10 @@ export class StudentEventParticipantRepository {
    * (personId) actually holds -- the real authorization boundary: a parent only
    * ever sees requests for a student they hold a real, ACTIVE guardian_link to,
    * mirroring GuardianLinkRepository.findActiveLink's own boundary comment. */
-  async findForGuardian(personId: string, executor: Queryable = this.postgres): Promise<(ParticipantRow & { eventName: string })[]> {
+  async findForGuardian(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<(ParticipantRow & { eventName: string })[]> {
     // Aliased "stev" (not "se") for student_event -- FROM already uses "se" for
     // student_enrolment; reusing it here for a second, different table is a
     // real Postgres error ("table name specified more than once"), not just a
@@ -188,7 +219,11 @@ export class StudentEventParticipantRepository {
 
   async setDecision(
     id: string,
-    input: { state: 'APPROVED' | 'REJECTED'; decidedByPersonId: string; signatureObjectKey: string | null },
+    input: {
+      state: 'APPROVED' | 'REJECTED';
+      decidedByPersonId: string;
+      signatureObjectKey: string | null;
+    },
     executor: Queryable,
   ): Promise<ParticipantRow> {
     await executor.query(
@@ -201,7 +236,10 @@ export class StudentEventParticipantRepository {
   }
 
   async delete(id: string, executor: Queryable = this.postgres): Promise<void> {
-    await executor.query(`DELETE FROM student_event_participant WHERE id = $1`, [id]);
+    await executor.query(
+      `DELETE FROM student_event_participant WHERE id = $1`,
+      [id],
+    );
   }
 
   /** Every real field the permission letter needs, in one query: event details,
@@ -211,7 +249,10 @@ export class StudentEventParticipantRepository {
    * and the deciding parent's own person/address for the letter's "To" line
    * (never an arbitrary guardian -- specifically whichever parent actually
    * signed). Only meaningful once state <> 'PENDING'. */
-  async findLetterData(id: string, executor: Queryable = this.postgres): Promise<LetterData | null> {
+  async findLetterData(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LetterData | null> {
     const { rows } = await executor.query(
       `SELECT
          ep.id AS participant_id, ep.state, ep.decided_at, ep.signature_object_key,

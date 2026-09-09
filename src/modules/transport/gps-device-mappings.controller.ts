@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -24,7 +34,10 @@ export class GpsDeviceMappingsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateGpsDeviceMappingDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateGpsDeviceMappingDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.mappingsService.create(dto, actor.personId) };
   }
 

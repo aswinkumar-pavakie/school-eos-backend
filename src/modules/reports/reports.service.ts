@@ -37,7 +37,11 @@ export interface ReportsSummary {
     vehiclesByStatus: { status: string; count: number }[];
   };
   hostel: {
-    occupancyByHostel: { hostelName: string; occupied: number; vacant: number }[];
+    occupancyByHostel: {
+      hostelName: string;
+      occupied: number;
+      vacant: number;
+    }[];
   };
   inventory: {
     byStatus: { status: string; count: number }[];
@@ -149,7 +153,11 @@ export class ReportsService {
       this.postgres.query<{ status: string; count: string }>(
         `SELECT operational_status AS status, count(*) AS count FROM vehicle GROUP BY operational_status`,
       ),
-      this.postgres.query<{ hostelName: string; occupied: string; vacant: string }>(
+      this.postgres.query<{
+        hostelName: string;
+        occupied: string;
+        vacant: string;
+      }>(
         `SELECT h.name AS "hostelName",
                 count(*) FILTER (WHERE bed.status = 'OCCUPIED') AS occupied,
                 count(*) FILTER (WHERE bed.status != 'OCCUPIED') AS vacant
@@ -174,13 +182,22 @@ export class ReportsService {
 
     return {
       enrollment: {
-        byGrade: gradeResult.rows.map((r) => ({ gradeName: r.gradeName, count: parseInt(r.count, 10) })),
-        byGender: genderResult.rows.map((r) => ({ gender: r.gender, count: parseInt(r.count, 10) })),
+        byGrade: gradeResult.rows.map((r) => ({
+          gradeName: r.gradeName,
+          count: parseInt(r.count, 10),
+        })),
+        byGender: genderResult.rows.map((r) => ({
+          gender: r.gender,
+          count: parseInt(r.count, 10),
+        })),
         activeCount: parseInt(studentStatusRow.active, 10),
         inactiveCount: parseInt(studentStatusRow.inactive, 10),
       },
       staff: {
-        byDesignation: designationResult.rows.map((r) => ({ designation: r.designation, count: parseInt(r.count, 10) })),
+        byDesignation: designationResult.rows.map((r) => ({
+          designation: r.designation,
+          count: parseInt(r.count, 10),
+        })),
         teachingCount: parseInt(staffTeachingRow.teaching, 10),
         nonTeachingCount: parseInt(staffTeachingRow.non_teaching, 10),
       },
@@ -195,8 +212,14 @@ export class ReportsService {
         totalOutstandingPaise: feeOverview.totalOutstandingPaise,
       },
       transport: {
-        ridershipByRoute: ridershipResult.rows.map((r) => ({ routeName: r.routeName, count: parseInt(r.count, 10) })),
-        vehiclesByStatus: vehicleStatusResult.rows.map((r) => ({ status: r.status, count: parseInt(r.count, 10) })),
+        ridershipByRoute: ridershipResult.rows.map((r) => ({
+          routeName: r.routeName,
+          count: parseInt(r.count, 10),
+        })),
+        vehiclesByStatus: vehicleStatusResult.rows.map((r) => ({
+          status: r.status,
+          count: parseInt(r.count, 10),
+        })),
       },
       hostel: {
         occupancyByHostel: hostelOccupancyResult.rows.map((r) => ({
@@ -206,7 +229,10 @@ export class ReportsService {
         })),
       },
       inventory: {
-        byStatus: inventoryStatusResult.rows.map((r) => ({ status: r.status, count: parseInt(r.count, 10) })),
+        byStatus: inventoryStatusResult.rows.map((r) => ({
+          status: r.status,
+          count: parseInt(r.count, 10),
+        })),
       },
       library: {
         byStatus: [

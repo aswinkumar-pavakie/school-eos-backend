@@ -11,18 +11,32 @@ import {
 } from '../../../infrastructure/postgres/postgres.service';
 
 export type ConversationStatus = 'ACTIVE' | 'CLOSED';
+export type ConversationType = 'STUDENT_CONTEXT' | 'STAFF_DIRECT';
 
+// A conversation is polymorphic: every row created before this type existed (and
+// every row `findOrCreate`/`ensureExist` create today) is a 'STUDENT_CONTEXT' row
+// -- the class/student-scoped shape this module was originally built around, with
+// student/academicYear/section always populated. A 'STAFF_DIRECT' row (a
+// Principal <-> Faculty direct thread, no student/class context at all) is the
+// opposite: those three are always null, and personAId/personBId (always null on
+// a 'STUDENT_CONTEXT' row) hold the two participants instead, order-normalized
+// (personAId < personBId) so one unordered pair never gets two rows. See
+// query.md's migration for the DB-level CHECK enforcing this split and the
+// partial unique index enforcing one row per staff pair.
 export interface ConversationView {
   id: string;
-  studentId: string;
-  studentFirstName: string;
-  studentLastName: string;
-  parentPersonId: string;
-  academicYearId: string;
-  academicYearName: string;
-  sectionId: string;
-  sectionName: string;
-  gradeName: string;
+  conversationType: ConversationType;
+  studentId: string | null;
+  studentFirstName: string | null;
+  studentLastName: string | null;
+  parentPersonId: string | null;
+  academicYearId: string | null;
+  academicYearName: string | null;
+  sectionId: string | null;
+  sectionName: string | null;
+  gradeName: string | null;
+  personAId: string | null;
+  personBId: string | null;
   status: ConversationStatus;
   lastMessageId: string | null;
   lastMessageAt: Date | null;
@@ -30,30 +44,39 @@ export interface ConversationView {
   updatedAt: Date;
 }
 
+// LEFT JOINs (not INNER) so a 'STAFF_DIRECT' row -- student_id/academic_year_id/
+// section_id all null -- still comes back as a row instead of vanishing. For
+// every existing 'STUDENT_CONTEXT' row those columns are always populated, so
+// this changes nothing about their results (an INNER JOIN and a LEFT JOIN return
+// identical rows whenever the joined-to row exists).
 const DETAIL_SELECT = `
-  SELECT c.id, c.student_id, p.first_name AS student_first_name, p.last_name AS student_last_name,
+  SELECT c.id, c.conversation_type, c.student_id, p.first_name AS student_first_name, p.last_name AS student_last_name,
          c.parent_person_id, c.academic_year_id, ay.name AS academic_year_name,
          c.section_id, sec.name AS section_name, g.name AS grade_name,
+         c.person_a_id, c.person_b_id,
          c.status, c.last_message_id, c.last_message_at, c.created_at, c.updated_at
   FROM conversation c
-  JOIN student st ON st.id = c.student_id
-  JOIN person p ON p.id = st.person_id
-  JOIN academic_year ay ON ay.id = c.academic_year_id
-  JOIN section sec ON sec.id = c.section_id
-  JOIN grade g ON g.id = sec.grade_id
+  LEFT JOIN student st ON st.id = c.student_id
+  LEFT JOIN person p ON p.id = st.person_id
+  LEFT JOIN academic_year ay ON ay.id = c.academic_year_id
+  LEFT JOIN section sec ON sec.id = c.section_id
+  LEFT JOIN grade g ON g.id = sec.grade_id
 `;
 
 interface DetailRow {
   id: string;
-  student_id: string;
-  student_first_name: string;
-  student_last_name: string;
-  parent_person_id: string;
-  academic_year_id: string;
-  academic_year_name: string;
-  section_id: string;
-  section_name: string;
-  grade_name: string;
+  conversation_type: ConversationType;
+  student_id: string | null;
+  student_first_name: string | null;
+  student_last_name: string | null;
+  parent_person_id: string | null;
+  academic_year_id: string | null;
+  academic_year_name: string | null;
+  section_id: string | null;
+  section_name: string | null;
+  grade_name: string | null;
+  person_a_id: string | null;
+  person_b_id: string | null;
   status: ConversationStatus;
   last_message_id: string | null;
   last_message_at: Date | null;
@@ -64,6 +87,7 @@ interface DetailRow {
 function mapRow(row: DetailRow): ConversationView {
   return {
     id: row.id,
+    conversationType: row.conversation_type,
     studentId: row.student_id,
     studentFirstName: row.student_first_name,
     studentLastName: row.student_last_name,
@@ -73,6 +97,8 @@ function mapRow(row: DetailRow): ConversationView {
     sectionId: row.section_id,
     sectionName: row.section_name,
     gradeName: row.grade_name,
+    personAId: row.person_a_id,
+    personBId: row.person_b_id,
     status: row.status,
     lastMessageId: row.last_message_id,
     lastMessageAt: row.last_message_at,
@@ -213,5 +239,89 @@ export class ConversationRepository {
       `UPDATE conversation SET last_message_id = $2, last_message_at = $3, updated_at = now() WHERE id = $1`,
       [id, messageId, lastMessageAt],
     );
+  }
+
+  /** Every STUDENT_CONTEXT conversation a Principal has started/engaged with --
+   * unlike Parent/Faculty, a Principal gets no auto-created roster (there's no
+   * bounded "their own students" set to seed one from), so their list is exactly
+   * the conversations carrying a 'PRINCIPAL' conversation_participant row (written
+   * by MessagingService.startStudentConversations / sendMessage), never every
+   * conversation in the school. */
+  async listStudentContextForPrincipal(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ConversationView[]> {
+    const { rows } = await executor.query<DetailRow>(
+      `${DETAIL_SELECT}
+       JOIN conversation_participant cp ON cp.conversation_id = c.id
+         AND cp.person_id = $1 AND cp.participant_role = 'PRINCIPAL'
+       WHERE c.conversation_type = 'STUDENT_CONTEXT'
+       ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC`,
+      [personId],
+    );
+    return rows.map(mapRow);
+  }
+
+  // ---- STAFF_DIRECT (Principal <-> Faculty, no student/class context) ----------
+
+  /** Idempotent find-or-create for one unordered pair of people -- mirrors
+   * findOrCreate()'s exact concurrency-safe shape, just keyed on the new partial
+   * unique index (one row per unordered pair, WHERE conversation_type =
+   * 'STAFF_DIRECT') instead of the student-scoped one. Always normalizes so
+   * person_a_id < person_b_id, so "A messages B" and "B messages A" resolve to the
+   * identical row regardless of call order. */
+  async findOrCreateStaffDirect(
+    personIdOne: string,
+    personIdTwo: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ConversationView> {
+    const [personA, personB] =
+      personIdOne < personIdTwo
+        ? [personIdOne, personIdTwo]
+        : [personIdTwo, personIdOne];
+
+    const inserted = await executor.query<{ id: string }>(
+      `INSERT INTO conversation (conversation_type, person_a_id, person_b_id)
+       VALUES ('STAFF_DIRECT', $1, $2)
+       ON CONFLICT (person_a_id, person_b_id) WHERE conversation_type = 'STAFF_DIRECT'
+       DO NOTHING
+       RETURNING id`,
+      [personA, personB],
+    );
+
+    const id = inserted.rows.length
+      ? inserted.rows[0].id
+      : (
+          await executor.query<{ id: string }>(
+            `SELECT id FROM conversation
+             WHERE conversation_type = 'STAFF_DIRECT' AND person_a_id = $1 AND person_b_id = $2`,
+            [personA, personB],
+          )
+        ).rows[0].id;
+
+    const view = await this.findById(id, executor);
+    if (!view) {
+      throw new Error(
+        'Staff-direct conversation vanished immediately after find-or-create — should never happen.',
+      );
+    }
+    return view;
+  }
+
+  /** Every STAFF_DIRECT conversation this person is one of the two parties in,
+   * newest-activity first -- the direct-thread half of a unified inbox (merged
+   * with listForParent/listBySectionYearPairs's STUDENT_CONTEXT-type results in
+   * MessagingService.listConversations). */
+  async listStaffDirectForPerson(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ConversationView[]> {
+    const { rows } = await executor.query<DetailRow>(
+      `${DETAIL_SELECT}
+       WHERE c.conversation_type = 'STAFF_DIRECT' AND (c.person_a_id = $1 OR c.person_b_id = $1)
+       ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC`,
+      [personId],
+    );
+    return rows.map(mapRow);
   }
 }

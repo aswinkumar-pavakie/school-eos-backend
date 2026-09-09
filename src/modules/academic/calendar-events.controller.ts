@@ -47,8 +47,13 @@ export class CalendarEventsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateCalendarEventDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.calendarEventsService.create(dto, actor.personId) };
+  async create(
+    @Body() dto: CreateCalendarEventDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.calendarEventsService.create(dto, actor.personId),
+    };
   }
 
   @Patch(':id')
@@ -57,12 +62,17 @@ export class CalendarEventsController {
     @Body() dto: UpdateCalendarEventDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.calendarEventsService.update(id, dto, actor.personId) };
+    return {
+      data: await this.calendarEventsService.update(id, dto, actor.personId),
+    };
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  async delete(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async delete(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.calendarEventsService.delete(id, actor.personId);
     return { data: { deleted: true } };
   }

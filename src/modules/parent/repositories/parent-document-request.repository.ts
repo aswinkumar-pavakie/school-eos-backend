@@ -6,7 +6,10 @@
 // then.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface DocumentRequestRow {
   id: string;
@@ -45,7 +48,10 @@ const REQUEST_WITH_DOCUMENT = `
 export class ParentDocumentRequestRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findForStudent(studentId: string, executor: Queryable = this.postgres): Promise<DocumentRequestRow[]> {
+  async findForStudent(
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<DocumentRequestRow[]> {
     const { rows } = await executor.query(
       `${REQUEST_WITH_DOCUMENT} WHERE dr.student_id = $1 ORDER BY dr.created_at DESC`,
       [studentId],
@@ -53,13 +59,25 @@ export class ParentDocumentRequestRepository {
     return rows.map(mapRow);
   }
 
-  async findById(id: string, studentId: string, executor: Queryable = this.postgres): Promise<DocumentRequestRow | null> {
-    const { rows } = await executor.query(`${REQUEST_WITH_DOCUMENT} WHERE dr.id = $1 AND dr.student_id = $2`, [id, studentId]);
+  async findById(
+    id: string,
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<DocumentRequestRow | null> {
+    const { rows } = await executor.query(
+      `${REQUEST_WITH_DOCUMENT} WHERE dr.id = $1 AND dr.student_id = $2`,
+      [id, studentId],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
   async create(
-    input: { studentId: string; requestedBy: string; docType: string; reason: string },
+    input: {
+      studentId: string;
+      requestedBy: string;
+      docType: string;
+      reason: string;
+    },
     executor: Queryable = this.postgres,
   ): Promise<string> {
     const { rows } = await executor.query(

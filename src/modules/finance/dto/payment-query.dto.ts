@@ -1,5 +1,13 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class PaymentQueryDto {
   @IsOptional()
@@ -7,7 +15,14 @@ export class PaymentQueryDto {
   search?: string;
 
   @IsOptional()
-  @IsIn(['INITIATED', 'PENDING', 'CONFIRMED', 'FAILED', 'RECONCILED', 'REVERSED'])
+  @IsIn([
+    'INITIATED',
+    'PENDING',
+    'CONFIRMED',
+    'FAILED',
+    'RECONCILED',
+    'REVERSED',
+  ])
   state?: string;
 
   @IsOptional()

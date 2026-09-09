@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface LibraryBookRow {
   id: string;
@@ -91,7 +94,10 @@ const FROM = `library_book b LEFT JOIN library_category cat ON cat.id = b.catego
 export class LibraryBookRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findMany(filter: BookFilter, executor: Queryable = this.postgres): Promise<{ rows: LibraryBookListRow[]; total: number }> {
+  async findMany(
+    filter: BookFilter,
+    executor: Queryable = this.postgres,
+  ): Promise<{ rows: LibraryBookListRow[]; total: number }> {
     const conditions: string[] = [];
     const params: unknown[] = [];
 
@@ -111,20 +117,29 @@ export class LibraryBookRepository {
     }
     if (filter.publisher) {
       params.push(`%${filter.publisher.toLowerCase()}%`);
-      conditions.push(`lower(coalesce(b.publisher, '')) LIKE $${params.length}`);
+      conditions.push(
+        `lower(coalesce(b.publisher, '')) LIKE $${params.length}`,
+      );
     }
     if (filter.status) {
       params.push(filter.status);
       conditions.push(`b.status = $${params.length}`);
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const countResult = await this.postgres.query<{ count: string }>(
       `SELECT count(*) FROM ${FROM} ${where}`,
       params,
     );
     const rowParams = [...params, filter.limit, filter.offset];
-    const { rows } = await executor.query<LibraryBookRow & { copiesTotal: string; copiesAvailable: string; copiesIssued: string }>(
+    const { rows } = await executor.query<
+      LibraryBookRow & {
+        copiesTotal: string;
+        copiesAvailable: string;
+        copiesIssued: string;
+      }
+    >(
       `SELECT ${COLUMNS},
               COALESCE(cs.total, 0) AS "copiesTotal",
               COALESCE(cs.available, 0) AS "copiesAvailable",
@@ -142,24 +157,35 @@ export class LibraryBookRepository {
       rowParams,
     );
     return {
-      rows: rows.map(({ copiesTotal, copiesAvailable, copiesIssued, ...book }) => ({
-        ...book,
-        copiesSummary: {
-          total: Number(copiesTotal),
-          available: Number(copiesAvailable),
-          issued: Number(copiesIssued),
-        },
-      })),
+      rows: rows.map(
+        ({ copiesTotal, copiesAvailable, copiesIssued, ...book }) => ({
+          ...book,
+          copiesSummary: {
+            total: Number(copiesTotal),
+            available: Number(copiesAvailable),
+            issued: Number(copiesIssued),
+          },
+        }),
+      ),
       total: parseInt(countResult.rows[0].count, 10),
     };
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<LibraryBookRow | null> {
-    const { rows } = await executor.query<LibraryBookRow>(`SELECT ${COLUMNS} FROM ${FROM} WHERE b.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryBookRow | null> {
+    const { rows } = await executor.query<LibraryBookRow>(
+      `SELECT ${COLUMNS} FROM ${FROM} WHERE b.id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
-  async findCopiesSummary(bookId: string, executor: Queryable = this.postgres): Promise<CopiesSummary> {
+  async findCopiesSummary(
+    bookId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<CopiesSummary> {
     const { rows } = await executor.query<{
       total: string;
       available: string;
@@ -191,7 +217,10 @@ export class LibraryBookRepository {
     };
   }
 
-  async create(input: CreateBookInput, executor: Queryable = this.postgres): Promise<LibraryBookRow> {
+  async create(
+    input: CreateBookInput,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryBookRow> {
     const { rows } = await executor.query<{ id: string }>(
       `INSERT INTO library_book (title, author, isbn, publisher, edition, category_id, publication_year, language, description, cover_image_url, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -213,7 +242,11 @@ export class LibraryBookRepository {
     return (await this.findById(rows[0].id, executor))!;
   }
 
-  async update(id: string, input: UpdateBookInput, executor: Queryable = this.postgres): Promise<LibraryBookRow | null> {
+  async update(
+    id: string,
+    input: UpdateBookInput,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryBookRow | null> {
     await executor.query(
       `UPDATE library_book SET
          title = COALESCE($2, title),
@@ -245,8 +278,15 @@ export class LibraryBookRepository {
     return this.findById(id, executor);
   }
 
-  async setStatus(id: string, status: string, executor: Queryable = this.postgres): Promise<LibraryBookRow | null> {
-    await executor.query(`UPDATE library_book SET status = $2, updated_at = now() WHERE id = $1`, [id, status]);
+  async setStatus(
+    id: string,
+    status: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryBookRow | null> {
+    await executor.query(
+      `UPDATE library_book SET status = $2, updated_at = now() WHERE id = $1`,
+      [id, status],
+    );
     return this.findById(id, executor);
   }
 }

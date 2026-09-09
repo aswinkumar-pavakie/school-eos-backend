@@ -1,4 +1,11 @@
-import { IsDateString, IsIn, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateDriverDto {
   @IsOptional()

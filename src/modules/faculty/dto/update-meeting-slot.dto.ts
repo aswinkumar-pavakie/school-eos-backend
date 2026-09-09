@@ -8,7 +8,9 @@ export class UpdateMeetingSlotDto {
   meetingDate?: string;
 
   @IsOptional()
-  @Matches(TIME_PATTERN, { message: 'fromTime must be in HH:MM 24-hour format' })
+  @Matches(TIME_PATTERN, {
+    message: 'fromTime must be in HH:MM 24-hour format',
+  })
   fromTime?: string;
 
   @IsOptional()

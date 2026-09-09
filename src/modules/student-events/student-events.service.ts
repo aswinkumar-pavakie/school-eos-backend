@@ -3,7 +3,11 @@
 // member only ever manages events they themselves created (mirrors
 // MediaInventoryController.assertOwnedByMedia's own-scope boundary).
 
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { GradeRepository } from '../academic/repositories/grade.repository';
 import { SectionRepository } from '../academic/repositories/section.repository';
@@ -17,8 +21,14 @@ import { AddParticipantDto } from './dto/add-participant.dto';
 import { CreateStudentEventDto } from './dto/create-student-event.dto';
 import { PermissionLetterDataService } from './permission-letter-data.service';
 import { isForeignKeyViolation, isUniqueViolation } from './pg-error.util';
-import { ParticipantRow, StudentEventParticipantRepository } from './repositories/student-event-participant.repository';
-import { StudentEventRepository, StudentEventRow } from './repositories/student-event.repository';
+import {
+  ParticipantRow,
+  StudentEventParticipantRepository,
+} from './repositories/student-event-participant.repository';
+import {
+  StudentEventRepository,
+  StudentEventRow,
+} from './repositories/student-event.repository';
 import { EVENT_SIGNATURES_BUCKET } from './student-event-storage.util';
 
 export interface StudentEventWithParticipants extends StudentEventRow {
@@ -44,28 +54,46 @@ export class StudentEventsService {
     return this.eventRepo.findByCreator(actorPersonId);
   }
 
-  private async getOwned(id: string, actorPersonId: string): Promise<StudentEventRow> {
+  private async getOwned(
+    id: string,
+    actorPersonId: string,
+  ): Promise<StudentEventRow> {
     const event = await this.eventRepo.findById(id);
     if (!event) throw new NotFoundException('Event not found');
-    if (event.createdBy !== actorPersonId) throw new NotFoundException('Event not found');
+    if (event.createdBy !== actorPersonId)
+      throw new NotFoundException('Event not found');
     return event;
   }
 
-  async get(id: string, actorPersonId: string): Promise<StudentEventWithParticipants> {
+  async get(
+    id: string,
+    actorPersonId: string,
+  ): Promise<StudentEventWithParticipants> {
     const event = await this.getOwned(id, actorPersonId);
     const participants = await this.participantRepo.findByEventId(id);
     return { ...event, participants };
   }
 
-  async create(dto: CreateStudentEventDto, actorPersonId: string): Promise<StudentEventRow> {
+  async create(
+    dto: CreateStudentEventDto,
+    actorPersonId: string,
+  ): Promise<StudentEventRow> {
     if (new Date(dto.endsAt).getTime() <= new Date(dto.startsAt).getTime()) {
       throw new ConflictException('endsAt must be after startsAt.');
     }
-    const teacher = await this.staffRepo.findByPersonId(dto.monitoringTeacherPersonId);
-    if (!teacher) throw new NotFoundException('monitoringTeacherPersonId does not refer to a real, existing staff member.');
+    const teacher = await this.staffRepo.findByPersonId(
+      dto.monitoringTeacherPersonId,
+    );
+    if (!teacher)
+      throw new NotFoundException(
+        'monitoringTeacherPersonId does not refer to a real, existing staff member.',
+      );
 
     try {
-      const created = await this.eventRepo.create({ ...dto, createdBy: actorPersonId });
+      const created = await this.eventRepo.create({
+        ...dto,
+        createdBy: actorPersonId,
+      });
       await this.audit.record({
         actorPersonId,
         actorRoleCode: 'FACULTY',
@@ -77,7 +105,10 @@ export class StudentEventsService {
       });
       return created;
     } catch (err) {
-      if (isForeignKeyViolation(err)) throw new NotFoundException('monitoringTeacherPersonId does not refer to a real, existing person.');
+      if (isForeignKeyViolation(err))
+        throw new NotFoundException(
+          'monitoringTeacherPersonId does not refer to a real, existing person.',
+        );
       throw err;
     }
   }
@@ -92,7 +123,9 @@ export class StudentEventsService {
    * to give a family a fresh request. Mirrors the same "a decided record is
    * immutable" convention already used for Concessions
    * (concessions.service.ts's own assertStillOpen). */
-  private assertRemovable(participant: Pick<ParticipantRow, 'state' | 'studentName'>): void {
+  private assertRemovable(
+    participant: Pick<ParticipantRow, 'state' | 'studentName'>,
+  ): void {
     if (participant.state === 'APPROVED') {
       throw new ConflictException(
         `${participant.studentName}'s parent has already signed and approved this request -- it is a real consent record and cannot be deleted. Remove students who are still waiting or were rejected instead.`,
@@ -112,7 +145,10 @@ export class StudentEventsService {
     await this.eventRepo.delete(id); // cascades student_event_participant rows
     for (const p of participants) {
       if (p.signatureObjectKey) {
-        await this.storage.removeBestEffort(EVENT_SIGNATURES_BUCKET, p.signatureObjectKey);
+        await this.storage.removeBestEffort(
+          EVENT_SIGNATURES_BUCKET,
+          p.signatureObjectKey,
+        );
       }
     }
     await this.audit.record({
@@ -148,10 +184,18 @@ export class StudentEventsService {
     return this.sectionRepo.findMany({ gradeId, status: 'ACTIVE' });
   }
 
-  async addParticipant(eventId: string, dto: AddParticipantDto, actorPersonId: string): Promise<ParticipantRow> {
+  async addParticipant(
+    eventId: string,
+    dto: AddParticipantDto,
+    actorPersonId: string,
+  ): Promise<ParticipantRow> {
     await this.getOwned(eventId, actorPersonId);
     try {
-      const created = await this.participantRepo.create({ eventId, studentId: dto.studentId, addedBy: actorPersonId });
+      const created = await this.participantRepo.create({
+        eventId,
+        studentId: dto.studentId,
+        addedBy: actorPersonId,
+      });
       await this.audit.record({
         actorPersonId,
         actorRoleCode: 'FACULTY',
@@ -163,20 +207,34 @@ export class StudentEventsService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('This student has already been added to this event.');
-      if (isForeignKeyViolation(err)) throw new NotFoundException('studentId does not refer to a real, existing student.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'This student has already been added to this event.',
+        );
+      if (isForeignKeyViolation(err))
+        throw new NotFoundException(
+          'studentId does not refer to a real, existing student.',
+        );
       throw err;
     }
   }
 
-  async removeParticipant(eventId: string, participantId: string, actorPersonId: string): Promise<void> {
+  async removeParticipant(
+    eventId: string,
+    participantId: string,
+    actorPersonId: string,
+  ): Promise<void> {
     await this.getOwned(eventId, actorPersonId);
     const participant = await this.participantRepo.findById(participantId);
-    if (!participant || participant.eventId !== eventId) throw new NotFoundException('Student not found on this event');
+    if (!participant || participant.eventId !== eventId)
+      throw new NotFoundException('Student not found on this event');
     this.assertRemovable(participant);
     await this.participantRepo.delete(participantId);
     if (participant.signatureObjectKey) {
-      await this.storage.removeBestEffort(EVENT_SIGNATURES_BUCKET, participant.signatureObjectKey);
+      await this.storage.removeBestEffort(
+        EVENT_SIGNATURES_BUCKET,
+        participant.signatureObjectKey,
+      );
     }
     await this.audit.record({
       actorPersonId,
@@ -189,10 +247,15 @@ export class StudentEventsService {
     });
   }
 
-  async getPermissionLetter(eventId: string, participantId: string, actorPersonId: string) {
+  async getPermissionLetter(
+    eventId: string,
+    participantId: string,
+    actorPersonId: string,
+  ) {
     await this.getOwned(eventId, actorPersonId);
     const participant = await this.participantRepo.findById(participantId);
-    if (!participant || participant.eventId !== eventId) throw new NotFoundException('Student not found on this event');
+    if (!participant || participant.eventId !== eventId)
+      throw new NotFoundException('Student not found on this event');
     return this.letterDataService.build(participantId);
   }
 }

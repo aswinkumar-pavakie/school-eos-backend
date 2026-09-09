@@ -1,4 +1,12 @@
-import { IsDateString, IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { TIME_PATTERN, TIME_PATTERN_MESSAGE } from '../time-format.util';
 
 // subjectOfferingId, not separate subject/class/section fields: subject_offering already

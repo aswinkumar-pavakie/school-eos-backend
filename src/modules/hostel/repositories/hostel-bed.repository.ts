@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface HostelBedRow {
   id: string;
@@ -24,7 +27,10 @@ const COLUMNS = `id, room_id AS "roomId", bed_no AS "bedNo", status`;
 export class HostelBedRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findByRoomId(roomId: string, executor: Queryable = this.postgres): Promise<HostelBedRow[]> {
+  async findByRoomId(
+    roomId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<HostelBedRow[]> {
     const { rows } = await executor.query<HostelBedRow>(
       `SELECT ${COLUMNS} FROM hostel_bed WHERE room_id = $1 ORDER BY bed_no`,
       [roomId],
@@ -32,7 +38,10 @@ export class HostelBedRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<HostelBedRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<HostelBedRow | null> {
     const { rows } = await executor.query<HostelBedRow>(
       `SELECT ${COLUMNS} FROM hostel_bed WHERE id = $1`,
       [id],
@@ -42,7 +51,10 @@ export class HostelBedRepository {
 
   /** Row-locking read, for use inside a transaction right before a status flip that
    * must not race with a concurrent allocation of the same bed. */
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<HostelBedRow | null> {
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<HostelBedRow | null> {
     const { rows } = await executor.query<HostelBedRow>(
       `SELECT ${COLUMNS} FROM hostel_bed WHERE id = $1 FOR UPDATE`,
       [id],
@@ -78,13 +90,23 @@ export class HostelBedRepository {
     return rows[0] ?? null;
   }
 
-  async setStatus(id: string, status: string, executor: Queryable): Promise<void> {
-    await executor.query(`UPDATE hostel_bed SET status = $2 WHERE id = $1`, [id, status]);
+  async setStatus(
+    id: string,
+    status: string,
+    executor: Queryable,
+  ): Promise<void> {
+    await executor.query(`UPDATE hostel_bed SET status = $2 WHERE id = $1`, [
+      id,
+      status,
+    ]);
   }
 
   /** Walks bed -> room -> floor -> block -> hostel to find which hostel (and its
    * gender) a bed belongs to -- for the allocation gender-match rule. */
-  async findHostelGenderForBed(id: string, executor: Queryable = this.postgres): Promise<string | null> {
+  async findHostelGenderForBed(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string | null> {
     const { rows } = await executor.query<{ gender: string }>(
       `SELECT h.gender
        FROM hostel_bed bed

@@ -3,7 +3,10 @@
 // only thing that ever moves SCHEDULED -> PUBLISHED (once publish_at has passed).
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface MediaPostAssetRow {
   id: string;
@@ -52,7 +55,10 @@ function mapRow(row: any): MediaPostRow {
 export class MediaPostRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async list(filter: { state?: string }, executor: Queryable = this.postgres): Promise<MediaPostRow[]> {
+  async list(
+    filter: { state?: string },
+    executor: Queryable = this.postgres,
+  ): Promise<MediaPostRow[]> {
     const { rows } = await executor.query(
       `SELECT * FROM media_post WHERE ($1::text IS NULL OR state = $1) ORDER BY pin_to_top DESC, created_at DESC`,
       [filter.state ?? null],
@@ -60,13 +66,25 @@ export class MediaPostRepository {
     return rows.map(mapRow);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<MediaPostRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM media_post WHERE id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<MediaPostRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM media_post WHERE id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<MediaPostRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM media_post WHERE id = $1 FOR UPDATE`, [id]);
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<MediaPostRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM media_post WHERE id = $1 FOR UPDATE`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
@@ -125,11 +143,23 @@ export class MediaPostRepository {
          allow_comments = COALESCE($6, allow_comments),
          updated_at = now()
        WHERE id = $1`,
-      [id, input.caption ?? null, input.firstComment ?? null, input.linkUrl ?? null, input.pinToTop ?? null, input.allowComments ?? null],
+      [
+        id,
+        input.caption ?? null,
+        input.firstComment ?? null,
+        input.linkUrl ?? null,
+        input.pinToTop ?? null,
+        input.allowComments ?? null,
+      ],
     );
   }
 
-  async setState(id: string, state: string, executor: Queryable = this.postgres, publishedAt?: Date): Promise<void> {
+  async setState(
+    id: string,
+    state: string,
+    executor: Queryable = this.postgres,
+    publishedAt?: Date,
+  ): Promise<void> {
     await executor.query(
       `UPDATE media_post SET state = $2, published_at = COALESCE($3, published_at), updated_at = now() WHERE id = $1`,
       [id, state, publishedAt ?? null],
@@ -149,8 +179,12 @@ export class MediaPostRepository {
     return rows.map(mapRow);
   }
 
-  async countByState(executor: Queryable = this.postgres): Promise<Record<string, number>> {
-    const { rows } = await executor.query(`SELECT state, COUNT(*)::int AS count FROM media_post GROUP BY state`);
+  async countByState(
+    executor: Queryable = this.postgres,
+  ): Promise<Record<string, number>> {
+    const { rows } = await executor.query(
+      `SELECT state, COUNT(*)::int AS count FROM media_post GROUP BY state`,
+    );
     const result: Record<string, number> = {};
     for (const row of rows) result[row.state] = row.count;
     return result;
@@ -158,16 +192,29 @@ export class MediaPostRepository {
 
   // ---- assets ----
 
-  async listAssets(mediaPostId: string, executor: Queryable = this.postgres): Promise<MediaPostAssetRow[]> {
+  async listAssets(
+    mediaPostId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<MediaPostAssetRow[]> {
     const { rows } = await executor.query(
       `SELECT id, object_key, media_type, sort_order FROM media_post_asset WHERE media_post_id = $1 ORDER BY sort_order ASC`,
       [mediaPostId],
     );
-    return rows.map((r: any) => ({ id: r.id, objectKey: r.object_key, mediaType: r.media_type, sortOrder: r.sort_order }));
+    return rows.map((r: any) => ({
+      id: r.id,
+      objectKey: r.object_key,
+      mediaType: r.media_type,
+      sortOrder: r.sort_order,
+    }));
   }
 
   async addAsset(
-    input: { mediaPostId: string; objectKey: string; mediaType: string; sortOrder: number },
+    input: {
+      mediaPostId: string;
+      objectKey: string;
+      mediaType: string;
+      sortOrder: number;
+    },
     executor: Queryable = this.postgres,
   ): Promise<void> {
     await executor.query(

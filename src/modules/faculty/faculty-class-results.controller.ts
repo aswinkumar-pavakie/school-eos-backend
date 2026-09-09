@@ -10,7 +10,10 @@ export class FacultyClassResultsController {
   constructor(private readonly service: FacultyClassResultsService) {}
 
   @Get('sections/:sectionId/exams')
-  async listExams(@Param('sectionId', ParseUUIDPipe) sectionId: string, @CurrentActor() actor: AuthenticatedUser) {
+  async listExams(
+    @Param('sectionId', ParseUUIDPipe) sectionId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.listExams(actor.personId, sectionId) };
   }
 
@@ -20,6 +23,8 @@ export class FacultyClassResultsController {
     @Param('examId', ParseUUIDPipe) examId: string,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.service.getResults(actor.personId, sectionId, examId) };
+    return {
+      data: await this.service.getResults(actor.personId, sectionId, examId),
+    };
   }
 }

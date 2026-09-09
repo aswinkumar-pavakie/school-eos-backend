@@ -4,7 +4,10 @@
 
 import { Controller, Get } from '@nestjs/common';
 import { Roles } from '../../common/auth/roles.decorator';
-import { ROLE_MODULE_ACCESS, RoleRepository } from './repositories/role.repository';
+import {
+  ROLE_MODULE_ACCESS,
+  RoleRepository,
+} from './repositories/role.repository';
 
 @Roles('ADMIN')
 @Controller('roles')

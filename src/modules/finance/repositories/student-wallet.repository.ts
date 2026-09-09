@@ -5,7 +5,10 @@
 // deferred to the separate Finance/Accounts login.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface StudentWalletRow {
   id: string;
@@ -47,9 +50,10 @@ export class StudentWalletRepository {
     studentId: string,
     executor: Queryable = this.postgres,
   ): Promise<StudentWalletRow | null> {
-    const { rows } = await executor.query(`SELECT ${COLUMNS} FROM wallet WHERE student_id = $1`, [
-      studentId,
-    ]);
+    const { rows } = await executor.query(
+      `SELECT ${COLUMNS} FROM wallet WHERE student_id = $1`,
+      [studentId],
+    );
     return rows.length > 0 ? mapRow(rows[0]) : null;
   }
 
@@ -70,7 +74,10 @@ export class StudentWalletRepository {
     return rows.length > 0 ? mapRow(rows[0]) : null;
   }
 
-  async unfreeze(id: string, executor: Queryable = this.postgres): Promise<StudentWalletRow | null> {
+  async unfreeze(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StudentWalletRow | null> {
     const { rows } = await executor.query(
       `UPDATE wallet
        SET status = 'ACTIVE', frozen_reason = NULL, frozen_by = NULL, frozen_at = NULL,

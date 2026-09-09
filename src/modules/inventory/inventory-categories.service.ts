@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CreateInventoryCategoryDto } from './dto/create-inventory-category.dto';
 import { UpdateInventoryCategoryDto } from './dto/update-inventory-category.dto';
@@ -35,12 +39,19 @@ export class InventoryCategoriesService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A category with this name already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A category with this name already exists.',
+        );
       throw err;
     }
   }
 
-  async update(id: string, dto: UpdateInventoryCategoryDto, actorPersonId: string) {
+  async update(
+    id: string,
+    dto: UpdateInventoryCategoryDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.get(id);
     try {
       const updated = await this.categoryRepo.update(id, dto);
@@ -56,7 +67,10 @@ export class InventoryCategoriesService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A category with this name already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A category with this name already exists.',
+        );
       throw err;
     }
   }

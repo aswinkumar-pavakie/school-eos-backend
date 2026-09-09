@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
@@ -29,7 +34,10 @@ export class IdCardsService {
 
   async create(dto: CreateIdCardDto, actor: AuthenticatedUser) {
     try {
-      const created = await this.idCardRepo.create({ ...dto, issuedBy: actor.personId });
+      const created = await this.idCardRepo.create({
+        ...dto,
+        issuedBy: actor.personId,
+      });
       await this.auditService.record({
         actorPersonId: actor.personId,
         action: 'ID_CARD_ISSUED',
@@ -46,14 +54,21 @@ export class IdCardsService {
         );
       }
       if (isForeignKeyViolation(err)) {
-        throw new NotFoundException('studentId or staffId does not refer to an existing record.');
+        throw new NotFoundException(
+          'studentId or staffId does not refer to an existing record.',
+        );
       }
       throw err;
     }
   }
 
   async block(id: string, dto: BlockIdCardDto, actor: AuthenticatedUser) {
-    const updated = await this.idCardRepo.block(id, dto.status, actor.personId, dto.blockedReason);
+    const updated = await this.idCardRepo.block(
+      id,
+      dto.status,
+      actor.personId,
+      dto.blockedReason,
+    );
     if (!updated) throw new NotFoundException('ID card not found');
     await this.auditService.record({
       actorPersonId: actor.personId,
@@ -75,7 +90,11 @@ export class IdCardsService {
    * lost, so it gets blocked, then a replacement is issued) is the primary real-world
    * flow, not an edge case. Only REPLACED (already superseded) and EXPIRED are
    * terminal here. */
-  async reissue(oldCardId: string, dto: ReissueIdCardDto, actor: AuthenticatedUser) {
+  async reissue(
+    oldCardId: string,
+    dto: ReissueIdCardDto,
+    actor: AuthenticatedUser,
+  ) {
     const old = await this.idCardRepo.findById(oldCardId);
     if (!old) throw new NotFoundException('ID card not found');
 
@@ -83,7 +102,9 @@ export class IdCardsService {
       const locked = await this.idCardRepo.findByIdForUpdate(oldCardId, client);
       if (!locked) throw new NotFoundException('ID card not found');
       if (locked.status === 'REPLACED' || locked.status === 'EXPIRED') {
-        throw new BadRequestException(`A ${locked.status.toLowerCase()} card cannot be reissued.`);
+        throw new BadRequestException(
+          `A ${locked.status.toLowerCase()} card cannot be reissued.`,
+        );
       }
 
       await this.idCardRepo.markReplaced(oldCardId, client);
@@ -134,12 +155,19 @@ export class IdCardsService {
       const locked = await this.idCardRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('ID card not found');
       if (locked.status !== 'BLOCKED') {
-        throw new ConflictException(`This card is ${locked.status.toLowerCase()}, not blocked.`);
+        throw new ConflictException(
+          `This card is ${locked.status.toLowerCase()}, not blocked.`,
+        );
       }
 
-      const holderId = locked.holderType === 'STUDENT' ? locked.studentId : locked.staffId;
+      const holderId =
+        locked.holderType === 'STUDENT' ? locked.studentId : locked.staffId;
       const existingActive = holderId
-        ? await this.idCardRepo.findActiveByHolder(locked.holderType, holderId, client)
+        ? await this.idCardRepo.findActiveByHolder(
+            locked.holderType,
+            holderId,
+            client,
+          )
         : null;
       if (existingActive) {
         throw new ConflictException(

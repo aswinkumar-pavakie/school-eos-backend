@@ -29,14 +29,21 @@ import { FacultyMarksController } from './faculty-marks.controller';
 import { FacultyMarksService } from './faculty-marks.service';
 import { FacultyMyAttendanceController } from './faculty-my-attendance.controller';
 import { FacultyMyAttendanceService } from './faculty-my-attendance.service';
-import { FacultyParentMeetingsController, ParentMeetingBookingController, ParentMeetingSlotsController } from './faculty-parent-meetings.controller';
+import {
+  FacultyParentMeetingsController,
+  ParentMeetingBookingController,
+  ParentMeetingSlotsController,
+} from './faculty-parent-meetings.controller';
 import { FacultyParentMeetingsService } from './faculty-parent-meetings.service';
 import { FacultyPayslipController } from './faculty-payslip.controller';
 import { FacultyPayslipService } from './faculty-payslip.service';
 import { FacultyScopeController } from './faculty-scope.controller';
 import { FacultyStaffLeaveController } from './faculty-staff-leave.controller';
 import { FacultyStaffLeaveService } from './faculty-staff-leave.service';
-import { FacultyStudentLeaveController, ParentStudentLeaveController } from './faculty-student-leave.controller';
+import {
+  FacultyStudentLeaveController,
+  ParentStudentLeaveController,
+} from './faculty-student-leave.controller';
 import { FacultyStudentLeaveService } from './faculty-student-leave.service';
 import { FacultySubjectRecordsController } from './faculty-subject-records.controller';
 import { FacultySubjectRecordsService } from './faculty-subject-records.service';
@@ -75,7 +82,13 @@ import { LibraryModule } from '../library/library.module';
   // StaffAttendanceModule: reuses StaffAttendanceRepository (its own widened
   // exports) for Faculty's own read-only "My Attendance" view over the same
   // real staff_attendance_event table the Admin bulk-marking feature uses.
-  imports: [ApprovalsModule, AttendanceModule, AnnouncementsModule, StaffAttendanceModule, LibraryModule],
+  imports: [
+    ApprovalsModule,
+    AttendanceModule,
+    AnnouncementsModule,
+    StaffAttendanceModule,
+    LibraryModule,
+  ],
   controllers: [
     FacultyScopeController,
     FacultyAttendanceController,
