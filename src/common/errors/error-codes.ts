@@ -123,6 +123,51 @@ export const HOSTEL_WARDEN_ERRORS = {
   STUDY_SESSION_LOCKED: 'This study session is already locked',
 } as const;
 
+// Activity/request 404s share one message regardless of cause (doesn't exist,
+// belongs to a different faculty/parent's scope, or authorization has since
+// lapsed) — same 404-not-403 rule as ONLINE_CLASS_ERRORS/MESSAGING_ERRORS above.
+export const PERMISSION_ERRORS = {
+  NOT_ACTIVE_FACULTY: 'Authenticated user is not an active faculty member',
+  ACTIVITY_NOT_FOUND: 'Permission activity not found',
+  REQUEST_NOT_FOUND: 'Permission request not found',
+  SECTION_NOT_FOUND: 'Section not found for the selected academic year',
+  NO_ELIGIBLE_STUDENTS: 'No active students found for this section',
+  STUDENT_NOT_ELIGIBLE:
+    'One or more selected students are not actively enrolled in this class and academic year',
+  INVALID_TIME_RANGE: 'endTime must be after startTime',
+  INVALID_DEADLINE: 'Response deadline must be on or before the activity date',
+  ACTIVITY_ALREADY_CANCELLED: 'This activity has already been cancelled',
+  REQUEST_ALREADY_CANCELLED: 'This permission request has been cancelled',
+  REQUEST_EXPIRED: 'The response deadline for this permission has passed',
+  REQUEST_ALREADY_DECLINED:
+    'This permission has already been declined and cannot be consented to',
+  REQUEST_ALREADY_CONSENTED:
+    'This permission has already been consented to and cannot be declined',
+} as const;
+
+// Sports Faculty operations — 404-not-403 for out-of-scope objects (a Faculty
+// member with no live SPORTS_FACULTY assignment for a given sport/team gets the
+// same "not found" as a genuinely nonexistent one), matching every other
+// module's convention (see ONLINE_CLASS_ERRORS/MESSAGING_ERRORS/PERMISSION_ERRORS).
+export const SPORTS_ERRORS = {
+  NOT_ACTIVE_FACULTY: 'Authenticated user is not an active faculty member',
+  NOT_AUTHORIZED_FOR_SPORT:
+    'You are not assigned as Sports Faculty for this sport',
+  TEAM_NOT_FOUND: 'Team not found',
+  SPORT_NOT_FOUND: 'Sport not found',
+  EQUIPMENT_NOT_FOUND: 'Equipment not found',
+  EQUIPMENT_ISSUE_NOT_FOUND: 'Equipment issue not found',
+  INSUFFICIENT_STOCK: 'Not enough equipment available to issue this quantity',
+  ALREADY_RETURNED: 'This equipment issue has already been returned',
+  ISSUE_REASON_REQUIRED: 'A reason is required to issue equipment',
+  IDEMPOTENCY_KEY_REQUIRED: 'Idempotency-Key header is required',
+  ROSTER_MEMBER_NOT_FOUND: 'Roster member not found',
+  ALREADY_ON_ROSTER: 'This student is already on the team roster',
+  OD_REQUEST_NOT_FOUND: 'On-duty request not found',
+  NO_ACTIVE_ROSTER:
+    'This team has no active roster members to request on-duty status for',
+} as const;
+
 export const PARENT_ERRORS = {
   NOT_LINKED_TO_STUDENT: 'You are not linked to this student',
   VIEW_ONLY_ACCESS:
