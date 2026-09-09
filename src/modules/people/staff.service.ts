@@ -5,7 +5,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
+import { LoginIdentifierRepository } from '../identity/repositories/login-identifier.repository';
 import { PersonRepository } from '../identity/repositories/person.repository';
+import { UserCredentialRepository } from '../identity/repositories/user-credential.repository';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { StaffExitDto } from './dto/staff-exit.dto';
 import { StaffQueryDto } from './dto/staff-query.dto';
@@ -18,6 +20,8 @@ export class StaffService {
   constructor(
     private readonly staffRepo: StaffRepository,
     private readonly personRepo: PersonRepository,
+    private readonly loginIdentifierRepo: LoginIdentifierRepository,
+    private readonly userCredentialRepo: UserCredentialRepository,
     private readonly auditService: AuditService,
   ) {}
 
@@ -61,7 +65,28 @@ export class StaffService {
   async get(id: string) {
     const staff = await this.staffRepo.findById(id);
     if (!staff) throw new NotFoundException('Staff record not found');
-    return staff;
+
+    // Same real login-credentials surface parents.service.ts's own get()
+    // already exposes (loginIdentifiers + resetAllowanceUsed) -- Faculty is a
+    // real login too (see CreateFacultyModal/createFacultyAction, POST
+    // /persons then POST /staff), just never had this shown on its own
+    // profile. resetAllowanceUsed only ever matters for a role with a
+    // self-service reset allowance to begin with; Faculty has the same
+    // forgot-password flow as Parent (identical /persons/:id/password-reset
+    // admin action, already role-agnostic -- see PersonsService.resetPassword,
+    // which clears the allowance whenever the target holds PARENT, and simply
+    // leaves it alone otherwise). Reusing that field here just surfaces the
+    // same already-real state Faculty's own credential row already tracks.
+    const [loginIdentifiers, credential] = await Promise.all([
+      this.loginIdentifierRepo.findByPersonId(staff.personId),
+      this.userCredentialRepo.findByPersonId(staff.personId),
+    ]);
+
+    return {
+      ...staff,
+      loginIdentifiers,
+      resetAllowanceUsed: credential?.resetAllowanceUsed ?? false,
+    };
   }
 
   /** The caller's OWN staff record, resolved from their authenticated
@@ -102,6 +127,7 @@ export class StaffService {
         stateTeacherId: dto.stateTeacherId ?? null,
         isTeaching: dto.isTeaching,
         dateOfJoining: dto.dateOfJoining,
+        experienceYears: dto.experienceYears ?? null,
       });
       await this.auditService.record({
         actorPersonId,

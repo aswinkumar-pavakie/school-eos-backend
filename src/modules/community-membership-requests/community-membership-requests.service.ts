@@ -158,7 +158,16 @@ export class CommunityMembershipRequestsService {
             subjectObjectType: 'community_membership_request',
             subjectObjectId: request.id,
             requestedBy: actor.personId,
-            payload: { studentId: dto.studentId },
+            // studentName is a real snapshot, not invented -- requestRepo.createAdd()
+            // already resolves it via its own COLUMNS join (student -> person), it just
+            // wasn't being forwarded into the payload the reviewer's own detail page
+            // actually renders. Without it the reviewer only ever saw a bare studentId
+            // UUID, which the detail page's generic payload renderer deliberately
+            // skips (an *Id-suffixed field with no human-readable value on its own).
+            payload: {
+              studentId: dto.studentId,
+              studentName: `${request.studentFirstName ?? ''} ${request.studentLastName ?? ''}`.trim() || null,
+            },
           },
           client,
         );
@@ -230,7 +239,13 @@ export class CommunityMembershipRequestsService {
           subjectObjectType: 'community_membership_request',
           subjectObjectId: request.id,
           requestedBy: actor.personId,
-          payload: { membershipId: dto.membershipId },
+          // Same fix as createAddRequest's own payload above -- requestRepo.createRemove()
+          // already resolves the member's name (via community_membership -> student ->
+          // person), just wasn't being forwarded to the reviewer.
+          payload: {
+            membershipId: dto.membershipId,
+            studentName: `${request.studentFirstName ?? ''} ${request.studentLastName ?? ''}`.trim() || null,
+          },
         },
         client,
       );
