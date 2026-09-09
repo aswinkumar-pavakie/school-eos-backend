@@ -132,4 +132,6 @@ export const PARENT_ERRORS = {
   FEE_LINE_NOT_PAYABLE: 'One or more selected fees are not open for payment',
   AMOUNT_EXCEEDS_OUTSTANDING:
     'The amount entered is more than what is actually outstanding on the selected fees',
+  INVALID_OUTING_TIMES:
+    'Expected return must be after the requested departure time',
 } as const;

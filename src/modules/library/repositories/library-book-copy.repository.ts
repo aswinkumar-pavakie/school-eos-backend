@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface LibraryBookCopyRow {
   id: string;
@@ -38,7 +41,10 @@ const FROM = `library_book_copy c JOIN library_book b ON b.id = c.book_id`;
 export class LibraryBookCopyRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findByBookId(bookId: string, executor: Queryable = this.postgres): Promise<LibraryBookCopyRow[]> {
+  async findByBookId(
+    bookId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryBookCopyRow[]> {
     const { rows } = await executor.query<LibraryBookCopyRow>(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE c.book_id = $1 ORDER BY c.copy_code`,
       [bookId],
@@ -46,14 +52,23 @@ export class LibraryBookCopyRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<LibraryBookCopyRow | null> {
-    const { rows } = await executor.query<LibraryBookCopyRow>(`SELECT ${COLUMNS} FROM ${FROM} WHERE c.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryBookCopyRow | null> {
+    const { rows } = await executor.query<LibraryBookCopyRow>(
+      `SELECT ${COLUMNS} FROM ${FROM} WHERE c.id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
   /** Row-locking read, for use inside a transaction right before a status change
    * that must not race with a concurrent issue/return/mark-lost on the same copy. */
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<LibraryBookCopyRow | null> {
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<LibraryBookCopyRow | null> {
     const { rows } = await executor.query<LibraryBookCopyRow>(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE c.id = $1 FOR UPDATE OF c`,
       [id],
@@ -61,7 +76,10 @@ export class LibraryBookCopyRepository {
     return rows[0] ?? null;
   }
 
-  async create(input: CreateCopyInput, executor: Queryable = this.postgres): Promise<LibraryBookCopyRow> {
+  async create(
+    input: CreateCopyInput,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryBookCopyRow> {
     const { rows } = await executor.query<{ id: string }>(
       `INSERT INTO library_book_copy (book_id, copy_code, shelf_location, acquisition_date, acquisition_cost_paise)
        VALUES ($1, $2, $3, $4, $5)
@@ -77,7 +95,11 @@ export class LibraryBookCopyRepository {
     return (await this.findById(rows[0].id, executor))!;
   }
 
-  async update(id: string, input: UpdateCopyInput, executor: Queryable = this.postgres): Promise<LibraryBookCopyRow | null> {
+  async update(
+    id: string,
+    input: UpdateCopyInput,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryBookCopyRow | null> {
     await executor.query(
       `UPDATE library_book_copy SET
          copy_code = COALESCE($2, copy_code),
@@ -97,15 +119,25 @@ export class LibraryBookCopyRepository {
     return this.findById(id, executor);
   }
 
-  async setStatus(id: string, status: string, executor: Queryable): Promise<LibraryBookCopyRow | null> {
-    await executor.query(`UPDATE library_book_copy SET status = $2, updated_at = now() WHERE id = $1`, [id, status]);
+  async setStatus(
+    id: string,
+    status: string,
+    executor: Queryable,
+  ): Promise<LibraryBookCopyRow | null> {
+    await executor.query(
+      `UPDATE library_book_copy SET status = $2, updated_at = now() WHERE id = $1`,
+      [id, status],
+    );
     return this.findById(id, executor);
   }
 
   /** Used to reject a reservation when the book already has a copy on the
    * shelf -- no one needs to queue for a book that's just sitting there
    * available. */
-  async countAvailableForBook(bookId: string, executor: Queryable = this.postgres): Promise<number> {
+  async countAvailableForBook(
+    bookId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<number> {
     const { rows } = await executor.query<{ count: string }>(
       `SELECT count(*) FROM library_book_copy WHERE book_id = $1 AND status = 'AVAILABLE'`,
       [bookId],

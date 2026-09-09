@@ -32,5 +32,9 @@ export function isCheckViolation(err: unknown): boolean {
 }
 
 export function isExclusionViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as PgErrorLike).code === '23P01';
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as PgErrorLike).code === '23P01'
+  );
 }

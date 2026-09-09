@@ -12,6 +12,7 @@
 // observable.
 
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -69,6 +70,13 @@ export class ParentHostelRequestsService {
     auditAction: string,
   ) {
     await this.assertActiveGuardian(personId, input.studentId);
+
+    // Same rule the DB's own `outing_times` CHECK enforces (expected_return >
+    // out_from) -- caught here first so a mis-picked date shows a real
+    // validation message, not a raw constraint-violation 500.
+    if (new Date(input.expectedReturn) <= new Date(input.outFrom)) {
+      throw new BadRequestException(PARENT_ERRORS.INVALID_OUTING_TIMES);
+    }
 
     const hostelId = await this.studentHostelRepo.findCurrentHostelIdForStudent(
       input.studentId,

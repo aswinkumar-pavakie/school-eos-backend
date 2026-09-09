@@ -65,8 +65,13 @@ export class MediaPostsController {
   // posts must never leak outside Media Room's own privileged callers.
   @Get()
   @Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL', 'FACULTY', 'PARENT')
-  async list(@Query() query: MediaPostQueryDto, @CurrentActor() actor: AuthenticatedUser) {
-    const privileged = actor.roles.some((r) => ['MEDIA_ROOM', 'ADMIN', 'PRINCIPAL'].includes(r));
+  async list(
+    @Query() query: MediaPostQueryDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    const privileged = actor.roles.some((r) =>
+      ['MEDIA_ROOM', 'ADMIN', 'PRINCIPAL'].includes(r),
+    );
     const filter = privileged ? query : { state: 'PUBLISHED' };
     return { data: await this.service.list(filter) };
   }

@@ -5,7 +5,10 @@
 // (explicitly out of scope here); this only ever reads and decides.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface StudentLeaveRequestRow {
   id: string;
@@ -75,7 +78,10 @@ export class StudentLeaveRequestRepository {
 
   /** Every leave request for a student currently enrolled in one of these
    * sections -- the Faculty class-advisor's own inbox. */
-  async findBySections(sectionIds: string[], executor: Queryable = this.postgres): Promise<StudentLeaveRequestRow[]> {
+  async findBySections(
+    sectionIds: string[],
+    executor: Queryable = this.postgres,
+  ): Promise<StudentLeaveRequestRow[]> {
     if (sectionIds.length === 0) return [];
     const { rows } = await executor.query(
       `SELECT ${COLUMNS} ${FROM} WHERE se.section_id = ANY($1::uuid[]) ORDER BY slr.created_at DESC`,
@@ -86,20 +92,35 @@ export class StudentLeaveRequestRepository {
 
   /** Every leave request this one real student has ever raised -- the
    * Parent-app's own "History" tab. */
-  async findByStudent(studentId: string, executor: Queryable = this.postgres): Promise<StudentLeaveRequestRow[]> {
-    const { rows } = await executor.query(`SELECT ${COLUMNS} ${FROM} WHERE slr.student_id = $1 ORDER BY slr.created_at DESC`, [studentId]);
+  async findByStudent(
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StudentLeaveRequestRow[]> {
+    const { rows } = await executor.query(
+      `SELECT ${COLUMNS} ${FROM} WHERE slr.student_id = $1 ORDER BY slr.created_at DESC`,
+      [studentId],
+    );
     return rows.map(mapRow);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<StudentLeaveRequestRow | null> {
-    const { rows } = await executor.query(`SELECT ${COLUMNS} ${FROM} WHERE slr.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StudentLeaveRequestRow | null> {
+    const { rows } = await executor.query(
+      `SELECT ${COLUMNS} ${FROM} WHERE slr.id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
   /** The student's own current section -- resolved fresh at decision time (not
    * trusted from whatever section they were in when the request was raised),
    * since that's the real section attendance must be marked against. */
-  async findCurrentSectionForStudent(studentId: string, executor: Queryable): Promise<{ sectionId: string } | null> {
+  async findCurrentSectionForStudent(
+    studentId: string,
+    executor: Queryable,
+  ): Promise<{ sectionId: string } | null> {
     const { rows } = await executor.query(
       `SELECT section_id FROM student_enrolment
        WHERE student_id = $1 AND status = 'ACTIVE'
@@ -112,7 +133,11 @@ export class StudentLeaveRequestRepository {
   /** The real guardian-link check every creation of a leave request runs first
    * -- only an ACTIVE guardian of this exact student may raise a request for
    * them (same boundary the Parent Fees/Events features already enforce). */
-  async isActiveGuardian(personId: string, studentId: string, executor: Queryable = this.postgres): Promise<boolean> {
+  async isActiveGuardian(
+    personId: string,
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<boolean> {
     const { rows } = await executor.query(
       `SELECT 1 FROM guardian_link WHERE person_id = $1 AND student_id = $2 AND status = 'ACTIVE'`,
       [personId, studentId],
@@ -120,7 +145,12 @@ export class StudentLeaveRequestRepository {
     return rows.length > 0;
   }
 
-  async setDecision(id: string, state: 'APPROVED' | 'REJECTED', decidedBy: string, executor: Queryable): Promise<void> {
+  async setDecision(
+    id: string,
+    state: 'APPROVED' | 'REJECTED',
+    decidedBy: string,
+    executor: Queryable,
+  ): Promise<void> {
     await executor.query(
       `UPDATE student_leave_request SET state = $2, decided_by = $3, decided_at = now(), updated_at = now() WHERE id = $1`,
       [id, state, decidedBy],

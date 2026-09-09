@@ -80,7 +80,9 @@ export class FeeOverviewRepository {
   /** One row per real fee_demand.state -- for Admin Reports' collection-status
    * donut. A plain GROUP BY, same table/authority as findOverviewCounts above,
    * just a count breakdown instead of an amount summary. */
-  async findStateCounts(executor: Queryable = this.postgres): Promise<FeeDemandStateCount[]> {
+  async findStateCounts(
+    executor: Queryable = this.postgres,
+  ): Promise<FeeDemandStateCount[]> {
     const { rows } = await executor.query<{ state: string; count: string }>(
       `SELECT state, count(*) AS count FROM fee_demand GROUP BY state`,
     );

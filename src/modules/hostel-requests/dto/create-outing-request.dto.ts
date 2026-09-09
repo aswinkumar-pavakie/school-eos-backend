@@ -1,4 +1,11 @@
-import { IsBoolean, IsDateString, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 // Shared by both Gate Pass and Emergency Exit (see school-eos-mobile's own
 // ParentOutingRequestScreen.tsx comment: "both create an outing_request on

@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -18,18 +30,28 @@ export class FacultyHomeworkController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateHomeworkDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateHomeworkDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.create(actor.personId, dto) };
   }
 
   @Patch(':id')
-  async update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateHomeworkDto, @CurrentActor() actor: AuthenticatedUser) {
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateHomeworkDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.update(actor.personId, id, dto) };
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id', ParseUUIDPipe) id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.service.remove(actor.personId, id);
   }
 
@@ -49,6 +71,15 @@ export class FacultyHomeworkController {
     @Query('key') key: string,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: { url: await this.service.getSubmissionFileUrl(actor.personId, id, studentId, key) } };
+    return {
+      data: {
+        url: await this.service.getSubmissionFileUrl(
+          actor.personId,
+          id,
+          studentId,
+          key,
+        ),
+      },
+    };
   }
 }

@@ -8,7 +8,10 @@
 // re-implements that check, it just surfaces the constraint violation.
 
 import { ConflictException, Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface CoordinatorTimetableSlotRow {
   slotId: string;
@@ -28,7 +31,10 @@ export interface CoordinatorTimetableSlotRow {
 export class AcademicCoordinatorTimetableRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findPeriodsForStage(stage: string, executor: Queryable = this.postgres) {
+  async findPeriodsForStage(
+    stage: string,
+    executor: Queryable = this.postgres,
+  ) {
     const { rows } = await executor.query(
       `SELECT id, period_no, label, start_time, end_time, is_break
        FROM timetable_period
@@ -46,7 +52,10 @@ export class AcademicCoordinatorTimetableRepository {
     }));
   }
 
-  async findSlotsForSection(sectionId: string, executor: Queryable = this.postgres): Promise<CoordinatorTimetableSlotRow[]> {
+  async findSlotsForSection(
+    sectionId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<CoordinatorTimetableSlotRow[]> {
     const { rows } = await executor.query(
       `SELECT ts.id AS slot_id, ts.period_id, tp.period_no, tp.start_time, tp.end_time, ts.day_of_week, ts.room, ts.is_draft,
               ts.subject_offering_id, subj.name AS subject_name,
@@ -81,9 +90,13 @@ export class AcademicCoordinatorTimetableRepository {
    * subject_offering) first, then inserts the new one as a draft. Runs both
    * halves in one transaction so a mid-way failure (e.g. the DB's own
    * teacher-clash trigger rejecting the insert) never leaves the cell empty. */
-  async upsertDraftSlot(
-    input: { sectionId: string; dayOfWeek: number; periodId: string; subjectOfferingId: string; room?: string | null },
-  ): Promise<string> {
+  async upsertDraftSlot(input: {
+    sectionId: string;
+    dayOfWeek: number;
+    periodId: string;
+    subjectOfferingId: string;
+    room?: string | null;
+  }): Promise<string> {
     const client = await this.postgres.connect();
     try {
       await client.query('BEGIN');
@@ -94,20 +107,30 @@ export class AcademicCoordinatorTimetableRepository {
         [input.sectionId, input.dayOfWeek, input.periodId],
       );
       for (const row of existing) {
-        await client.query(`UPDATE timetable_slot SET status = 'CANCELLED', updated_at = now() WHERE id = $1`, [row.id]);
+        await client.query(
+          `UPDATE timetable_slot SET status = 'CANCELLED', updated_at = now() WHERE id = $1`,
+          [row.id],
+        );
       }
       let newId: string;
       try {
         const { rows } = await client.query(
           `INSERT INTO timetable_slot (subject_offering_id, period_id, day_of_week, room, status, is_draft)
            VALUES ($1, $2, $3, $4, 'ACTIVE', true) RETURNING id`,
-          [input.subjectOfferingId, input.periodId, input.dayOfWeek, input.room ?? null],
+          [
+            input.subjectOfferingId,
+            input.periodId,
+            input.dayOfWeek,
+            input.room ?? null,
+          ],
         );
         newId = rows[0].id;
       } catch (err) {
         await client.query('ROLLBACK');
         if (isTeacherClash(err)) {
-          throw new ConflictException('This teacher already has another class scheduled at that day and period.');
+          throw new ConflictException(
+            'This teacher already has another class scheduled at that day and period.',
+          );
         }
         throw err;
       }
@@ -118,12 +141,21 @@ export class AcademicCoordinatorTimetableRepository {
     }
   }
 
-  async deleteDraftSlot(slotId: string, executor: Queryable = this.postgres): Promise<boolean> {
-    const { rowCount } = await executor.query(`DELETE FROM timetable_slot WHERE id = $1 AND is_draft = true`, [slotId]);
+  async deleteDraftSlot(
+    slotId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<boolean> {
+    const { rowCount } = await executor.query(
+      `DELETE FROM timetable_slot WHERE id = $1 AND is_draft = true`,
+      [slotId],
+    );
     return (rowCount ?? 0) > 0;
   }
 
-  async findSlotSectionId(slotId: string, executor: Queryable = this.postgres): Promise<string | null> {
+  async findSlotSectionId(
+    slotId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string | null> {
     const { rows } = await executor.query(
       `SELECT so.section_id FROM timetable_slot ts JOIN subject_offering so ON so.id = ts.subject_offering_id WHERE ts.id = $1`,
       [slotId],
@@ -131,7 +163,10 @@ export class AcademicCoordinatorTimetableRepository {
     return rows[0]?.section_id ?? null;
   }
 
-  async publishSectionDrafts(sectionId: string, executor: Queryable = this.postgres): Promise<number> {
+  async publishSectionDrafts(
+    sectionId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<number> {
     const { rowCount } = await executor.query(
       `UPDATE timetable_slot SET is_draft = false, updated_at = now()
        WHERE is_draft = true AND subject_offering_id IN (SELECT id FROM subject_offering WHERE section_id = $1)`,
@@ -144,7 +179,10 @@ export class AcademicCoordinatorTimetableRepository {
 function isTeacherClash(err: unknown): boolean {
   // Exact text raised by the DB's own trg_slot_clash / check_teacher_slot_clash()
   // trigger -- see database function definition, never re-derive it here.
-  return typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message: unknown }).message === 'string'
+  return typeof err === 'object' &&
+    err !== null &&
+    'message' in err &&
+    typeof (err as { message: unknown }).message === 'string'
     ? /already has a class/i.test((err as { message: string }).message)
     : false;
 }

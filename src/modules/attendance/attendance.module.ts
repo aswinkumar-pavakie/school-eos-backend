@@ -22,6 +22,11 @@ import { AttendanceSessionRepository } from './repositories/attendance-session.r
   // Faculty module reuses AttendanceSessionRepository/AttendanceRecordRepository
   // directly (its own auto-seed-present-then-correct pattern, and the same
   // locked-session correction path) rather than a second copy of this logic.
-  exports: [AttendanceRecordsService, AttendanceSessionRepository, AttendanceRecordRepository, AttendanceCorrectionRepository],
+  exports: [
+    AttendanceRecordsService,
+    AttendanceSessionRepository,
+    AttendanceRecordRepository,
+    AttendanceCorrectionRepository,
+  ],
 })
 export class AttendanceModule {}

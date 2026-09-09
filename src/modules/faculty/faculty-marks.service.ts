@@ -6,7 +6,13 @@
 // only ever allowed while the parent exam is in its own real 'MARKS_ENTRY'
 // state.
 
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { SaveMarksDto } from './dto/save-marks.dto';
@@ -25,25 +31,43 @@ export class FacultyMarksService {
   private async assertOwnsExamSubject(personId: string, examSubjectId: string) {
     const examSubject = await this.marksRepo.findExamSubjectById(examSubjectId);
     if (!examSubject) throw new NotFoundException('Exam not found');
-    const owns = await this.scopeRepo.ownsOffering(personId, examSubject.subjectOfferingId);
-    if (!owns) throw new ForbiddenException('You do not teach this subject for this class.');
+    const owns = await this.scopeRepo.ownsOffering(
+      personId,
+      examSubject.subjectOfferingId,
+    );
+    if (!owns)
+      throw new ForbiddenException(
+        'You do not teach this subject for this class.',
+      );
     return examSubject;
   }
 
   async listExamsForOffering(personId: string, subjectOfferingId: string) {
     const owns = await this.scopeRepo.ownsOffering(personId, subjectOfferingId);
-    if (!owns) throw new ForbiddenException('You do not teach this subject for this class.');
+    if (!owns)
+      throw new ForbiddenException(
+        'You do not teach this subject for this class.',
+      );
     return this.marksRepo.findExamSubjectsForOffering(subjectOfferingId);
   }
 
   async getRoster(personId: string, examSubjectId: string) {
-    const examSubject = await this.assertOwnsExamSubject(personId, examSubjectId);
-    const roster = await this.marksRepo.findRosterWithMarks(examSubject.sectionId, examSubjectId);
+    const examSubject = await this.assertOwnsExamSubject(
+      personId,
+      examSubjectId,
+    );
+    const roster = await this.marksRepo.findRosterWithMarks(
+      examSubject.sectionId,
+      examSubjectId,
+    );
     return { examSubject, roster };
   }
 
   async save(personId: string, examSubjectId: string, dto: SaveMarksDto) {
-    const examSubject = await this.assertOwnsExamSubject(personId, examSubjectId);
+    const examSubject = await this.assertOwnsExamSubject(
+      personId,
+      examSubjectId,
+    );
     if (examSubject.examState !== 'MARKS_ENTRY') {
       throw new ConflictException(
         `Marks entry for "${examSubject.examName}" is not open right now (current status: ${examSubject.examState}).`,
@@ -51,20 +75,35 @@ export class FacultyMarksService {
     }
     for (const entry of dto.entries) {
       if (entry.isAbsent && entry.marksObtained !== undefined) {
-        throw new BadRequestException(`${entry.studentId}: an absent student cannot also have marks entered.`);
+        throw new BadRequestException(
+          `${entry.studentId}: an absent student cannot also have marks entered.`,
+        );
       }
       if (!entry.isAbsent && entry.marksObtained === undefined) {
-        throw new BadRequestException(`${entry.studentId}: marks are required unless the student is marked absent.`);
+        throw new BadRequestException(
+          `${entry.studentId}: marks are required unless the student is marked absent.`,
+        );
       }
-      if (entry.marksObtained !== undefined && entry.marksObtained > examSubject.maxMarks) {
-        throw new BadRequestException(`${entry.studentId}: marks cannot exceed the maximum of ${examSubject.maxMarks}.`);
+      if (
+        entry.marksObtained !== undefined &&
+        entry.marksObtained > examSubject.maxMarks
+      ) {
+        throw new BadRequestException(
+          `${entry.studentId}: marks cannot exceed the maximum of ${examSubject.maxMarks}.`,
+        );
       }
     }
 
     return this.unitOfWork.run(async (client) => {
       for (const entry of dto.entries) {
         await this.marksRepo.upsertMark(
-          { examSubjectId, studentId: entry.studentId, marksObtained: entry.marksObtained ?? null, isAbsent: entry.isAbsent ?? false, enteredBy: personId },
+          {
+            examSubjectId,
+            studentId: entry.studentId,
+            marksObtained: entry.marksObtained ?? null,
+            isAbsent: entry.isAbsent ?? false,
+            enteredBy: personId,
+          },
           client,
         );
       }
@@ -85,7 +124,10 @@ export class FacultyMarksService {
   }
 
   async publish(personId: string, examSubjectId: string) {
-    const examSubject = await this.assertOwnsExamSubject(personId, examSubjectId);
+    const examSubject = await this.assertOwnsExamSubject(
+      personId,
+      examSubjectId,
+    );
     return this.unitOfWork.run(async (client) => {
       const count = await this.marksRepo.publishMarks(examSubjectId, client);
       await this.audit.record(

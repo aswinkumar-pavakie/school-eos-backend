@@ -1,4 +1,15 @@
-import { ArrayMinSize, IsArray, IsDateString, IsIn, IsInt, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsDateString,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 const STATUSES = ['DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED'];
 

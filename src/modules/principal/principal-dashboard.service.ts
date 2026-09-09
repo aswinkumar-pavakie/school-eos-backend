@@ -15,7 +15,12 @@ import { PostgresService } from '../../infrastructure/postgres/postgres.service'
 export interface PrincipalDashboardSummary {
   activeStudents: number;
   activeStaff: number;
-  currentAcademicYear: { id: string; name: string; startDate: string; endDate: string } | null;
+  currentAcademicYear: {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+  } | null;
   generatedAt: string;
 }
 
@@ -25,9 +30,18 @@ export class PrincipalDashboardService {
 
   async getSummary(): Promise<PrincipalDashboardSummary> {
     const [studentsResult, staffResult, yearResult] = await Promise.all([
-      this.postgres.query<{ count: string }>(`SELECT count(*) FROM student WHERE status = 'ACTIVE'`),
-      this.postgres.query<{ count: string }>(`SELECT count(*) FROM staff WHERE status = 'ACTIVE'`),
-      this.postgres.query<{ id: string; name: string; start_date: string; end_date: string }>(
+      this.postgres.query<{ count: string }>(
+        `SELECT count(*) FROM student WHERE status = 'ACTIVE'`,
+      ),
+      this.postgres.query<{ count: string }>(
+        `SELECT count(*) FROM staff WHERE status = 'ACTIVE'`,
+      ),
+      this.postgres.query<{
+        id: string;
+        name: string;
+        start_date: string;
+        end_date: string;
+      }>(
         `SELECT id, name, start_date, end_date FROM academic_year WHERE is_current LIMIT 1`,
       ),
     ]);
@@ -38,7 +52,12 @@ export class PrincipalDashboardService {
       activeStudents: parseInt(studentsResult.rows[0].count, 10),
       activeStaff: parseInt(staffResult.rows[0].count, 10),
       currentAcademicYear: year
-        ? { id: year.id, name: year.name, startDate: year.start_date, endDate: year.end_date }
+        ? {
+            id: year.id,
+            name: year.name,
+            startDate: year.start_date,
+            endDate: year.end_date,
+          }
         : null,
       generatedAt: new Date().toISOString(),
     };

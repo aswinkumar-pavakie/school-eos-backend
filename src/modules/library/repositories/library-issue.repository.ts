@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface LibraryIssueRow {
   id: string;
@@ -69,7 +72,10 @@ export class LibraryIssueRepository {
     );
   }
 
-  async findMany(filter: IssueFilter, executor: Queryable = this.postgres): Promise<{ rows: LibraryIssueRow[]; total: number }> {
+  async findMany(
+    filter: IssueFilter,
+    executor: Queryable = this.postgres,
+  ): Promise<{ rows: LibraryIssueRow[]; total: number }> {
     const conditions: string[] = [];
     const params: unknown[] = [];
 
@@ -89,7 +95,9 @@ export class LibraryIssueRepository {
       conditions.push(`i.member_id = $${params.length}`);
     }
     if (filter.overdueOnly) {
-      conditions.push(`i.status IN ('ISSUED', 'OVERDUE') AND i.due_date < current_date`);
+      conditions.push(
+        `i.status IN ('ISSUED', 'OVERDUE') AND i.due_date < current_date`,
+      );
     }
     if (filter.startDate) {
       params.push(filter.startDate);
@@ -97,10 +105,13 @@ export class LibraryIssueRepository {
     }
     if (filter.endDate) {
       params.push(filter.endDate);
-      conditions.push(`i.issued_at < ($${params.length}::date + interval '1 day')`);
+      conditions.push(
+        `i.issued_at < ($${params.length}::date + interval '1 day')`,
+      );
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const countResult = await this.postgres.query<{ count: string }>(
       `SELECT count(*) FROM ${FROM} ${where}`,
       params,
@@ -115,12 +126,21 @@ export class LibraryIssueRepository {
     return { rows, total: parseInt(countResult.rows[0].count, 10) };
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<LibraryIssueRow | null> {
-    const { rows } = await executor.query<LibraryIssueRow>(`SELECT ${COLUMNS} FROM ${FROM} WHERE i.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryIssueRow | null> {
+    const { rows } = await executor.query<LibraryIssueRow>(
+      `SELECT ${COLUMNS} FROM ${FROM} WHERE i.id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<LibraryIssueRow | null> {
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<LibraryIssueRow | null> {
     const { rows } = await executor.query<LibraryIssueRow>(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE i.id = $1 FOR UPDATE OF i`,
       [id],
@@ -130,7 +150,10 @@ export class LibraryIssueRepository {
 
   /** The one active (ISSUED/OVERDUE) issue for a copy, if any -- used to decide
    * whether marking a copy lost/damaged also needs to close out an issue. */
-  async findActiveByCopyId(copyId: string, executor: Queryable = this.postgres): Promise<LibraryIssueRow | null> {
+  async findActiveByCopyId(
+    copyId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryIssueRow | null> {
     const { rows } = await executor.query<LibraryIssueRow>(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE i.copy_id = $1 AND i.status IN ('ISSUED', 'OVERDUE')`,
       [copyId],
@@ -139,7 +162,12 @@ export class LibraryIssueRepository {
   }
 
   async create(
-    input: { copyId: string; memberId: string; issuedBy: string; dueDate: string },
+    input: {
+      copyId: string;
+      memberId: string;
+      issuedBy: string;
+      dueDate: string;
+    },
     executor: Queryable,
   ): Promise<LibraryIssueRow> {
     const { rows } = await executor.query<{ id: string }>(
@@ -151,7 +179,11 @@ export class LibraryIssueRepository {
     return (await this.findById(rows[0].id, executor))!;
   }
 
-  async markReturned(id: string, returnedTo: string, executor: Queryable): Promise<LibraryIssueRow | null> {
+  async markReturned(
+    id: string,
+    returnedTo: string,
+    executor: Queryable,
+  ): Promise<LibraryIssueRow | null> {
     await executor.query(
       `UPDATE library_issue SET status = 'RETURNED', returned_at = now(), returned_to = $2, updated_at = now() WHERE id = $1`,
       [id, returnedTo],
@@ -159,7 +191,11 @@ export class LibraryIssueRepository {
     return this.findById(id, executor);
   }
 
-  async renew(id: string, newDueDate: string, executor: Queryable): Promise<LibraryIssueRow | null> {
+  async renew(
+    id: string,
+    newDueDate: string,
+    executor: Queryable,
+  ): Promise<LibraryIssueRow | null> {
     await executor.query(
       `UPDATE library_issue SET due_date = $2, renewed_count = renewed_count + 1, status = 'ISSUED', updated_at = now() WHERE id = $1`,
       [id, newDueDate],
@@ -167,8 +203,14 @@ export class LibraryIssueRepository {
     return this.findById(id, executor);
   }
 
-  async markLost(id: string, executor: Queryable): Promise<LibraryIssueRow | null> {
-    await executor.query(`UPDATE library_issue SET status = 'LOST', updated_at = now() WHERE id = $1`, [id]);
+  async markLost(
+    id: string,
+    executor: Queryable,
+  ): Promise<LibraryIssueRow | null> {
+    await executor.query(
+      `UPDATE library_issue SET status = 'LOST', updated_at = now() WHERE id = $1`,
+      [id],
+    );
     return this.findById(id, executor);
   }
 }

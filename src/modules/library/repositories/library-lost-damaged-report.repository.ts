@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface LibraryLostDamagedReportRow {
   id: string;
@@ -73,7 +76,16 @@ export class LibraryLostDamagedReportRepository {
          (copy_id, issue_id, member_id, type, reason, notes, fine_id, reported_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id`,
-      [input.copyId, input.issueId, input.memberId, input.type, input.reason, input.notes, input.fineId, input.reportedBy],
+      [
+        input.copyId,
+        input.issueId,
+        input.memberId,
+        input.type,
+        input.reason,
+        input.notes,
+        input.fineId,
+        input.reportedBy,
+      ],
     );
     return (await this.findById(rows[0].id, executor))!;
   }
@@ -99,8 +111,12 @@ export class LibraryLostDamagedReportRepository {
           OR lower(coalesce(mp.last_name, '')) LIKE $${params.length})`,
       );
     }
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const countResult = await this.postgres.query<{ count: string }>(`SELECT count(*) FROM ${FROM} ${where}`, params);
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const countResult = await this.postgres.query<{ count: string }>(
+      `SELECT count(*) FROM ${FROM} ${where}`,
+      params,
+    );
     const rowParams = [...params, filter.limit, filter.offset];
     const { rows } = await executor.query<LibraryLostDamagedReportRow>(
       `SELECT ${COLUMNS} FROM ${FROM} ${where}
@@ -111,8 +127,14 @@ export class LibraryLostDamagedReportRepository {
     return { rows, total: parseInt(countResult.rows[0].count, 10) };
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<LibraryLostDamagedReportRow | null> {
-    const { rows } = await executor.query<LibraryLostDamagedReportRow>(`SELECT ${COLUMNS} FROM ${FROM} WHERE r.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryLostDamagedReportRow | null> {
+    const { rows } = await executor.query<LibraryLostDamagedReportRow>(
+      `SELECT ${COLUMNS} FROM ${FROM} WHERE r.id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 }

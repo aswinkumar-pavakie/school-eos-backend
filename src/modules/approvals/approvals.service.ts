@@ -204,8 +204,12 @@ export class ApprovalsService {
     comment: string,
   ): Promise<ApprovalRequestWithSteps> {
     return this.unitOfWork.run(async (client) => {
-      const request = await this.approvalRequestRepo.findByIdForUpdate(id, client);
-      if (!request) throw new NotFoundException(APPROVALS_ERRORS.REQUEST_NOT_FOUND);
+      const request = await this.approvalRequestRepo.findByIdForUpdate(
+        id,
+        client,
+      );
+      if (!request)
+        throw new NotFoundException(APPROVALS_ERRORS.REQUEST_NOT_FOUND);
       if (!OPEN_STATES.includes(request.state)) {
         throw new ConflictException(APPROVALS_ERRORS.NOT_PENDING);
       }
@@ -220,7 +224,9 @@ export class ApprovalsService {
       }
 
       if (request.requestedBy === actor.personId) {
-        throw new ForbiddenException('You cannot decide a request you raised yourself');
+        throw new ForbiddenException(
+          'You cannot decide a request you raised yourself',
+        );
       }
 
       const scope = approverScopeFromPayload(request.payload);
@@ -231,7 +237,9 @@ export class ApprovalsService {
         client,
       );
       if (!authorized) {
-        throw new ForbiddenException(APPROVALS_ERRORS.STEP_NOT_ASSIGNED_TO_CALLER);
+        throw new ForbiddenException(
+          APPROVALS_ERRORS.STEP_NOT_ASSIGNED_TO_CALLER,
+        );
       }
 
       await this.approvalRequestRepo.markSentBack(id, client);
@@ -264,7 +272,10 @@ export class ApprovalsService {
         client,
       );
 
-      const refreshedRequest = await this.approvalRequestRepo.findById(id, client);
+      const refreshedRequest = await this.approvalRequestRepo.findById(
+        id,
+        client,
+      );
       const steps = await this.approvalStepRepo.listByRequest(id, client);
       return { request: refreshedRequest!, steps };
     });

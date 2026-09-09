@@ -1,4 +1,8 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ParentHostelRequestsService } from './parent-hostel-requests.service';
 
 function buildService(opts: { link?: any; hostelId?: string | null } = {}) {
@@ -136,4 +140,37 @@ describe('ParentHostelRequestsService', () => {
   // 49. Parent cannot self-approve -- structurally guaranteed: this service exposes no
   // approve/reject method at all (see hostel-warden's OutingRequestsSharedService,
   // @Roles('HOSTEL_WARDEN')-gated, for the only code path that can decide a request).
+
+  // A mis-picked date (e.g. wrong month) must surface as a real 400, not the raw
+  // "outing_times" CHECK-violation 500 the DB itself would otherwise throw.
+  it('rejects a gate pass request where expectedReturn is before outFrom, before ever touching the DB', async () => {
+    const { service, outingRequestRepo } = buildService();
+    await expect(
+      service.createGatePassRequest(
+        {
+          ...GATE_PASS_DTO,
+          outFrom: '2026-09-13T03:30:00Z',
+          expectedReturn: '2026-08-13T05:30:00Z',
+        } as any,
+        'parent-1',
+      ),
+    ).rejects.toThrow(BadRequestException);
+    expect(outingRequestRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects an emergency exit request where expectedReturn equals outFrom (must be strictly after)', async () => {
+    const { service, outingRequestRepo } = buildService();
+    await expect(
+      service.createEmergencyExitRequest(
+        {
+          studentId: 'student-1',
+          outFrom: '2026-09-10T09:00:00Z',
+          expectedReturn: '2026-09-10T09:00:00Z',
+          reason: 'Medical',
+        } as any,
+        'parent-1',
+      ),
+    ).rejects.toThrow(BadRequestException);
+    expect(outingRequestRepo.create).not.toHaveBeenCalled();
+  });
 });

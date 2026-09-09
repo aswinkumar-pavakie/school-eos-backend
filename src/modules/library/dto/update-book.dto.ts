@@ -1,5 +1,13 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, IsUUID, IsUrl, Max, Min } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  IsUrl,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class UpdateBookDto {
   @IsOptional()

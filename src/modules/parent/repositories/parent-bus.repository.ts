@@ -6,7 +6,10 @@
 // live location, matching the user's own explicit instruction.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface StudentBusAllocation {
   direction: string;
@@ -22,14 +25,21 @@ export interface StudentBusAllocation {
   driverPhone: string | null;
   attendantName: string | null;
   attendantPhone: string | null;
-  stops: { stopName: string; sequenceNo: number; scheduledTime: string | null }[];
+  stops: {
+    stopName: string;
+    sequenceNo: number;
+    scheduledTime: string | null;
+  }[];
 }
 
 @Injectable()
 export class ParentBusRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findAllocationForStudent(studentId: string, executor: Queryable = this.postgres): Promise<StudentBusAllocation | null> {
+  async findAllocationForStudent(
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StudentBusAllocation | null> {
     const { rows } = await executor.query(
       `SELECT sta.direction, rs.stop_name, rs.scheduled_time, r.id AS route_id, r.name AS route_name, r.code AS route_code
        FROM student_transport_allocation sta
@@ -78,7 +88,11 @@ export class ParentBusRepository {
       driverPhone: vra?.driver_phone ?? null,
       attendantName: vra?.attendant_name ?? null,
       attendantPhone: vra?.attendant_phone ?? null,
-      stops: stopRows.map((s: any) => ({ stopName: s.stop_name, sequenceNo: s.sequence_no, scheduledTime: s.scheduled_time })),
+      stops: stopRows.map((s: any) => ({
+        stopName: s.stop_name,
+        sequenceNo: s.sequence_no,
+        scheduledTime: s.scheduled_time,
+      })),
     };
   }
 }

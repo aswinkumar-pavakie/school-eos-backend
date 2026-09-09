@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { CreateIssueDto } from './dto/create-issue.dto';
@@ -72,31 +77,53 @@ export class CirculationService {
       if (copy.status === 'RESERVED') {
         // Held for whoever's reservation is READY on this book -- only that
         // member can be issued this specific copy right now.
-        const ready = await this.reservationRepo.findReadyForBook(copy.bookId, client);
+        const ready = await this.reservationRepo.findReadyForBook(
+          copy.bookId,
+          client,
+        );
         if (!ready || ready.memberId !== dto.memberId) {
-          throw new ConflictException("This copy is held for another member's reservation -- it can't be issued to anyone else.");
+          throw new ConflictException(
+            "This copy is held for another member's reservation -- it can't be issued to anyone else.",
+          );
         }
         readyReservationToFulfil = { id: ready.id };
       } else if (copy.status !== 'AVAILABLE') {
-        throw new ConflictException(`This copy is currently ${copy.status.toLowerCase()}, not available -- it can't be issued.`);
+        throw new ConflictException(
+          `This copy is currently ${copy.status.toLowerCase()}, not available -- it can't be issued.`,
+        );
       }
 
-      const member = await this.memberRepo.findByIdForUpdate(dto.memberId, client);
+      const member = await this.memberRepo.findByIdForUpdate(
+        dto.memberId,
+        client,
+      );
       if (!member) throw new NotFoundException('Member not found');
       if (member.status !== 'ACTIVE') {
-        throw new BadRequestException(`This member is ${member.status.toLowerCase()} -- they can't be issued a book.`);
+        throw new BadRequestException(
+          `This member is ${member.status.toLowerCase()} -- they can't be issued a book.`,
+        );
       }
 
-      const activeCount = await this.memberRepo.countActiveIssues(dto.memberId, client);
+      const activeCount = await this.memberRepo.countActiveIssues(
+        dto.memberId,
+        client,
+      );
       if (activeCount >= member.maxBooksAllowed) {
-        throw new ConflictException(`This member already has ${activeCount} book(s) out, at their limit of ${member.maxBooksAllowed}.`);
+        throw new ConflictException(
+          `This member already has ${activeCount} book(s) out, at their limit of ${member.maxBooksAllowed}.`,
+        );
       }
 
       const config = await this.configRepo.get(client);
       const dueDate = addDays(today(), config.loanPeriodDays);
 
       const created = await this.issueRepo.create(
-        { copyId: dto.copyId, memberId: dto.memberId, issuedBy: actorPersonId, dueDate },
+        {
+          copyId: dto.copyId,
+          memberId: dto.memberId,
+          issuedBy: actorPersonId,
+          dueDate,
+        },
         client,
       );
       await this.copyRepo.setStatus(dto.copyId, 'ISSUED', client);
@@ -106,7 +133,12 @@ export class CirculationService {
       // this member's turn) never auto-fulfils just because they happened to
       // be issued a different, unheld copy of the same book.
       if (readyReservationToFulfil) {
-        await this.reservationRepo.setStatus(readyReservationToFulfil.id, 'FULFILLED', created.id, client);
+        await this.reservationRepo.setStatus(
+          readyReservationToFulfil.id,
+          'FULFILLED',
+          created.id,
+          client,
+        );
       }
 
       await this.auditService.record(
@@ -134,20 +166,40 @@ export class CirculationService {
       const copy = await this.copyRepo.findByIdForUpdate(issue.copyId, client);
       if (!copy) throw new NotFoundException('Copy not found');
 
-      const daysOverdue = Math.max(0, Math.floor((Date.now() - new Date(`${issue.dueDate}T00:00:00Z`).getTime()) / 86400000));
+      const daysOverdue = Math.max(
+        0,
+        Math.floor(
+          (Date.now() - new Date(`${issue.dueDate}T00:00:00Z`).getTime()) /
+            86400000,
+        ),
+      );
 
-      const updated = (await this.issueRepo.markReturned(id, actorPersonId, client))!;
+      const updated = (await this.issueRepo.markReturned(
+        id,
+        actorPersonId,
+        client,
+      ))!;
       // Holds the copy for the next PENDING reservation in the queue (flips it
       // to RESERVED and that reservation to READY) if one exists for this
       // book; otherwise frees it straight to AVAILABLE, same as before.
-      await this.reservationsService.releaseOrPromoteHold(copy.bookId, copy.id, client);
+      await this.reservationsService.releaseOrPromoteHold(
+        copy.bookId,
+        copy.id,
+        client,
+      );
 
       let fine = null;
       if (daysOverdue > 0) {
         const config = await this.configRepo.get(client);
         const amountPaise = daysOverdue * Number(config.finePerDayPaise);
         fine = await this.fineRepo.create(
-          { issueId: id, memberId: issue.memberId, reason: 'OVERDUE', amountPaise, assessedBy: actorPersonId },
+          {
+            issueId: id,
+            memberId: issue.memberId,
+            reason: 'OVERDUE',
+            amountPaise,
+            assessedBy: actorPersonId,
+          },
           client,
         );
       }
@@ -178,12 +230,20 @@ export class CirculationService {
 
       const config = await this.configRepo.get(client);
       if (issue.renewedCount >= config.maxRenewals) {
-        throw new ConflictException(`This book has already been renewed the maximum ${config.maxRenewals} time(s).`);
+        throw new ConflictException(
+          `This book has already been renewed the maximum ${config.maxRenewals} time(s).`,
+        );
       }
 
-      const pendingReservation = await this.reservationRepo.findOldestPendingForBook(issue.bookId, client);
+      const pendingReservation =
+        await this.reservationRepo.findOldestPendingForBook(
+          issue.bookId,
+          client,
+        );
       if (pendingReservation) {
-        throw new ConflictException('Another member is waiting for this book -- it can\'t be renewed.');
+        throw new ConflictException(
+          "Another member is waiting for this book -- it can't be renewed.",
+        );
       }
 
       const newDueDate = addDays(today(), config.loanPeriodDays);
@@ -205,7 +265,12 @@ export class CirculationService {
     });
   }
 
-  async markLost(id: string, actorPersonId: string, reason?: string, notes?: string) {
+  async markLost(
+    id: string,
+    actorPersonId: string,
+    reason?: string,
+    notes?: string,
+  ) {
     return this.unitOfWork.run(async (client) => {
       const issue = await this.issueRepo.findByIdForUpdate(id, client);
       if (!issue) throw new NotFoundException('Issue not found');

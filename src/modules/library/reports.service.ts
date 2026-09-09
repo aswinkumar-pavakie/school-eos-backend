@@ -27,7 +27,15 @@ export class ReportsService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 50;
     return this.auditLogRepo
-      .findMany({ startDate: query.startDate, endDate: query.endDate, limit, offset: (page - 1) * limit })
-      .then(({ rows, total }) => ({ data: rows, meta: { page, limit, total } }));
+      .findMany({
+        startDate: query.startDate,
+        endDate: query.endDate,
+        limit,
+        offset: (page - 1) * limit,
+      })
+      .then(({ rows, total }) => ({
+        data: rows,
+        meta: { page, limit, total },
+      }));
   }
 }

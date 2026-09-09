@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { SubmitFeedbackDto } from './dto/submit-feedback.dto';
 import { GuardianLinkRepository } from './repositories/guardian-link.repository';
@@ -14,7 +18,10 @@ export class ParentFeedbackService {
 
   private async assertGuardian(personId: string, studentId: string) {
     const link = await this.guardianRepo.findActiveLink(personId, studentId);
-    if (!link) throw new ForbiddenException('You are not a registered guardian of this student.');
+    if (!link)
+      throw new ForbiddenException(
+        'You are not a registered guardian of this student.',
+      );
   }
 
   async list(personId: string, studentId: string) {

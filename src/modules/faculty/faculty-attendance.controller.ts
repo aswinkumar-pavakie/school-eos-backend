@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -12,13 +20,31 @@ export class FacultyAttendanceController {
   constructor(private readonly service: FacultyAttendanceService) {}
 
   @Get()
-  async getRoster(@Query() query: AttendanceDayQueryDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.service.getOrCreateRoster(actor.personId, query.sectionId, query.date) };
+  async getRoster(
+    @Query() query: AttendanceDayQueryDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.getOrCreateRoster(
+        actor.personId,
+        query.sectionId,
+        query.date,
+      ),
+    };
   }
 
   @Post('mark-all-present')
-  async markAllPresent(@Query() query: AttendanceDayQueryDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.service.markAllPresent(actor.personId, query.sectionId, query.date) };
+  async markAllPresent(
+    @Query() query: AttendanceDayQueryDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.markAllPresent(
+        actor.personId,
+        query.sectionId,
+        query.date,
+      ),
+    };
   }
 
   @Post('records/:id')
@@ -28,7 +54,9 @@ export class FacultyAttendanceController {
     @Body() dto: MarkAttendanceRecordDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.service.markRecord(actor.personId, sectionId, id, dto) };
+    return {
+      data: await this.service.markRecord(actor.personId, sectionId, id, dto),
+    };
   }
 
   @Get('history')
@@ -38,6 +66,13 @@ export class FacultyAttendanceController {
     @Query('monthEnd') monthEnd: string,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.service.getHistory(actor.personId, sectionId, monthStart, monthEnd) };
+    return {
+      data: await this.service.getHistory(
+        actor.personId,
+        sectionId,
+        monthStart,
+        monthEnd,
+      ),
+    };
   }
 }

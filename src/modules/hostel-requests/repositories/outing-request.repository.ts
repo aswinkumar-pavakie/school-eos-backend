@@ -14,7 +14,10 @@
 // gate_pass table this migration also never touches).
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export type OutingRequestType = 'GATE_PASS' | 'EMERGENCY_EXIT';
 
@@ -69,7 +72,11 @@ export class OutingRequestRepository {
    * hostel(s) they run -- resolved via each request's student's own CURRENT
    * hostel_allocation (a student who has since moved hostels or checked out
    * no longer surfaces in a warden's list who isn't theirs any more). */
-  async findForWardenHostels(hostelIds: string[], requestType: OutingRequestType, executor: Queryable = this.postgres): Promise<OutingRequestRow[]> {
+  async findForWardenHostels(
+    hostelIds: string[],
+    requestType: OutingRequestType,
+    executor: Queryable = this.postgres,
+  ): Promise<OutingRequestRow[]> {
     if (hostelIds.length === 0) return [];
     const { rows } = await executor.query(
       `SELECT ${COLUMNS} FROM ${FROM}
@@ -88,12 +95,23 @@ export class OutingRequestRepository {
     return rows.map(mapRow);
   }
 
-  async findById(id: string, requestType: OutingRequestType, executor: Queryable = this.postgres): Promise<OutingRequestRow | null> {
-    const { rows } = await executor.query(`SELECT ${COLUMNS} FROM ${FROM} WHERE o.id = $1 AND o.request_type = $2`, [id, requestType]);
+  async findById(
+    id: string,
+    requestType: OutingRequestType,
+    executor: Queryable = this.postgres,
+  ): Promise<OutingRequestRow | null> {
+    const { rows } = await executor.query(
+      `SELECT ${COLUMNS} FROM ${FROM} WHERE o.id = $1 AND o.request_type = $2`,
+      [id, requestType],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
-  async findByStudent(studentId: string, requestType: OutingRequestType, executor: Queryable = this.postgres): Promise<OutingRequestRow[]> {
+  async findByStudent(
+    studentId: string,
+    requestType: OutingRequestType,
+    executor: Queryable = this.postgres,
+  ): Promise<OutingRequestRow[]> {
     const { rows } = await executor.query(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE o.student_id = $1 AND o.request_type = $2 ORDER BY o.requested_at DESC`,
       [studentId, requestType],
@@ -105,7 +123,11 @@ export class OutingRequestRepository {
    * their linked children) -- school-eos-mobile's own listMyGatePassRequests()
    * takes no studentId at all, so this is "my own requests", not scoped to
    * whichever child happens to be selected in the app right now. */
-  async findByRequestedBy(personId: string, requestType: OutingRequestType, executor: Queryable = this.postgres): Promise<OutingRequestRow[]> {
+  async findByRequestedBy(
+    personId: string,
+    requestType: OutingRequestType,
+    executor: Queryable = this.postgres,
+  ): Promise<OutingRequestRow[]> {
     const { rows } = await executor.query(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE o.requested_by = $1 AND o.request_type = $2 ORDER BY o.requested_at DESC`,
       [personId, requestType],
@@ -143,7 +165,13 @@ export class OutingRequestRepository {
     return rows[0].id;
   }
 
-  async decide(id: string, state: 'APPROVED' | 'REJECTED', decidedBy: string, note: string | null, executor: Queryable = this.postgres): Promise<void> {
+  async decide(
+    id: string,
+    state: 'APPROVED' | 'REJECTED',
+    decidedBy: string,
+    note: string | null,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
     await executor.query(
       `UPDATE outing_request SET state = $2, decided_by = $3, decision_note = $4, decided_at = now()
        WHERE id = $1 AND state = 'REQUESTED'`,

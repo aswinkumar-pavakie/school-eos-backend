@@ -47,12 +47,22 @@ export class FacultyLibraryController {
    * (incorrectly) send and resolves it fresh from the caller's own personId
    * every time. No library_member row yet -> honestly empty, not an error. */
   @Get('my-issues')
-  async myIssues(@Query() query: IssueQueryDto, @CurrentActor() actor: AuthenticatedUser) {
+  async myIssues(
+    @Query() query: IssueQueryDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const member = await this.memberRepo.findByPersonId(actor.personId);
     if (!member) {
-      return { data: [], meta: { page: query.page ?? 1, limit: query.limit ?? 50, total: 0 }, hasLibraryCard: false };
+      return {
+        data: [],
+        meta: { page: query.page ?? 1, limit: query.limit ?? 50, total: 0 },
+        hasLibraryCard: false,
+      };
     }
-    const result = await this.circulationService.list({ ...query, memberId: member.id });
+    const result = await this.circulationService.list({
+      ...query,
+      memberId: member.id,
+    });
     return { ...result, hasLibraryCard: true };
   }
 }

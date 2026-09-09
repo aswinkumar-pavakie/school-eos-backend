@@ -12,7 +12,10 @@ export class ParentLibraryController {
   constructor(private readonly service: ParentLibraryService) {}
 
   @Get('summary')
-  async getSummary(@Param('studentId', ParseUUIDPipe) studentId: string, @CurrentActor() actor: AuthenticatedUser) {
+  async getSummary(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.getSummary(actor.personId, studentId) };
   }
 
@@ -31,7 +34,9 @@ export class ParentLibraryController {
     @Param('bookId') bookId: string,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.service.getBook(actor.personId, studentId, bookId) };
+    return {
+      data: await this.service.getBook(actor.personId, studentId, bookId),
+    };
   }
 
   @Get('categories')
@@ -40,6 +45,8 @@ export class ParentLibraryController {
     @Query() query: CategoryQueryDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.service.listCategories(actor.personId, studentId, query) };
+    return {
+      data: await this.service.listCategories(actor.personId, studentId, query),
+    };
   }
 }

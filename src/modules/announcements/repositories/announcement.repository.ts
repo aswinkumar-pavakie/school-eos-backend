@@ -92,15 +92,22 @@ export class AnnouncementRepository {
     if (!filter.includeArchived) {
       conditions.push(`a.state NOT IN ('ARCHIVED', 'CANCELLED')`);
     }
-    if (filter.roleCode || (filter.sectionIds && filter.sectionIds.length > 0)) {
+    if (
+      filter.roleCode ||
+      (filter.sectionIds && filter.sectionIds.length > 0)
+    ) {
       const audienceOrs: string[] = [`aud.audience_type = 'SCHOOL'`];
       if (filter.roleCode) {
         params.push(filter.roleCode);
-        audienceOrs.push(`(aud.audience_type = 'ROLE' AND aud.target_role = $${params.length})`);
+        audienceOrs.push(
+          `(aud.audience_type = 'ROLE' AND aud.target_role = $${params.length})`,
+        );
       }
       if (filter.sectionIds && filter.sectionIds.length > 0) {
         params.push(filter.sectionIds);
-        audienceOrs.push(`(aud.audience_type = 'SECTION' AND aud.target_id = ANY($${params.length}))`);
+        audienceOrs.push(
+          `(aud.audience_type = 'SECTION' AND aud.target_id = ANY($${params.length}))`,
+        );
       }
       conditions.push(
         `EXISTS (SELECT 1 FROM announcement_audience aud WHERE aud.announcement_id = a.id AND (${audienceOrs.join(' OR ')}))`,
@@ -202,21 +209,34 @@ export class AnnouncementRepository {
     if (input.body !== undefined) push('body', input.body);
     if (input.category !== undefined) push('category', input.category);
     if (input.priority !== undefined) push('priority', input.priority);
-    if (input.isEmergency !== undefined) push('is_emergency', input.isEmergency);
+    if (input.isEmergency !== undefined)
+      push('is_emergency', input.isEmergency);
     if (input.expiresAt !== undefined) push('expires_at', input.expiresAt);
 
     if (sets.length > 0) {
       params.push(id);
-      await executor.query(`UPDATE announcement SET ${sets.join(', ')}, updated_at = now() WHERE id = $${params.length}`, params);
+      await executor.query(
+        `UPDATE announcement SET ${sets.join(', ')}, updated_at = now() WHERE id = $${params.length}`,
+        params,
+      );
     }
 
     if (input.audiences) {
-      await executor.query(`DELETE FROM announcement_audience WHERE announcement_id = $1`, [id]);
+      await executor.query(
+        `DELETE FROM announcement_audience WHERE announcement_id = $1`,
+        [id],
+      );
       for (const audience of input.audiences) {
         await executor.query(
           `INSERT INTO announcement_audience (announcement_id, audience_type, target_id, target_stage, target_role)
            VALUES ($1, $2, $3, $4, $5)`,
-          [id, audience.audienceType, audience.targetId ?? null, audience.targetStage ?? null, audience.targetRole ?? null],
+          [
+            id,
+            audience.audienceType,
+            audience.targetId ?? null,
+            audience.targetStage ?? null,
+            audience.targetRole ?? null,
+          ],
         );
       }
     }
@@ -226,8 +246,14 @@ export class AnnouncementRepository {
 
   /** Hard delete -- children first (no assumption of ON DELETE CASCADE). */
   async delete(id: string, executor: Queryable = this.postgres): Promise<void> {
-    await executor.query(`DELETE FROM announcement_read WHERE announcement_id = $1`, [id]);
-    await executor.query(`DELETE FROM announcement_audience WHERE announcement_id = $1`, [id]);
+    await executor.query(
+      `DELETE FROM announcement_read WHERE announcement_id = $1`,
+      [id],
+    );
+    await executor.query(
+      `DELETE FROM announcement_audience WHERE announcement_id = $1`,
+      [id],
+    );
     await executor.query(`DELETE FROM announcement WHERE id = $1`, [id]);
   }
 }

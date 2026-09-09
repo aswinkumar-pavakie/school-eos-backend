@@ -3,7 +3,11 @@
 // always resolved server-side from the student's own current
 // hostel_allocation, never trusted from the client.
 
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { GuardianLinkRepository } from '../parent/repositories/guardian-link.repository';
 import { CallRequestRepository } from './repositories/call-request.repository';
@@ -21,7 +25,10 @@ export class ParentCallRequestsService {
 
   private async assertGuardian(personId: string, studentId: string) {
     const link = await this.guardianRepo.findActiveLink(personId, studentId);
-    if (!link) throw new ForbiddenException('You are not a registered guardian of this student.');
+    if (!link)
+      throw new ForbiddenException(
+        'You are not a registered guardian of this student.',
+      );
   }
 
   /** Every call request this parent has themselves raised, across all their
@@ -33,12 +40,21 @@ export class ParentCallRequestsService {
 
   async create(personId: string, dto: CreateCallRequestDto) {
     await this.assertGuardian(personId, dto.studentId);
-    const allocation = await this.scopeRepo.getActiveHostelForStudent(dto.studentId);
+    const allocation = await this.scopeRepo.getActiveHostelForStudent(
+      dto.studentId,
+    );
     if (!allocation) {
-      throw new BadRequestException('This student does not have an active hostel allocation.');
+      throw new BadRequestException(
+        'This student does not have an active hostel allocation.',
+      );
     }
-    if (new Date(dto.requestedTo).getTime() < new Date(dto.requestedFrom).getTime()) {
-      throw new BadRequestException('requestedTo must be on or after requestedFrom.');
+    if (
+      new Date(dto.requestedTo).getTime() <
+      new Date(dto.requestedFrom).getTime()
+    ) {
+      throw new BadRequestException(
+        'requestedTo must be on or after requestedFrom.',
+      );
     }
     const id = await this.callRepo.create({
       studentId: dto.studentId,

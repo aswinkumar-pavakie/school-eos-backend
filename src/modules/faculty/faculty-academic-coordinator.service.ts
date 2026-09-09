@@ -16,7 +16,12 @@
 // draft-publish, and promotion/progression (no existing computation
 // infrastructure to build on safely).
 
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { AssignClassAdvisorDto } from './dto/assign-class-advisor.dto';
 import { AssignOfferingTeacherDto } from './dto/assign-offering-teacher.dto';
@@ -55,20 +60,38 @@ export class FacultyAcademicCoordinatorService {
   private async resolveScope(personId: string): Promise<ResolvedScope> {
     const raw = await this.scopeRepo.getCoordinatorScope(personId);
     if (raw.length === 0) {
-      throw new ForbiddenException('You are not currently assigned as an Academic Coordinator.');
+      throw new ForbiddenException(
+        'You are not currently assigned as an Academic Coordinator.',
+      );
     }
-    const stages = [...new Set(raw.filter((r) => r.scopeType === 'STAGE').map((r) => r.scopeStage as string))];
-    const explicitGradeIds = raw.filter((r) => r.scopeType === 'GRADE').map((r) => r.scopeId as string);
+    const stages = [
+      ...new Set(
+        raw
+          .filter((r) => r.scopeType === 'STAGE')
+          .map((r) => r.scopeStage as string),
+      ),
+    ];
+    const explicitGradeIds = raw
+      .filter((r) => r.scopeType === 'GRADE')
+      .map((r) => r.scopeId as string);
     const schoolWide = raw.some((r) => r.scopeType === 'SCHOOL');
-    const gradeIds = await this.acRepo.resolveGradeIdsForScope(stages, explicitGradeIds, schoolWide);
+    const gradeIds = await this.acRepo.resolveGradeIdsForScope(
+      stages,
+      explicitGradeIds,
+      schoolWide,
+    );
     const grades = await this.acRepo.findGrades(gradeIds);
-    const effectiveStages = [...new Set([...stages, ...grades.map((g) => g.stage)])];
+    const effectiveStages = [
+      ...new Set([...stages, ...grades.map((g) => g.stage)]),
+    ];
     return { gradeIds, stages: effectiveStages };
   }
 
   private assertGradeInScope(scope: ResolvedScope, gradeId: string) {
     if (!scope.gradeIds.includes(gradeId)) {
-      throw new ForbiddenException('That grade is outside your assigned academic scope.');
+      throw new ForbiddenException(
+        'That grade is outside your assigned academic scope.',
+      );
     }
   }
 
@@ -81,7 +104,8 @@ export class FacultyAcademicCoordinatorService {
 
   async getMe(personId: string) {
     const raw = await this.scopeRepo.getCoordinatorScope(personId);
-    if (raw.length === 0) return { isCoordinator: false, stages: [], grades: [] };
+    if (raw.length === 0)
+      return { isCoordinator: false, stages: [], grades: [] };
     const scope = await this.resolveScope(personId);
     const grades = await this.acRepo.findGrades(scope.gradeIds);
     return { isCoordinator: true, stages: scope.stages, grades };
@@ -100,8 +124,12 @@ export class FacultyAcademicCoordinatorService {
       this.acRepo.findFacultyWorkload(scope.gradeIds),
     ]);
     const totalStudents = grades.reduce((sum, g) => sum + g.studentCount, 0);
-    const unassignedOfferings = offerings.filter((o) => !o.teacherStaffId).length;
-    const sectionsWithoutAdvisor = sections.filter((s) => !s.advisorRoleAssignmentId).length;
+    const unassignedOfferings = offerings.filter(
+      (o) => !o.teacherStaffId,
+    ).length;
+    const sectionsWithoutAdvisor = sections.filter(
+      (s) => !s.advisorRoleAssignmentId,
+    ).length;
     return {
       stages: scope.stages,
       gradeCount: grades.length,
@@ -126,7 +154,9 @@ export class FacultyAcademicCoordinatorService {
   async getSections(personId: string, gradeId?: string) {
     const scope = await this.resolveScope(personId);
     if (gradeId) this.assertGradeInScope(scope, gradeId);
-    const sections = await this.acRepo.findSections(gradeId ? [gradeId] : scope.gradeIds);
+    const sections = await this.acRepo.findSections(
+      gradeId ? [gradeId] : scope.gradeIds,
+    );
     return sections;
   }
 
@@ -134,26 +164,39 @@ export class FacultyAcademicCoordinatorService {
   // Faculty academic assignment + workload (sections 9, 22)
   // ============================================================
 
-  async getOfferings(personId: string, filter: { gradeId?: string; sectionId?: string }) {
+  async getOfferings(
+    personId: string,
+    filter: { gradeId?: string; sectionId?: string },
+  ) {
     const scope = await this.resolveScope(personId);
     if (filter.gradeId) this.assertGradeInScope(scope, filter.gradeId);
     return this.acRepo.findOfferings(scope.gradeIds, filter);
   }
 
-  private async assertOfferingInScope(scope: ResolvedScope, offeringId: string) {
+  private async assertOfferingInScope(
+    scope: ResolvedScope,
+    offeringId: string,
+  ) {
     const offering = await this.acRepo.findOfferingById(offeringId);
     if (!offering) throw new NotFoundException('Subject offering not found');
     this.assertGradeInScope(scope, offering.gradeId);
     return offering;
   }
 
-  async assignOfferingTeacher(personId: string, offeringId: string, dto: AssignOfferingTeacherDto) {
+  async assignOfferingTeacher(
+    personId: string,
+    offeringId: string,
+    dto: AssignOfferingTeacherDto,
+  ) {
     const scope = await this.resolveScope(personId);
     await this.assertOfferingInScope(scope, offeringId);
     const teacherStaffId = dto.teacherStaffId ?? null;
     if (teacherStaffId) {
       const eligible = await this.acRepo.isEligibleFacultyStaff(teacherStaffId);
-      if (!eligible) throw new BadRequestException('Selected person is not an active faculty member.');
+      if (!eligible)
+        throw new BadRequestException(
+          'Selected person is not an active faculty member.',
+        );
     }
     await this.acRepo.updateOfferingTeacher(offeringId, teacherStaffId);
     await this.audit.record({
@@ -165,7 +208,11 @@ export class FacultyAcademicCoordinatorService {
       outcome: 'SUCCESS',
       afterData: { teacherStaffId },
     });
-    return this.acRepo.findOfferings(scope.gradeIds, {}).then((rows) => rows.find((r) => r.subjectOfferingId === offeringId) ?? null);
+    return this.acRepo
+      .findOfferings(scope.gradeIds, {})
+      .then(
+        (rows) => rows.find((r) => r.subjectOfferingId === offeringId) ?? null,
+      );
   }
 
   async getEligibleFaculty(personId: string) {
@@ -182,19 +229,36 @@ export class FacultyAcademicCoordinatorService {
   // Class Advisor assignment (section 10)
   // ============================================================
 
-  async assignClassAdvisor(personId: string, sectionId: string, dto: AssignClassAdvisorDto) {
+  async assignClassAdvisor(
+    personId: string,
+    sectionId: string,
+    dto: AssignClassAdvisorDto,
+  ) {
     const scope = await this.resolveScope(personId);
     const sections = await this.acRepo.findSections(scope.gradeIds);
     const section = sections.find((s) => s.sectionId === sectionId);
-    if (!section) throw new NotFoundException('Section not found in your scope');
+    if (!section)
+      throw new NotFoundException('Section not found in your scope');
 
-    const eligibleStaffId = await this.acRepo.isEligibleFacultyPerson(dto.personId);
-    if (!eligibleStaffId) throw new BadRequestException('Selected person is not an active faculty member.');
+    const eligibleStaffId = await this.acRepo.isEligibleFacultyPerson(
+      dto.personId,
+    );
+    if (!eligibleStaffId)
+      throw new BadRequestException(
+        'Selected person is not an active faculty member.',
+      );
 
     if (section.advisorRoleAssignmentId) {
-      await this.acRepo.revokeRoleAssignment(section.advisorRoleAssignmentId, personId);
+      await this.acRepo.revokeRoleAssignment(
+        section.advisorRoleAssignmentId,
+        personId,
+      );
     }
-    const newId = await this.acRepo.createClassAdvisorAssignment(sectionId, dto.personId, personId);
+    const newId = await this.acRepo.createClassAdvisorAssignment(
+      sectionId,
+      dto.personId,
+      personId,
+    );
     await this.audit.record({
       actorPersonId: personId,
       actorRoleCode: 'ACADEMIC_COORDINATOR',
@@ -211,9 +275,16 @@ export class FacultyAcademicCoordinatorService {
     const scope = await this.resolveScope(personId);
     const sections = await this.acRepo.findSections(scope.gradeIds);
     const section = sections.find((s) => s.sectionId === sectionId);
-    if (!section) throw new NotFoundException('Section not found in your scope');
-    if (!section.advisorRoleAssignmentId) throw new NotFoundException('This section has no active advisor to revoke');
-    await this.acRepo.revokeRoleAssignment(section.advisorRoleAssignmentId, personId);
+    if (!section)
+      throw new NotFoundException('Section not found in your scope');
+    if (!section.advisorRoleAssignmentId)
+      throw new NotFoundException(
+        'This section has no active advisor to revoke',
+      );
+    await this.acRepo.revokeRoleAssignment(
+      section.advisorRoleAssignmentId,
+      personId,
+    );
     await this.audit.record({
       actorPersonId: personId,
       actorRoleCode: 'ACADEMIC_COORDINATOR',
@@ -234,7 +305,8 @@ export class FacultyAcademicCoordinatorService {
     const scope = await this.resolveScope(personId);
     const sections = await this.acRepo.findSections(scope.gradeIds);
     const section = sections.find((s) => s.sectionId === sectionId);
-    if (!section) throw new NotFoundException('Section not found in your scope');
+    if (!section)
+      throw new NotFoundException('Section not found in your scope');
     const grades = await this.acRepo.findGrades(scope.gradeIds);
     const grade = grades.find((g) => g.gradeId === section.gradeId);
     const [periods, slots] = await Promise.all([
@@ -248,10 +320,13 @@ export class FacultyAcademicCoordinatorService {
     const scope = await this.resolveScope(personId);
     const sections = await this.acRepo.findSections(scope.gradeIds);
     const section = sections.find((s) => s.sectionId === dto.sectionId);
-    if (!section) throw new NotFoundException('Section not found in your scope');
+    if (!section)
+      throw new NotFoundException('Section not found in your scope');
     const offering = await this.acRepo.findOfferingById(dto.subjectOfferingId);
     if (!offering || offering.sectionId !== dto.sectionId) {
-      throw new BadRequestException('That subject offering does not belong to this section.');
+      throw new BadRequestException(
+        'That subject offering does not belong to this section.',
+      );
     }
     const slotId = await this.ttRepo.upsertDraftSlot(dto);
     await this.audit.record({
@@ -271,9 +346,13 @@ export class FacultyAcademicCoordinatorService {
     const sectionId = await this.ttRepo.findSlotSectionId(slotId);
     if (!sectionId) throw new NotFoundException('Slot not found');
     const sections = await this.acRepo.findSections(scope.gradeIds);
-    if (!sections.some((s) => s.sectionId === sectionId)) throw new ForbiddenException('That section is outside your scope.');
+    if (!sections.some((s) => s.sectionId === sectionId))
+      throw new ForbiddenException('That section is outside your scope.');
     const deleted = await this.ttRepo.deleteDraftSlot(slotId);
-    if (!deleted) throw new BadRequestException('Only a not-yet-published draft slot can be deleted.');
+    if (!deleted)
+      throw new BadRequestException(
+        'Only a not-yet-published draft slot can be deleted.',
+      );
     await this.audit.record({
       actorPersonId: personId,
       actorRoleCode: 'ACADEMIC_COORDINATOR',
@@ -287,7 +366,8 @@ export class FacultyAcademicCoordinatorService {
   async publishTimetable(personId: string, sectionId: string) {
     const scope = await this.resolveScope(personId);
     const sections = await this.acRepo.findSections(scope.gradeIds);
-    if (!sections.some((s) => s.sectionId === sectionId)) throw new NotFoundException('Section not found in your scope');
+    if (!sections.some((s) => s.sectionId === sectionId))
+      throw new NotFoundException('Section not found in your scope');
     const count = await this.ttRepo.publishSectionDrafts(sectionId);
     await this.audit.record({
       actorPersonId: personId,
@@ -314,7 +394,9 @@ export class FacultyAcademicCoordinatorService {
     const gradeIds = await this.examRepo.findExamGradeIds(examId);
     if (gradeIds.length === 0) throw new NotFoundException('Exam not found');
     if (!gradeIds.some((id) => scope.gradeIds.includes(id))) {
-      throw new ForbiddenException('That exam is outside your assigned academic scope.');
+      throw new ForbiddenException(
+        'That exam is outside your assigned academic scope.',
+      );
     }
   }
 
@@ -322,7 +404,13 @@ export class FacultyAcademicCoordinatorService {
     const scope = await this.resolveScope(personId);
     for (const gradeId of dto.gradeIds) this.assertGradeInScope(scope, gradeId);
     const academicYearId = await this.acRepo.findCurrentAcademicYearId();
-    const examId = await this.examRepo.createExam({ academicYearId, name: dto.name, examType: dto.examType, term: dto.term, gradeIds: dto.gradeIds });
+    const examId = await this.examRepo.createExam({
+      academicYearId,
+      name: dto.name,
+      examType: dto.examType,
+      term: dto.term,
+      gradeIds: dto.gradeIds,
+    });
     await this.audit.record({
       actorPersonId: personId,
       actorRoleCode: 'ACADEMIC_COORDINATOR',
@@ -339,7 +427,10 @@ export class FacultyAcademicCoordinatorService {
     const scope = await this.resolveScope(personId);
     await this.assertExamInScope(scope, examId);
     const next = await this.examRepo.advanceExamState(examId);
-    if (!next) throw new BadRequestException('This exam cannot be advanced any further from its current state.');
+    if (!next)
+      throw new BadRequestException(
+        'This exam cannot be advanced any further from its current state.',
+      );
     await this.audit.record({
       actorPersonId: personId,
       actorRoleCode: 'ACADEMIC_COORDINATOR',
@@ -358,13 +449,22 @@ export class FacultyAcademicCoordinatorService {
     return this.examRepo.findExamSubjects(examId, scope.gradeIds);
   }
 
-  async createExamSubject(personId: string, examId: string, dto: CreateExamSubjectDto) {
+  async createExamSubject(
+    personId: string,
+    examId: string,
+    dto: CreateExamSubjectDto,
+  ) {
     const scope = await this.resolveScope(personId);
     await this.assertExamInScope(scope, examId);
-    const offering = await this.assertOfferingInScope(scope, dto.subjectOfferingId);
+    const offering = await this.assertOfferingInScope(
+      scope,
+      dto.subjectOfferingId,
+    );
     const examGradeIds = await this.examRepo.findExamGradeIds(examId);
     if (!examGradeIds.includes(offering.gradeId)) {
-      throw new BadRequestException("That class's grade is not one of this exam's configured grades.");
+      throw new BadRequestException(
+        "That class's grade is not one of this exam's configured grades.",
+      );
     }
     const id = await this.examRepo.createExamSubject({ ...dto, examId });
     await this.audit.record({
@@ -379,9 +479,14 @@ export class FacultyAcademicCoordinatorService {
     return { examSubjectId: id };
   }
 
-  async updateExamSubject(personId: string, examSubjectId: string, dto: UpdateExamSubjectDto) {
+  async updateExamSubject(
+    personId: string,
+    examSubjectId: string,
+    dto: UpdateExamSubjectDto,
+  ) {
     const scope = await this.resolveScope(personId);
-    const offeringId = await this.examRepo.findExamSubjectOffering(examSubjectId);
+    const offeringId =
+      await this.examRepo.findExamSubjectOffering(examSubjectId);
     if (!offeringId) throw new NotFoundException('Exam subject not found');
     await this.assertOfferingInScope(scope, offeringId);
     await this.examRepo.updateExamSubject(examSubjectId, dto);
@@ -414,15 +519,24 @@ export class FacultyAcademicCoordinatorService {
 
   private assertStageInScope(scope: ResolvedScope, stage: string) {
     if (!scope.stages.includes(stage)) {
-      throw new ForbiddenException('That stage is outside your assigned academic scope.');
+      throw new ForbiddenException(
+        'That stage is outside your assigned academic scope.',
+      );
     }
   }
 
-  async createCalendarEvent(personId: string, dto: CreateCoordinatorCalendarEventDto) {
+  async createCalendarEvent(
+    personId: string,
+    dto: CreateCoordinatorCalendarEventDto,
+  ) {
     const scope = await this.resolveScope(personId);
     this.assertStageInScope(scope, dto.scopeStage);
     const academicYearId = await this.acRepo.findCurrentAcademicYearId();
-    const id = await this.calendarRepo.create({ ...dto, academicYearId, createdBy: personId });
+    const id = await this.calendarRepo.create({
+      ...dto,
+      academicYearId,
+      createdBy: personId,
+    });
     await this.audit.record({
       actorPersonId: personId,
       actorRoleCode: 'ACADEMIC_COORDINATOR',
@@ -437,12 +551,17 @@ export class FacultyAcademicCoordinatorService {
 
   private async assertOwnsCalendarEvent(scope: ResolvedScope, id: string) {
     const event = await this.calendarRepo.findById(id);
-    if (!event || event.scopeType !== 'STAGE' || !event.scopeStage) throw new NotFoundException('Calendar event not found');
+    if (!event || event.scopeType !== 'STAGE' || !event.scopeStage)
+      throw new NotFoundException('Calendar event not found');
     this.assertStageInScope(scope, event.scopeStage);
     return event;
   }
 
-  async updateCalendarEvent(personId: string, id: string, dto: UpdateCoordinatorCalendarEventDto) {
+  async updateCalendarEvent(
+    personId: string,
+    id: string,
+    dto: UpdateCoordinatorCalendarEventDto,
+  ) {
     const scope = await this.resolveScope(personId);
     await this.assertOwnsCalendarEvent(scope, id);
     await this.calendarRepo.update(id, dto);

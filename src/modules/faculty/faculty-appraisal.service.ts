@@ -3,7 +3,11 @@
 // as every other approval-routed Faculty feature). Deciding happens through
 // the existing generic /approvals/:id/approve|reject endpoints.
 
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { ApprovalsService } from '../approvals/approvals.service';
@@ -28,19 +32,35 @@ export class FacultyAppraisalService {
     const staffId = await this.scopeRepo.getStaffId(personId);
     if (!staffId) return [];
     const appraisals = await this.appraisalRepo.findByStaffId(staffId);
-    return Promise.all(appraisals.map(async (a) => ({ ...a, approvalTrail: await getApprovalTrail(this.stepRepo, a.approvalRequestId) })));
+    return Promise.all(
+      appraisals.map(async (a) => ({
+        ...a,
+        approvalTrail: await getApprovalTrail(
+          this.stepRepo,
+          a.approvalRequestId,
+        ),
+      })),
+    );
   }
 
   async get(personId: string, id: string) {
     const staffId = await this.scopeRepo.getStaffId(personId);
     const appraisal = await this.appraisalRepo.findById(id);
-    if (!appraisal || !staffId || appraisal.staffId !== staffId) throw new NotFoundException('Appraisal not found');
-    return { ...appraisal, approvalTrail: await getApprovalTrail(this.stepRepo, appraisal.approvalRequestId) };
+    if (!appraisal || !staffId || appraisal.staffId !== staffId)
+      throw new NotFoundException('Appraisal not found');
+    return {
+      ...appraisal,
+      approvalTrail: await getApprovalTrail(
+        this.stepRepo,
+        appraisal.approvalRequestId,
+      ),
+    };
   }
 
   async create(personId: string, dto: CreateStaffAppraisalDto) {
     const staffId = await this.scopeRepo.getStaffId(personId);
-    if (!staffId) throw new ForbiddenException('No active staff record for this account.');
+    if (!staffId)
+      throw new ForbiddenException('No active staff record for this account.');
 
     return this.unitOfWork.run(async (client) => {
       const id = await this.appraisalRepo.create(

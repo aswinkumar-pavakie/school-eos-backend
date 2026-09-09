@@ -1,6 +1,23 @@
-import { IsBoolean, IsDateString, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsIn,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
-const EVENT_TYPES = ['HOLIDAY', 'TERM_START', 'TERM_END', 'EXAM_WINDOW', 'PTM', 'FUNCTION', 'COMPETITION', 'WORKING_SATURDAY', 'OTHER'];
+const EVENT_TYPES = [
+  'HOLIDAY',
+  'TERM_START',
+  'TERM_END',
+  'EXAM_WINDOW',
+  'PTM',
+  'FUNCTION',
+  'COMPETITION',
+  'WORKING_SATURDAY',
+  'OTHER',
+];
 
 export class UpdateCoordinatorCalendarEventDto {
   @IsOptional()

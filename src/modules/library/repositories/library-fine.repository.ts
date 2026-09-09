@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface LibraryFineRow {
   id: string;
@@ -48,7 +51,10 @@ const FROM = `library_fine f
 export class LibraryFineRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findMany(filter: FineFilter, executor: Queryable = this.postgres): Promise<{ rows: LibraryFineRow[]; total: number }> {
+  async findMany(
+    filter: FineFilter,
+    executor: Queryable = this.postgres,
+  ): Promise<{ rows: LibraryFineRow[]; total: number }> {
     const conditions: string[] = [];
     const params: unknown[] = [];
     if (filter.status) {
@@ -59,8 +65,12 @@ export class LibraryFineRepository {
       params.push(filter.memberId);
       conditions.push(`f.member_id = $${params.length}`);
     }
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const countResult = await this.postgres.query<{ count: string }>(`SELECT count(*) FROM ${FROM} ${where}`, params);
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const countResult = await this.postgres.query<{ count: string }>(
+      `SELECT count(*) FROM ${FROM} ${where}`,
+      params,
+    );
     const rowParams = [...params, filter.limit, filter.offset];
     const { rows } = await executor.query<LibraryFineRow>(
       `SELECT ${COLUMNS} FROM ${FROM} ${where}
@@ -71,25 +81,47 @@ export class LibraryFineRepository {
     return { rows, total: parseInt(countResult.rows[0].count, 10) };
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<LibraryFineRow | null> {
-    const { rows } = await executor.query<LibraryFineRow>(`SELECT ${COLUMNS} FROM ${FROM} WHERE f.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryFineRow | null> {
+    const { rows } = await executor.query<LibraryFineRow>(
+      `SELECT ${COLUMNS} FROM ${FROM} WHERE f.id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
   async create(
-    input: { issueId: string; memberId: string; reason: string; amountPaise: number | string; assessedBy: string },
+    input: {
+      issueId: string;
+      memberId: string;
+      reason: string;
+      amountPaise: number | string;
+      assessedBy: string;
+    },
     executor: Queryable,
   ): Promise<LibraryFineRow> {
     const { rows } = await executor.query<{ id: string }>(
       `INSERT INTO library_fine (issue_id, member_id, reason, amount_paise, assessed_by)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
-      [input.issueId, input.memberId, input.reason, input.amountPaise, input.assessedBy],
+      [
+        input.issueId,
+        input.memberId,
+        input.reason,
+        input.amountPaise,
+        input.assessedBy,
+      ],
     );
     return (await this.findById(rows[0].id, executor))!;
   }
 
-  async setSentToFinance(id: string, financeReceivableId: string, executor: Queryable = this.postgres): Promise<LibraryFineRow | null> {
+  async setSentToFinance(
+    id: string,
+    financeReceivableId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryFineRow | null> {
     await executor.query(
       `UPDATE library_fine SET status = 'SENT_TO_FINANCE', finance_receivable_id = $2, updated_at = now() WHERE id = $1`,
       [id, financeReceivableId],
@@ -97,8 +129,15 @@ export class LibraryFineRepository {
     return this.findById(id, executor);
   }
 
-  async setStatus(id: string, status: string, executor: Queryable = this.postgres): Promise<LibraryFineRow | null> {
-    await executor.query(`UPDATE library_fine SET status = $2, updated_at = now() WHERE id = $1`, [id, status]);
+  async setStatus(
+    id: string,
+    status: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryFineRow | null> {
+    await executor.query(
+      `UPDATE library_fine SET status = $2, updated_at = now() WHERE id = $1`,
+      [id, status],
+    );
     return this.findById(id, executor);
   }
 
@@ -121,7 +160,9 @@ export class LibraryFineRepository {
     return rows[0].total;
   }
 
-  async sumSentToFinanceAmount(executor: Queryable = this.postgres): Promise<string> {
+  async sumSentToFinanceAmount(
+    executor: Queryable = this.postgres,
+  ): Promise<string> {
     const { rows } = await executor.query<{ total: string }>(
       `SELECT COALESCE(sum(amount_paise), 0) AS total FROM library_fine WHERE status = 'SENT_TO_FINANCE'`,
     );

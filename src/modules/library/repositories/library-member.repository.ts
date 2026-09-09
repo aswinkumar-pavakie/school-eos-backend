@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface LibraryMemberRow {
   id: string;
@@ -71,7 +74,10 @@ const FROM = `library_member m
 export class LibraryMemberRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findMany(filter: MemberFilter, executor: Queryable = this.postgres): Promise<{ rows: LibraryMemberListRow[]; total: number }> {
+  async findMany(
+    filter: MemberFilter,
+    executor: Queryable = this.postgres,
+  ): Promise<{ rows: LibraryMemberListRow[]; total: number }> {
     const conditions: string[] = [];
     const params: unknown[] = [];
 
@@ -99,7 +105,8 @@ export class LibraryMemberRepository {
       conditions.push(`sec.id = $${params.length}`);
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const countResult = await this.postgres.query<{ count: string }>(
       `SELECT count(*) FROM ${FROM} ${where}`,
       params,
@@ -136,8 +143,14 @@ export class LibraryMemberRepository {
     };
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<LibraryMemberRow | null> {
-    const { rows } = await executor.query<LibraryMemberRow>(`SELECT ${COLUMNS} FROM ${FROM} WHERE m.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryMemberRow | null> {
+    const { rows } = await executor.query<LibraryMemberRow>(
+      `SELECT ${COLUMNS} FROM ${FROM} WHERE m.id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
@@ -146,12 +159,21 @@ export class LibraryMemberRepository {
    * trusting a client-supplied one (not every real STAFF/STUDENT person is
    * necessarily an opted-in library member -- null is a genuine, honest
    * "no library card yet" answer, not an error). */
-  async findByPersonId(personId: string, executor: Queryable = this.postgres): Promise<LibraryMemberRow | null> {
-    const { rows } = await executor.query<LibraryMemberRow>(`SELECT ${COLUMNS} FROM ${FROM} WHERE m.person_id = $1`, [personId]);
+  async findByPersonId(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryMemberRow | null> {
+    const { rows } = await executor.query<LibraryMemberRow>(
+      `SELECT ${COLUMNS} FROM ${FROM} WHERE m.person_id = $1`,
+      [personId],
+    );
     return rows[0] ?? null;
   }
 
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<LibraryMemberRow | null> {
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<LibraryMemberRow | null> {
     const { rows } = await executor.query<LibraryMemberRow>(
       `SELECT ${COLUMNS} FROM ${FROM} WHERE m.id = $1 FOR UPDATE OF m`,
       [id],
@@ -161,7 +183,10 @@ export class LibraryMemberRepository {
 
   /** Active students and staff not already opted in as a library member --
    * backs the "add member" picker. */
-  async findEligiblePeople(search: string | undefined, executor: Queryable = this.postgres): Promise<EligiblePersonRow[]> {
+  async findEligiblePeople(
+    search: string | undefined,
+    executor: Queryable = this.postgres,
+  ): Promise<EligiblePersonRow[]> {
     const params: unknown[] = [];
     let searchClause = '';
     if (search) {
@@ -198,7 +223,10 @@ export class LibraryMemberRepository {
     return rows;
   }
 
-  async create(input: CreateMemberInput, executor: Queryable = this.postgres): Promise<LibraryMemberRow> {
+  async create(
+    input: CreateMemberInput,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryMemberRow> {
     const { rows } = await executor.query<{ id: string }>(
       `INSERT INTO library_member (person_id, member_type, max_books_allowed)
        VALUES ($1, $2, COALESCE($3, 3))
@@ -208,7 +236,11 @@ export class LibraryMemberRepository {
     return (await this.findById(rows[0].id, executor))!;
   }
 
-  async update(id: string, maxBooksAllowed: number | undefined, executor: Queryable = this.postgres): Promise<LibraryMemberRow | null> {
+  async update(
+    id: string,
+    maxBooksAllowed: number | undefined,
+    executor: Queryable = this.postgres,
+  ): Promise<LibraryMemberRow | null> {
     await executor.query(
       `UPDATE library_member SET max_books_allowed = COALESCE($2, max_books_allowed), updated_at = now() WHERE id = $1`,
       [id, maxBooksAllowed ?? null],
@@ -229,7 +261,10 @@ export class LibraryMemberRepository {
     return this.findById(id, executor);
   }
 
-  async countActiveIssues(memberId: string, executor: Queryable = this.postgres): Promise<number> {
+  async countActiveIssues(
+    memberId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<number> {
     const { rows } = await executor.query<{ count: string }>(
       `SELECT count(*) FROM library_issue WHERE member_id = $1 AND status IN ('ISSUED', 'OVERDUE')`,
       [memberId],
@@ -237,7 +272,10 @@ export class LibraryMemberRepository {
     return parseInt(rows[0].count, 10);
   }
 
-  async sumPendingFines(memberId: string, executor: Queryable = this.postgres): Promise<string> {
+  async sumPendingFines(
+    memberId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string> {
     const { rows } = await executor.query<{ total: string }>(
       `SELECT COALESCE(sum(amount_paise), 0) AS total FROM library_fine
        WHERE member_id = $1 AND status IN ('PENDING', 'SENT_TO_FINANCE')`,

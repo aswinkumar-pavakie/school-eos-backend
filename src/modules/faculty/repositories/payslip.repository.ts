@@ -13,7 +13,10 @@
 // rupees, not paise. Never divide those by 100 again.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface PayslipRow {
   id: string;
@@ -50,7 +53,10 @@ function mapRow(row: any): PayslipRow {
 export class PayslipRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findForStaff(staffId: string, executor: Queryable = this.postgres): Promise<PayslipRow[]> {
+  async findForStaff(
+    staffId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<PayslipRow[]> {
     const { rows } = await executor.query(
       `SELECT ${COLUMNS} ${FROM} WHERE ps.staff_id = $1 AND pp.state = 'PAID' ORDER BY pp.year DESC, pp.month DESC`,
       [staffId],
@@ -58,7 +64,11 @@ export class PayslipRepository {
     return rows.map(mapRow);
   }
 
-  async findOneForStaff(staffId: string, payslipId: string, executor: Queryable = this.postgres): Promise<PayslipRow | null> {
+  async findOneForStaff(
+    staffId: string,
+    payslipId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<PayslipRow | null> {
     const { rows } = await executor.query(
       `SELECT ${COLUMNS} ${FROM} WHERE ps.id = $1 AND ps.staff_id = $2 AND pp.state = 'PAID'`,
       [payslipId, staffId],

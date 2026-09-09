@@ -4,7 +4,10 @@
 // real day/time. No new schema needed.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface TimetablePeriod {
   periodId: string;
@@ -37,7 +40,9 @@ export class TimetableRepository {
   /** Every real period definition (the grid's own row headers), including
    * breaks -- shown in the grid so a free period reads as "free", not just
    * a gap. */
-  async findAllPeriods(executor: Queryable = this.postgres): Promise<TimetablePeriod[]> {
+  async findAllPeriods(
+    executor: Queryable = this.postgres,
+  ): Promise<TimetablePeriod[]> {
     const { rows } = await executor.query(
       `SELECT id, period_no, label, start_time, end_time, is_break
        FROM timetable_period ORDER BY period_no`,
@@ -57,7 +62,10 @@ export class TimetableRepository {
    * one of the 1666 rows that existed before Academic Coordinator's own
    * draft-then-publish editor -- this filter changes nothing for any of
    * them, it only ever hides a coordinator's still-in-progress edit. */
-  async findSlotsForOfferings(subjectOfferingIds: string[], executor: Queryable = this.postgres): Promise<TimetableSlot[]> {
+  async findSlotsForOfferings(
+    subjectOfferingIds: string[],
+    executor: Queryable = this.postgres,
+  ): Promise<TimetableSlot[]> {
     if (subjectOfferingIds.length === 0) return [];
     const { rows } = await executor.query(
       `SELECT ts.id AS slot_id, ts.period_id, tp.period_no, tp.start_time, tp.end_time, ts.day_of_week, ts.room,

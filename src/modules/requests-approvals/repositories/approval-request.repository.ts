@@ -189,7 +189,9 @@ export class ApprovalRequestRepository {
   }
 
   /** Used by Admin Reports' status-breakdown donut. */
-  async countByState(executor: Queryable = this.postgres): Promise<{ state: string; count: number }[]> {
+  async countByState(
+    executor: Queryable = this.postgres,
+  ): Promise<{ state: string; count: number }[]> {
     const { rows } = await executor.query<{ state: string; count: string }>(
       `SELECT state, count(*) AS count FROM approval_request GROUP BY state`,
     );
@@ -197,10 +199,18 @@ export class ApprovalRequestRepository {
   }
 
   /** Used by Admin Reports' volume-by-request-type bar. */
-  async countByType(executor: Queryable = this.postgres): Promise<{ requestType: string; count: number }[]> {
-    const { rows } = await executor.query<{ requestType: string; count: string }>(
+  async countByType(
+    executor: Queryable = this.postgres,
+  ): Promise<{ requestType: string; count: number }[]> {
+    const { rows } = await executor.query<{
+      requestType: string;
+      count: string;
+    }>(
       `SELECT request_type AS "requestType", count(*) AS count FROM approval_request GROUP BY request_type ORDER BY count(*) DESC`,
     );
-    return rows.map((r) => ({ requestType: r.requestType, count: parseInt(r.count, 10) }));
+    return rows.map((r) => ({
+      requestType: r.requestType,
+      count: parseInt(r.count, 10),
+    }));
   }
 }

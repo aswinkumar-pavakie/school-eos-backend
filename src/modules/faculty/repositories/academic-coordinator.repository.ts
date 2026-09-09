@@ -7,7 +7,10 @@
 // by the exact grade set it's given.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface CoordinatorGradeRow {
   gradeId: string;
@@ -61,8 +64,12 @@ export interface FacultyWorkloadRow {
 export class AcademicCoordinatorRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findCurrentAcademicYearId(executor: Queryable = this.postgres): Promise<string> {
-    const { rows } = await executor.query(`SELECT id FROM academic_year WHERE is_current LIMIT 1`);
+  async findCurrentAcademicYearId(
+    executor: Queryable = this.postgres,
+  ): Promise<string> {
+    const { rows } = await executor.query(
+      `SELECT id FROM academic_year WHERE is_current LIMIT 1`,
+    );
     return rows[0].id;
   }
 
@@ -77,7 +84,9 @@ export class AcademicCoordinatorRepository {
     executor: Queryable = this.postgres,
   ): Promise<string[]> {
     if (schoolWide) {
-      const { rows } = await executor.query(`SELECT id FROM grade WHERE status = 'ACTIVE'`);
+      const { rows } = await executor.query(
+        `SELECT id FROM grade WHERE status = 'ACTIVE'`,
+      );
       return rows.map((r: any) => r.id);
     }
     if (stages.length === 0 && explicitGradeIds.length === 0) return [];
@@ -88,7 +97,10 @@ export class AcademicCoordinatorRepository {
     return rows.map((r: any) => r.id);
   }
 
-  async findGrades(gradeIds: string[], executor: Queryable = this.postgres): Promise<CoordinatorGradeRow[]> {
+  async findGrades(
+    gradeIds: string[],
+    executor: Queryable = this.postgres,
+  ): Promise<CoordinatorGradeRow[]> {
     if (gradeIds.length === 0) return [];
     const { rows } = await executor.query(
       `SELECT g.id AS grade_id, g.name AS grade_name, g.level_no, g.stage,
@@ -113,7 +125,10 @@ export class AcademicCoordinatorRepository {
     }));
   }
 
-  async findSections(gradeIds: string[], executor: Queryable = this.postgres): Promise<CoordinatorSectionRow[]> {
+  async findSections(
+    gradeIds: string[],
+    executor: Queryable = this.postgres,
+  ): Promise<CoordinatorSectionRow[]> {
     if (gradeIds.length === 0) return [];
     const { rows } = await executor.query(
       `SELECT sec.id AS section_id, sec.name AS section_name, g.id AS grade_id, g.name AS grade_name,
@@ -190,7 +205,10 @@ export class AcademicCoordinatorRepository {
     }));
   }
 
-  async isEligibleFacultyStaff(staffId: string, executor: Queryable = this.postgres): Promise<boolean> {
+  async isEligibleFacultyStaff(
+    staffId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<boolean> {
     const { rows } = await executor.query(
       `SELECT 1 FROM staff st JOIN role_assignment ra ON ra.person_id = st.person_id AND ra.role_code = 'FACULTY' AND ra.status = 'ACTIVE'
        WHERE st.id = $1 AND st.status = 'ACTIVE'`,
@@ -199,7 +217,10 @@ export class AcademicCoordinatorRepository {
     return rows.length > 0;
   }
 
-  async isEligibleFacultyPerson(personId: string, executor: Queryable = this.postgres): Promise<string | null> {
+  async isEligibleFacultyPerson(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string | null> {
     const { rows } = await executor.query(
       `SELECT st.id FROM staff st JOIN role_assignment ra ON ra.person_id = st.person_id AND ra.role_code = 'FACULTY' AND ra.status = 'ACTIVE'
        WHERE st.person_id = $1 AND st.status = 'ACTIVE'`,
@@ -208,24 +229,38 @@ export class AcademicCoordinatorRepository {
     return rows[0]?.id ?? null;
   }
 
-  async findOfferingById(offeringId: string, executor: Queryable = this.postgres): Promise<{ sectionId: string; gradeId: string } | null> {
+  async findOfferingById(
+    offeringId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<{ sectionId: string; gradeId: string } | null> {
     const { rows } = await executor.query(
       `SELECT sec.id AS section_id, g.id AS grade_id
        FROM subject_offering so JOIN section sec ON sec.id = so.section_id JOIN grade g ON g.id = sec.grade_id
        WHERE so.id = $1`,
       [offeringId],
     );
-    return rows[0] ? { sectionId: rows[0].section_id, gradeId: rows[0].grade_id } : null;
+    return rows[0]
+      ? { sectionId: rows[0].section_id, gradeId: rows[0].grade_id }
+      : null;
   }
 
-  async updateOfferingTeacher(offeringId: string, teacherStaffId: string | null, executor: Queryable = this.postgres): Promise<void> {
-    await executor.query(`UPDATE subject_offering SET teacher_staff_id = $2, updated_at = now() WHERE id = $1`, [offeringId, teacherStaffId]);
+  async updateOfferingTeacher(
+    offeringId: string,
+    teacherStaffId: string | null,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE subject_offering SET teacher_staff_id = $2, updated_at = now() WHERE id = $1`,
+      [offeringId, teacherStaffId],
+    );
   }
 
   /** Every active FACULTY-role staff member, for an assignment picker. Not
    * scope-filtered -- a coordinator may reasonably bring in any eligible
    * faculty member to teach a class in their scope. */
-  async findEligibleFaculty(executor: Queryable = this.postgres): Promise<EligibleFacultyRow[]> {
+  async findEligibleFaculty(
+    executor: Queryable = this.postgres,
+  ): Promise<EligibleFacultyRow[]> {
     const { rows } = await executor.query(
       `SELECT DISTINCT st.id AS staff_id, p.id AS person_id, (p.first_name || COALESCE(' ' || p.last_name, '')) AS name, st.designation
        FROM staff st
@@ -234,10 +269,18 @@ export class AcademicCoordinatorRepository {
        WHERE st.status = 'ACTIVE'
        ORDER BY name`,
     );
-    return rows.map((r: any) => ({ staffId: r.staff_id, personId: r.person_id, name: r.name, designation: r.designation }));
+    return rows.map((r: any) => ({
+      staffId: r.staff_id,
+      personId: r.person_id,
+      name: r.name,
+      designation: r.designation,
+    }));
   }
 
-  async findFacultyWorkload(gradeIds: string[], executor: Queryable = this.postgres): Promise<FacultyWorkloadRow[]> {
+  async findFacultyWorkload(
+    gradeIds: string[],
+    executor: Queryable = this.postgres,
+  ): Promise<FacultyWorkloadRow[]> {
     if (gradeIds.length === 0) return [];
     const { rows } = await executor.query(
       `SELECT st.id AS staff_id, p.id AS person_id, (p.first_name || COALESCE(' ' || p.last_name, '')) AS name,
@@ -262,7 +305,10 @@ export class AcademicCoordinatorRepository {
     }));
   }
 
-  async findActiveAdvisorForSection(sectionId: string, executor: Queryable = this.postgres): Promise<string | null> {
+  async findActiveAdvisorForSection(
+    sectionId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string | null> {
     const { rows } = await executor.query(
       `SELECT id FROM role_assignment WHERE scope_type = 'SECTION' AND scope_id = $1 AND role_code = 'CLASS_ADVISOR' AND status = 'ACTIVE'`,
       [sectionId],
@@ -270,7 +316,11 @@ export class AcademicCoordinatorRepository {
     return rows[0]?.id ?? null;
   }
 
-  async revokeRoleAssignment(id: string, revokedBy: string, executor: Queryable = this.postgres): Promise<void> {
+  async revokeRoleAssignment(
+    id: string,
+    revokedBy: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
     await executor.query(
       `UPDATE role_assignment SET status = 'REVOKED', revoked_at = now(), revoked_by = $2, updated_at = now() WHERE id = $1 AND status = 'ACTIVE'`,
       [id, revokedBy],

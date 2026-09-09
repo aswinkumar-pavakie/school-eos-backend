@@ -6,7 +6,11 @@
 // (2) full CRUD over student_duty_assignment -- the "class leader / class
 // officer" feature, search-select-assign, shown at the bottom.
 
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { AttendanceRecordRepository } from '../attendance/repositories/attendance-record.repository';
 import { AttendanceSessionRepository } from '../attendance/repositories/attendance-session.repository';
@@ -32,8 +36,14 @@ export class FacultyClassTeacherService {
   ) {}
 
   private async assertAdvisor(personId: string, sectionId: string) {
-    const isAdvisor = await this.scopeRepo.isAdvisorForSection(personId, sectionId);
-    if (!isAdvisor) throw new ForbiddenException('You are not the class advisor for this section.');
+    const isAdvisor = await this.scopeRepo.isAdvisorForSection(
+      personId,
+      sectionId,
+    );
+    if (!isAdvisor)
+      throw new ForbiddenException(
+        'You are not the class advisor for this section.',
+      );
   }
 
   async getDashboard(personId: string, sectionId: string) {
@@ -51,8 +61,13 @@ export class FacultyClassTeacherService {
     let attendanceSubmitted = false;
     if (session) {
       attendanceSubmitted = true;
-      const records = await this.recordRepo.findBySessionId(session.id, sectionId);
-      presentToday = records.filter((r) => ['PRESENT', 'LATE', 'HALF_DAY'].includes(r.status)).length;
+      const records = await this.recordRepo.findBySessionId(
+        session.id,
+        sectionId,
+      );
+      presentToday = records.filter((r) =>
+        ['PRESENT', 'LATE', 'HALF_DAY'].includes(r.status),
+      ).length;
       onLeaveToday = records.filter((r) => r.status === 'ON_LEAVE').length;
     }
 
@@ -64,7 +79,9 @@ export class FacultyClassTeacherService {
         {
           key: 'ATTENDANCE_REGISTER',
           title: 'Attendance register',
-          meta: attendanceSubmitted ? `Submitted for ${todayIso()}` : 'Not yet submitted today',
+          meta: attendanceSubmitted
+            ? `Submitted for ${todayIso()}`
+            : 'Not yet submitted today',
           status: attendanceSubmitted ? 'Done' : 'Pending',
         },
         {
@@ -96,7 +113,11 @@ export class FacultyClassTeacherService {
     return this.dutyRepo.findActiveForSection(sectionId);
   }
 
-  async createDuty(personId: string, sectionId: string, dto: CreateStudentDutyDto) {
+  async createDuty(
+    personId: string,
+    sectionId: string,
+    dto: CreateStudentDutyDto,
+  ) {
     await this.assertAdvisor(personId, sectionId);
     const id = await this.dutyRepo.create({
       studentId: dto.studentId,
@@ -125,7 +146,11 @@ export class FacultyClassTeacherService {
     return duty;
   }
 
-  async updateDuty(personId: string, dutyId: string, dto: UpdateStudentDutyDto) {
+  async updateDuty(
+    personId: string,
+    dutyId: string,
+    dto: UpdateStudentDutyDto,
+  ) {
     const existing = await this.assertOwnsDuty(personId, dutyId);
     await this.dutyRepo.update(dutyId, dto);
     const updated = await this.dutyRepo.findById(dutyId);

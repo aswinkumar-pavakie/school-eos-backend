@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { MiscReceivablesService } from '../finance/misc-receivables/misc-receivables.service';
 import { FineQueryDto } from './dto/fine-query.dto';
@@ -16,7 +20,12 @@ export class FinesService {
   async list(query: FineQueryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 50;
-    const { rows, total } = await this.fineRepo.findMany({ status: query.status, memberId: query.memberId, limit, offset: (page - 1) * limit });
+    const { rows, total } = await this.fineRepo.findMany({
+      status: query.status,
+      memberId: query.memberId,
+      limit,
+      offset: (page - 1) * limit,
+    });
     return { data: rows, meta: { page, limit, total } };
   }
 
@@ -29,7 +38,10 @@ export class FinesService {
   async sendToFinance(id: string, actorPersonId: string) {
     const fine = await this.fineRepo.findById(id);
     if (!fine) throw new NotFoundException('Fine not found');
-    if (fine.status !== 'PENDING') throw new ConflictException('Only a pending fine can be sent to Finance.');
+    if (fine.status !== 'PENDING')
+      throw new ConflictException(
+        'Only a pending fine can be sent to Finance.',
+      );
 
     const receivable = await this.receivablesService.create({
       sourceModule: 'LIBRARY',
@@ -56,9 +68,13 @@ export class FinesService {
     const fine = await this.fineRepo.findById(id);
     if (!fine) throw new NotFoundException('Fine not found');
     if (!fine.financeReceivableId) {
-      throw new ConflictException('This fine has not been sent to Finance yet -- nothing to refresh.');
+      throw new ConflictException(
+        'This fine has not been sent to Finance yet -- nothing to refresh.',
+      );
     }
-    const receivable = await this.receivablesService.get(fine.financeReceivableId);
+    const receivable = await this.receivablesService.get(
+      fine.financeReceivableId,
+    );
     const nextStatus =
       receivable.status === 'PAID'
         ? 'PAID'
@@ -87,9 +103,14 @@ export class FinesService {
     const fine = await this.fineRepo.findById(id);
     if (!fine) throw new NotFoundException('Fine not found');
     if (fine.status !== 'PENDING') {
-      throw new ConflictException('This fine has already been sent to Finance -- waive it there instead.');
+      throw new ConflictException(
+        'This fine has already been sent to Finance -- waive it there instead.',
+      );
     }
-    const updated = (await this.fineRepo.waive(id, { waivedBy: actorPersonId, waivedReason: dto.reason }))!;
+    const updated = (await this.fineRepo.waive(id, {
+      waivedBy: actorPersonId,
+      waivedReason: dto.reason,
+    }))!;
     await this.auditService.record({
       actorPersonId,
       action: 'LIBRARY_FINE_WAIVED',

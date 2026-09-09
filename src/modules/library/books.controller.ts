@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -25,20 +35,30 @@ export class BooksController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @Roles('LIBRARY')
-  async create(@Body() dto: CreateBookDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateBookDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.booksService.create(dto, actor.personId) };
   }
 
   @Patch(':id')
   @Roles('LIBRARY')
-  async update(@Param('id') id: string, @Body() dto: UpdateBookDto, @CurrentActor() actor: AuthenticatedUser) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateBookDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.booksService.update(id, dto, actor.personId) };
   }
 
   @Post(':id/withdraw')
   @HttpCode(HttpStatus.OK)
   @Roles('LIBRARY')
-  async withdraw(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async withdraw(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.booksService.withdraw(id, actor.personId) };
   }
 }

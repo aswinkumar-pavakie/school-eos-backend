@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -25,28 +34,50 @@ export class CirculationController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @Roles('LIBRARY')
-  async issue(@Body() dto: CreateIssueDto, @CurrentActor() actor: AuthenticatedUser) {
+  async issue(
+    @Body() dto: CreateIssueDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.circulationService.issue(dto, actor.personId) };
   }
 
   @Post(':id/return')
   @HttpCode(HttpStatus.OK)
   @Roles('LIBRARY')
-  async returnBook(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.circulationService.returnBook(id, actor.personId) };
+  async returnBook(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.circulationService.returnBook(id, actor.personId),
+    };
   }
 
   @Post(':id/renew')
   @HttpCode(HttpStatus.OK)
   @Roles('LIBRARY')
-  async renew(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async renew(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.circulationService.renew(id, actor.personId) };
   }
 
   @Post(':id/mark-lost')
   @HttpCode(HttpStatus.OK)
   @Roles('LIBRARY')
-  async markLost(@Param('id') id: string, @Body() dto: MarkLostDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.circulationService.markLost(id, actor.personId, dto.reason, dto.notes) };
+  async markLost(
+    @Param('id') id: string,
+    @Body() dto: MarkLostDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.circulationService.markLost(
+        id,
+        actor.personId,
+        dto.reason,
+        dto.notes,
+      ),
+    };
   }
 }

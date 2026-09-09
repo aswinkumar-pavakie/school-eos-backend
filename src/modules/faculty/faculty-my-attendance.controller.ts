@@ -11,7 +11,10 @@ export class FacultyMyAttendanceController {
   constructor(private readonly service: FacultyMyAttendanceService) {}
 
   @Get()
-  async get(@Query() query: MyAttendanceQueryDto, @CurrentActor() actor: AuthenticatedUser) {
+  async get(
+    @Query() query: MyAttendanceQueryDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.getSummary(actor.personId, query.month) };
   }
 }

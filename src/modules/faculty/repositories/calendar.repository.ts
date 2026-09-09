@@ -4,7 +4,10 @@
 // scope, not a client-supplied filter).
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface CalendarEventRow {
   id: string;
@@ -31,13 +34,24 @@ export class CalendarRepository {
   /** The real current academic_year's own name + date range -- the
    * Calendar screen's header subtitle reads this instead of a fabricated
    * "Semester" label, since no semester/term table exists in this schema. */
-  async findCurrentAcademicYear(executor: Queryable = this.postgres): Promise<CurrentAcademicYearRow | null> {
-    const { rows } = await executor.query(`SELECT name, start_date, end_date FROM academic_year WHERE is_current LIMIT 1`);
+  async findCurrentAcademicYear(
+    executor: Queryable = this.postgres,
+  ): Promise<CurrentAcademicYearRow | null> {
+    const { rows } = await executor.query(
+      `SELECT name, start_date, end_date FROM academic_year WHERE is_current LIMIT 1`,
+    );
     if (!rows[0]) return null;
-    return { name: rows[0].name, startDate: rows[0].start_date, endDate: rows[0].end_date };
+    return {
+      name: rows[0].name,
+      startDate: rows[0].start_date,
+      endDate: rows[0].end_date,
+    };
   }
 
-  async findForStages(stages: string[], executor: Queryable = this.postgres): Promise<CalendarEventRow[]> {
+  async findForStages(
+    stages: string[],
+    executor: Queryable = this.postgres,
+  ): Promise<CalendarEventRow[]> {
     const { rows } = await executor.query(
       `SELECT id, title, description, event_type, is_holiday, start_date, end_date, scope_type, scope_stage
        FROM calendar_event
@@ -57,7 +71,10 @@ export class CalendarRepository {
   // stays Admin/Principal's own call.
   // ============================================================
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<CalendarEventRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<CalendarEventRow | null> {
     const { rows } = await executor.query(
       `SELECT id, title, description, event_type, is_holiday, start_date, end_date, scope_type, scope_stage, created_by
        FROM calendar_event WHERE id = $1`,
@@ -100,7 +117,14 @@ export class CalendarRepository {
 
   async update(
     id: string,
-    input: Partial<{ title: string; description: string; eventType: string; isHoliday: boolean; startDate: string; endDate: string }>,
+    input: Partial<{
+      title: string;
+      description: string;
+      eventType: string;
+      isHoliday: boolean;
+      startDate: string;
+      endDate: string;
+    }>,
     executor: Queryable = this.postgres,
   ): Promise<void> {
     const sets: string[] = [];
@@ -117,7 +141,10 @@ export class CalendarRepository {
     push('start_date', input.startDate);
     push('end_date', input.endDate);
     if (sets.length === 0) return;
-    await executor.query(`UPDATE calendar_event SET ${sets.join(', ')}, updated_at = now() WHERE id = $1`, params);
+    await executor.query(
+      `UPDATE calendar_event SET ${sets.join(', ')}, updated_at = now() WHERE id = $1`,
+      params,
+    );
   }
 
   async delete(id: string, executor: Queryable = this.postgres): Promise<void> {

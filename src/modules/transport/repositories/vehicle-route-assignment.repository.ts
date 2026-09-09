@@ -90,7 +90,13 @@ export class VehicleRouteAssignmentRepository {
    * and shares the same vehicle, driver, or attendant. NULL effective_to
    * means "still active" (open-ended), treated as unbounded via COALESCE. */
   async findOverlapping(
-    input: { vehicleId: string; driverId?: string | null; attendantId?: string | null; effectiveFrom: string; effectiveTo?: string | null },
+    input: {
+      vehicleId: string;
+      driverId?: string | null;
+      attendantId?: string | null;
+      effectiveFrom: string;
+      effectiveTo?: string | null;
+    },
     excludeId: string | null,
     executor: Queryable = this.postgres,
   ): Promise<VehicleRouteAssignmentRow[]> {
@@ -99,7 +105,13 @@ export class VehicleRouteAssignmentRepository {
       `effective_from <= COALESCE($5::date, 'infinity'::date)`,
       `COALESCE(effective_to, 'infinity'::date) >= $4::date`,
     ];
-    const params: unknown[] = [input.vehicleId, input.driverId ?? null, input.attendantId ?? null, input.effectiveFrom, input.effectiveTo ?? null];
+    const params: unknown[] = [
+      input.vehicleId,
+      input.driverId ?? null,
+      input.attendantId ?? null,
+      input.effectiveFrom,
+      input.effectiveTo ?? null,
+    ];
     if (excludeId) {
       params.push(excludeId);
       conditions.push(`id != $${params.length}`);

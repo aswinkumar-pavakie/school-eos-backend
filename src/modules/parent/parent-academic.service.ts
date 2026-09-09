@@ -3,7 +3,11 @@
 // ParentAcademicRepository, every method guardian-checked first via the same
 // GuardianLinkRepository every other Parent feature already uses.
 
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AnnouncementsService } from '../announcements/announcements.service';
 import { AttendanceRecordsService } from '../attendance/attendance-records.service';
 import { CalendarRepository } from '../faculty/repositories/calendar.repository';
@@ -27,12 +31,18 @@ export class ParentAcademicService {
 
   private async assertGuardian(personId: string, studentId: string) {
     const link = await this.guardianRepo.findActiveLink(personId, studentId);
-    if (!link) throw new ForbiddenException('You are not a registered guardian of this student.');
+    if (!link)
+      throw new ForbiddenException(
+        'You are not a registered guardian of this student.',
+      );
   }
 
   private async requireSection(studentId: string) {
     const section = await this.academicRepo.getCurrentSection(studentId);
-    if (!section) throw new NotFoundException('This student has no active enrolment this academic year.');
+    if (!section)
+      throw new NotFoundException(
+        'This student has no active enrolment this academic year.',
+      );
     return section;
   }
 
@@ -40,12 +50,26 @@ export class ParentAcademicService {
 
   async getAttendance(personId: string, studentId: string, month?: string) {
     await this.assertGuardian(personId, studentId);
-    const summary = await this.attendanceRecordsService.getAttendanceSummaryForStudent(studentId);
+    const summary =
+      await this.attendanceRecordsService.getAttendanceSummaryForStudent(
+        studentId,
+      );
     const now = new Date();
-    const [year, mon] = (month ?? `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`).split('-').map(Number);
+    const [year, mon] = (
+      month ??
+      `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
+    )
+      .split('-')
+      .map(Number);
     const monthStart = `${year}-${String(mon).padStart(2, '0')}-01`;
-    const monthEnd = new Date(Date.UTC(year, mon, 0)).toISOString().slice(0, 10);
-    const days = await this.academicRepo.findMonthAttendance(studentId, monthStart, monthEnd);
+    const monthEnd = new Date(Date.UTC(year, mon, 0))
+      .toISOString()
+      .slice(0, 10);
+    const days = await this.academicRepo.findMonthAttendance(
+      studentId,
+      monthStart,
+      monthEnd,
+    );
     return { summary, days };
   }
 
@@ -59,11 +83,18 @@ export class ParentAcademicService {
 
   async getResults(personId: string, studentId: string, examId: string) {
     await this.assertGuardian(personId, studentId);
-    const rows = await this.academicRepo.findResultsForStudent(studentId, examId);
+    const rows = await this.academicRepo.findResultsForStudent(
+      studentId,
+      examId,
+    );
     const scored = rows.filter((r) => r.marksObtained !== null);
-    const totalObtained = Math.round(scored.reduce((sum, r) => sum + (r.marksObtained ?? 0), 0) * 100) / 100;
+    const totalObtained =
+      Math.round(
+        scored.reduce((sum, r) => sum + (r.marksObtained ?? 0), 0) * 100,
+      ) / 100;
     const totalMax = scored.reduce((sum, r) => sum + r.maxMarks, 0);
-    const percent = totalMax > 0 ? Math.round((totalObtained / totalMax) * 100) : null;
+    const percent =
+      totalMax > 0 ? Math.round((totalObtained / totalMax) * 100) : null;
     return { subjects: rows, totalObtained, totalMax, percent };
   }
 
@@ -83,7 +114,11 @@ export class ParentAcademicService {
     return Promise.all(
       offerings.map(async (o) => ({
         ...o,
-        syllabusProgressPercent: await this.academicRepo.findSyllabusProgress(o.subjectId, section.gradeId, o.subjectOfferingId),
+        syllabusProgressPercent: await this.academicRepo.findSyllabusProgress(
+          o.subjectId,
+          section.gradeId,
+          o.subjectOfferingId,
+        ),
       })),
     );
   }
@@ -95,16 +130,29 @@ export class ParentAcademicService {
     return this.academicRepo.getCurrentOfferings(studentId);
   }
 
-  private async assertOwnsOffering(studentId: string, subjectOfferingId: string) {
+  private async assertOwnsOffering(
+    studentId: string,
+    subjectOfferingId: string,
+  ) {
     const offerings = await this.academicRepo.getCurrentOfferings(studentId);
-    const offering = offerings.find((o) => o.subjectOfferingId === subjectOfferingId);
-    if (!offering) throw new NotFoundException('Subject not found for this student.');
+    const offering = offerings.find(
+      (o) => o.subjectOfferingId === subjectOfferingId,
+    );
+    if (!offering)
+      throw new NotFoundException('Subject not found for this student.');
     return offering;
   }
 
-  async getSubjectDetail(personId: string, studentId: string, subjectOfferingId: string) {
+  async getSubjectDetail(
+    personId: string,
+    studentId: string,
+    subjectOfferingId: string,
+  ) {
     await this.assertGuardian(personId, studentId);
-    const offering = await this.assertOwnsOffering(studentId, subjectOfferingId);
+    const offering = await this.assertOwnsOffering(
+      studentId,
+      subjectOfferingId,
+    );
     const [folders, lessonPlans] = await Promise.all([
       this.academicRepo.findSharedFolders(subjectOfferingId),
       this.academicRepo.findLessonPlans(subjectOfferingId),
@@ -112,18 +160,35 @@ export class ParentAcademicService {
     return { offering, folders, lessonPlans };
   }
 
-  async getFolderFiles(personId: string, studentId: string, subjectOfferingId: string, folderId: string) {
+  async getFolderFiles(
+    personId: string,
+    studentId: string,
+    subjectOfferingId: string,
+    folderId: string,
+  ) {
     await this.assertGuardian(personId, studentId);
     await this.assertOwnsOffering(studentId, subjectOfferingId);
     return this.academicRepo.findFolderFiles(folderId, subjectOfferingId);
   }
 
-  async getFileUrl(personId: string, studentId: string, subjectOfferingId: string, fileId: string): Promise<string> {
+  async getFileUrl(
+    personId: string,
+    studentId: string,
+    subjectOfferingId: string,
+    fileId: string,
+  ): Promise<string> {
     await this.assertGuardian(personId, studentId);
     await this.assertOwnsOffering(studentId, subjectOfferingId);
-    const file = await this.academicRepo.findSharedFile(fileId, subjectOfferingId);
+    const file = await this.academicRepo.findSharedFile(
+      fileId,
+      subjectOfferingId,
+    );
     if (!file) throw new NotFoundException('File not found');
-    return this.storage.createSignedUrl(LMS_MATERIALS_BUCKET, file.objectKey, SIGNED_URL_TTL_SECONDS);
+    return this.storage.createSignedUrl(
+      LMS_MATERIALS_BUCKET,
+      file.objectKey,
+      SIGNED_URL_TTL_SECONDS,
+    );
   }
 
   // ---------- Timetable ----------
@@ -131,7 +196,10 @@ export class ParentAcademicService {
   async getTimetable(personId: string, studentId: string) {
     await this.assertGuardian(personId, studentId);
     const section = await this.requireSection(studentId);
-    return this.academicRepo.findTimetableForSection(section.sectionId, section.stage);
+    return this.academicRepo.findTimetableForSection(
+      section.sectionId,
+      section.stage,
+    );
   }
 
   // ---------- Calendar ----------

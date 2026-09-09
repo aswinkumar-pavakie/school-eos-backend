@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -20,13 +30,22 @@ export class CategoriesController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @Roles('LIBRARY')
-  async create(@Body() dto: CreateCategoryDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateCategoryDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.categoriesService.create(dto, actor.personId) };
   }
 
   @Patch(':id')
   @Roles('LIBRARY')
-  async update(@Param('id') id: string, @Body() dto: UpdateCategoryDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.categoriesService.update(id, dto, actor.personId) };
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateCategoryDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.categoriesService.update(id, dto, actor.personId),
+    };
   }
 }

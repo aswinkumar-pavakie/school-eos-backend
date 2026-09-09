@@ -1,6 +1,24 @@
-import { ArrayMinSize, IsArray, IsIn, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
-const EXAM_TYPES = ['UNIT_TEST', 'MONTHLY', 'QUARTERLY', 'HALF_YEARLY', 'ANNUAL', 'MODEL', 'REVISION', 'PRACTICAL', 'BOARD'];
+const EXAM_TYPES = [
+  'UNIT_TEST',
+  'MONTHLY',
+  'QUARTERLY',
+  'HALF_YEARLY',
+  'ANNUAL',
+  'MODEL',
+  'REVISION',
+  'PRACTICAL',
+  'BOARD',
+];
 
 export class CreateCoordinatorExamDto {
   @IsString()
