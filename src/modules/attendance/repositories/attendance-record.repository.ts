@@ -60,6 +60,23 @@ export class AttendanceRecordRepository {
     );
   }
 
+  /** One-off insert for a single student into an already-existing session --
+   * the rare case where a session was created before this student's own
+   * enrolment (so createManyPresent's original seed never covered them). */
+  async createOne(
+    sessionId: string,
+    studentId: string,
+    status: string,
+    reason: string | null,
+    executor: Queryable,
+  ): Promise<AttendanceRecordRow> {
+    const { rows } = await executor.query<{ id: string }>(
+      `INSERT INTO attendance_record (session_id, student_id, status, reason) VALUES ($1, $2, $3, $4) RETURNING id`,
+      [sessionId, studentId, status, reason],
+    );
+    return (await this.findById(rows[0].id, executor))!;
+  }
+
   async findById(
     id: string,
     executor: Queryable = this.postgres,
@@ -67,6 +84,21 @@ export class AttendanceRecordRepository {
     const { rows } = await executor.query<AttendanceRecordRow>(
       `SELECT ${COLUMNS} FROM attendance_record ar ${LATEST_CORRECTION_JOIN} WHERE ar.id = $1`,
       [id],
+    );
+    return rows[0] ?? null;
+  }
+
+  /** This exact student's own row within one session -- used by the
+   * student-leave auto-mark-absent rule (one student, one already-known
+   * session) rather than pulling the whole roster just to find one row. */
+  async findBySessionAndStudent(
+    sessionId: string,
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<AttendanceRecordRow | null> {
+    const { rows } = await executor.query<AttendanceRecordRow>(
+      `SELECT ${COLUMNS} FROM attendance_record ar ${LATEST_CORRECTION_JOIN} WHERE ar.session_id = $1 AND ar.student_id = $2`,
+      [sessionId, studentId],
     );
     return rows[0] ?? null;
   }

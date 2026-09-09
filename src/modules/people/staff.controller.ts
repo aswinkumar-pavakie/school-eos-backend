@@ -20,7 +20,13 @@ import { StaffQueryDto } from './dto/staff-query.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 import { StaffService } from './staff.service';
 
-@Roles('ADMIN')
+// Class-level @Roles broadened to include PRINCIPAL for read-only oversight
+// (Principal's own /principal/faculty module) -- every write method below has
+// its own narrower @Roles('ADMIN') override (RolesGuard's
+// Reflector.getAllAndOverride means a method-level @Roles fully replaces, never
+// merges with, the class-level one), so Principal never gains create/update/
+// exit access even by calling the API directly.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('staff')
 export class StaffController {
   constructor(
@@ -47,6 +53,7 @@ export class StaffController {
   }
 
   @Post()
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateStaffDto,
@@ -56,6 +63,7 @@ export class StaffController {
   }
 
   @Patch(':id')
+  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateStaffDto,
@@ -77,6 +85,7 @@ export class StaffController {
   }
 
   @Post(':id/exit')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async exit(
     @Param('id') id: string,

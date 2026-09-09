@@ -9,4 +9,9 @@ export class FeeOverviewService {
   get(query: FeeOverviewQueryDto) {
     return this.feeOverviewRepo.findOverviewCounts(query.academicYearId);
   }
+
+  /** Used by Admin Reports' collection-status donut -- see repository method doc. */
+  getStateCounts() {
+    return this.feeOverviewRepo.findStateCounts();
+  }
 }

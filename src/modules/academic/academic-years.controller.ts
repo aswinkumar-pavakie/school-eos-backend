@@ -15,7 +15,13 @@ import { AcademicYearsService } from './academic-years.service';
 import { CreateAcademicYearDto } from './dto/create-academic-year.dto';
 import { UpdateAcademicYearDto } from './dto/update-academic-year.dto';
 
-@Roles('ADMIN')
+// Class-level @Roles broadened to include PRINCIPAL for read-only oversight
+// (Principal's Students module needs grade/section/academic-year names for
+// enrolment display) -- every write method below has its own narrower
+// @Roles('ADMIN') override (RolesGuard's Reflector.getAllAndOverride means a
+// method-level @Roles fully replaces the class-level one), so Principal never
+// gains create/update/set-current/close access even by calling the API directly.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('academic-years')
 export class AcademicYearsController {
   constructor(private readonly academicYearsService: AcademicYearsService) {}
@@ -31,6 +37,7 @@ export class AcademicYearsController {
   }
 
   @Post()
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateAcademicYearDto,
@@ -42,6 +49,7 @@ export class AcademicYearsController {
   }
 
   @Patch(':id')
+  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateAcademicYearDto,
@@ -53,6 +61,7 @@ export class AcademicYearsController {
   }
 
   @Post(':id/set-current')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async setCurrent(
     @Param('id') id: string,
@@ -64,6 +73,7 @@ export class AcademicYearsController {
   }
 
   @Post(':id/close')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async close(
     @Param('id') id: string,

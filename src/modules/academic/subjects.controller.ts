@@ -15,7 +15,10 @@ import { SubjectsService } from './subjects.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
 
-@Roles('ADMIN')
+// Class-level @Roles broadened to include PRINCIPAL for read-only oversight
+// (Principal's Academics module) -- write methods below have their own
+// narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('subjects')
 export class SubjectsController {
   constructor(private readonly subjectsService: SubjectsService) {}
@@ -31,6 +34,7 @@ export class SubjectsController {
   }
 
   @Post()
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateSubjectDto,
@@ -40,6 +44,7 @@ export class SubjectsController {
   }
 
   @Patch(':id')
+  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateSubjectDto,

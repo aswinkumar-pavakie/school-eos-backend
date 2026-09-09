@@ -6,8 +6,11 @@ import { TimetableService } from './timetable.service';
 // Read-only view over a fully real, already-populated timetable_slot /
 // timetable_period / subject_offering chain -- see query.md for how this was
 // discovered (a prior assumption that "Timetable isn't built yet" was wrong; the
-// schema and data already existed, just with no API in front of it).
-@Roles('ADMIN')
+// schema and data already existed, just with no API in front of it). Broadened
+// to include PRINCIPAL for read-only oversight (Principal's own Class Timetable
+// module) -- no method-level override needed anywhere in this controller, since
+// every endpoint here is already GET-only for every role, Admin included.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('timetable')
 export class TimetableController {
   constructor(private readonly timetableService: TimetableService) {}

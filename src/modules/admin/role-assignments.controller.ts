@@ -15,7 +15,10 @@ import { GrantRoleAssignmentDto } from './dto/grant-role-assignment.dto';
 import { RoleAssignmentQueryDto } from './dto/role-assignment-query.dto';
 import { RoleAssignmentsService } from './role-assignments.service';
 
-@Roles('ADMIN')
+// Class-level @Roles broadened to include PRINCIPAL for read-only oversight
+// (Principal's Faculty profile needs to display Class Advisor/Academic
+// Coordinator role assignments) -- grant/revoke below stay narrowed to ADMIN.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('role-assignments')
 export class RoleAssignmentsController {
   constructor(
@@ -28,6 +31,7 @@ export class RoleAssignmentsController {
   }
 
   @Post()
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async grant(
     @Body() dto: GrantRoleAssignmentDto,
@@ -38,6 +42,7 @@ export class RoleAssignmentsController {
   }
 
   @Post(':id/revoke')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async revoke(
     @Param('id') id: string,

@@ -19,7 +19,11 @@ import { CreateCalendarEventDto } from './dto/create-calendar-event.dto';
 // Read/write over the real, already-populated calendar_event table -- see
 // query.md for how this was found (same story as Timetable: schema and data
 // existed, just no API).
-@Roles('ADMIN')
+// Class-level role covers the read-only list endpoint for Principal's own
+// oversight view; create/remove are explicitly re-narrowed to ADMIN below --
+// Principal has no create/edit/delete authority here (no PATCH endpoint even
+// exists for Admin, and no approval workflow gates calendar events).
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('calendar-events')
 export class CalendarEventsController {
   constructor(private readonly calendarEventsService: CalendarEventsService) {}
@@ -30,6 +34,7 @@ export class CalendarEventsController {
   }
 
   @Post()
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateCalendarEventDto,
@@ -41,6 +46,7 @@ export class CalendarEventsController {
   }
 
   @Delete(':id')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async remove(
     @Param('id') id: string,

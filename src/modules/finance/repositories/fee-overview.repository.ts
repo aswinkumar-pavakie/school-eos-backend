@@ -14,6 +14,11 @@ export interface FeeOverviewCounts {
   studentsWithOverdueCount: number;
 }
 
+export interface FeeDemandStateCount {
+  state: string;
+  count: number;
+}
+
 /** Admin's read-only Fee Overview -- every figure comes straight out of
  * fee_demand.state, the same authoritative state Finance's own collections
  * flow maintains. Nothing here is computed by re-deriving "overdue" from
@@ -70,5 +75,15 @@ export class FeeOverviewRepository {
       studentsWithPendingCount: parseInt(row.students_pending, 10),
       studentsWithOverdueCount: parseInt(row.students_overdue, 10),
     };
+  }
+
+  /** One row per real fee_demand.state -- for Admin Reports' collection-status
+   * donut. A plain GROUP BY, same table/authority as findOverviewCounts above,
+   * just a count breakdown instead of an amount summary. */
+  async findStateCounts(executor: Queryable = this.postgres): Promise<FeeDemandStateCount[]> {
+    const { rows } = await executor.query<{ state: string; count: string }>(
+      `SELECT state, count(*) AS count FROM fee_demand GROUP BY state`,
+    );
+    return rows.map((r) => ({ state: r.state, count: parseInt(r.count, 10) }));
   }
 }

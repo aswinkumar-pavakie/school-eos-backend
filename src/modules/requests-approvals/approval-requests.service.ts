@@ -171,6 +171,9 @@ export class ApprovalRequestsService {
           `This request is already ${locked.state.toLowerCase()}.`,
         );
       }
+      if (locked.approverRoleCode !== 'ADMIN') {
+        throw new ForbiddenException("This request isn't Admin's to reject.");
+      }
       await this.stepRepo.decide(
         id,
         locked.currentStep,

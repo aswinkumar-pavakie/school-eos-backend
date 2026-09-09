@@ -27,7 +27,14 @@ import { EnrolmentsService } from './enrolments.service';
 import { GuardianLinksService } from './guardian-links.service';
 import { StudentsService } from './students.service';
 
-@Roles('ADMIN')
+// Class-level @Roles broadened to include PRINCIPAL for read-only oversight
+// (Principal's own /principal/students module) -- every write method below has
+// its own narrower @Roles('ADMIN') override (RolesGuard's
+// Reflector.getAllAndOverride means a method-level @Roles fully replaces, never
+// merges with, the class-level one), so Principal never gains create/update/
+// leave/enrolment/wallet-freeze/guardian-grant access even by calling the API
+// directly.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('students')
 export class StudentsController {
   constructor(
@@ -52,6 +59,7 @@ export class StudentsController {
   }
 
   @Post()
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateStudentDto,
@@ -61,6 +69,7 @@ export class StudentsController {
   }
 
   @Patch(':id')
+  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateStudentDto,
@@ -70,6 +79,7 @@ export class StudentsController {
   }
 
   @Post(':id/leave')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async leave(
     @Param('id') id: string,
@@ -85,6 +95,7 @@ export class StudentsController {
   }
 
   @Post(':id/enrolments')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async createEnrolment(
     @Param('id') id: string,
@@ -114,6 +125,7 @@ export class StudentsController {
   }
 
   @Post(':id/wallet/freeze')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async freezeWallet(
     @Param('id') id: string,
@@ -130,6 +142,7 @@ export class StudentsController {
   }
 
   @Post(':id/wallet/unfreeze')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   async unfreezeWallet(
     @Param('id') id: string,
@@ -155,6 +168,7 @@ export class StudentsController {
   }
 
   @Post(':id/guardians')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async createGuardian(
     @Param('id') id: string,

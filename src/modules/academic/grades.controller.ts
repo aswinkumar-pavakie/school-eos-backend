@@ -15,7 +15,10 @@ import { GradesService } from './grades.service';
 import { CreateGradeDto } from './dto/create-grade.dto';
 import { UpdateGradeDto } from './dto/update-grade.dto';
 
-@Roles('ADMIN')
+// Class-level @Roles broadened to include PRINCIPAL for read-only oversight
+// (Principal's Students module needs grade names for filters/enrolment display) --
+// write methods below have their own narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL')
 @Controller('grades')
 export class GradesController {
   constructor(private readonly gradesService: GradesService) {}
@@ -31,6 +34,7 @@ export class GradesController {
   }
 
   @Post()
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateGradeDto,
@@ -40,6 +44,7 @@ export class GradesController {
   }
 
   @Patch(':id')
+  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateGradeDto,

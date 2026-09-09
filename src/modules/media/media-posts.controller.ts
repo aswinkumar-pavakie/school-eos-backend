@@ -57,9 +57,18 @@ export class MediaPostsController {
     return { data: { deleted: true } };
   }
 
+  // Widened for Faculty's own Home feed (published social media posts
+  // alongside Announcements), and now Parent's own Home feed the same way --
+  // everyone else's existing behavior is untouched. A non-MEDIA_ROOM/ADMIN/
+  // PRINCIPAL caller (FACULTY or PARENT) always gets state forced to
+  // PUBLISHED regardless of what they ask for: drafts/scheduled/cancelled
+  // posts must never leak outside Media Room's own privileged callers.
   @Get()
-  async list(@Query() query: MediaPostQueryDto) {
-    return { data: await this.service.list(query) };
+  @Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL', 'FACULTY', 'PARENT')
+  async list(@Query() query: MediaPostQueryDto, @CurrentActor() actor: AuthenticatedUser) {
+    const privileged = actor.roles.some((r) => ['MEDIA_ROOM', 'ADMIN', 'PRINCIPAL'].includes(r));
+    const filter = privileged ? query : { state: 'PUBLISHED' };
+    return { data: await this.service.list(filter) };
   }
 
   @Post()
