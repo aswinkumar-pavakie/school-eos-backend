@@ -1345,6 +1345,48 @@ export class MessagingService {
     );
     return summary!;
   }
+
+  /** The reverse direction of startStaffDirectConversation: Faculty starting a
+   * thread with the Principal rather than the other way around. No target-id
+   * picker needed (PRINCIPAL is single-holder) -- who "the Principal" is gets
+   * resolved server-side, never supplied by the client. Reuses the exact same
+   * findOrCreateStaffDirect (order-independent, unique-constrained pair), so
+   * a Faculty-initiated thread and a Principal-initiated one to the same pair
+   * are the same single conversation either way. */
+  async startPrincipalConversation(
+    actor: AuthenticatedUser,
+  ): Promise<ConversationSummaryDto> {
+    const actorContext = await this.resolveActorContext(actor);
+    if (actorContext.role !== 'FACULTY') {
+      throw new ForbiddenException(MESSAGING_ERRORS.NOT_ACTIVE_FACULTY);
+    }
+
+    const principalPersonId =
+      await this.principalRepo.findActivePrincipalPersonId();
+    if (!principalPersonId) {
+      throw new NotFoundException(MESSAGING_ERRORS.NO_ACTIVE_PRINCIPAL);
+    }
+
+    const conversation = await this.conversationRepo.findOrCreateStaffDirect(
+      actor.personId,
+      principalPersonId,
+    );
+
+    await this.auditService.record({
+      actorPersonId: actor.personId,
+      actorRoleCode: 'FACULTY',
+      action: 'STAFF_DIRECT_CONVERSATION_STARTED',
+      objectType: 'conversation',
+      objectId: conversation.id,
+      outcome: 'SUCCESS',
+    });
+
+    const [summary] = await this.buildStaffDirectSummariesBulk(
+      [conversation],
+      actor.personId,
+    );
+    return summary!;
+  }
 }
 
 // A STUDENT_CONTEXT conversation's class-scoping fields, non-null -- true at the

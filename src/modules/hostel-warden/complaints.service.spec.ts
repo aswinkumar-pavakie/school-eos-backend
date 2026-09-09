@@ -45,13 +45,28 @@ function buildService(opts: { complaint?: any } = {}) {
   const auditService = {
     record: jest.fn().mockResolvedValue(undefined),
   } as any;
+  const approvalsService = {
+    createRequest: jest.fn().mockResolvedValue(undefined),
+  } as any;
+  const unitOfWork = {
+    run: jest.fn((work: (client: unknown) => Promise<unknown>) => work({})),
+  } as any;
 
   const service = new ComplaintsService(
     wardenContext,
     complaintRepo,
     auditService,
+    approvalsService,
+    unitOfWork,
   );
-  return { service, complaintRepo, auditService, getStored: () => stored };
+  return {
+    service,
+    complaintRepo,
+    auditService,
+    approvalsService,
+    unitOfWork,
+    getStored: () => stored,
+  };
 }
 
 const CREATE_DTO = {
@@ -71,8 +86,26 @@ describe('ComplaintsService (pending feature)', () => {
         issueType: 'ELECTRICAL',
         raisedByPersonId: 'warden-1',
       }),
+      expect.anything(),
     );
     expect(complaint.id).toBe('complaint-1');
+  });
+
+  // New: a created complaint is routed to PRINCIPAL for review via the generic
+  // approvals engine, in the same transaction as the complaint row itself.
+  it('routes the new complaint to PRINCIPAL for review via the approvals engine', async () => {
+    const { service, approvalsService, unitOfWork } = buildService();
+    await service.create(CREATE_DTO as any, 'warden-1');
+    expect(approvalsService.createRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestType: 'HOSTEL_COMPLAINT_REVIEW',
+        subjectObjectType: 'complaint',
+        subjectObjectId: 'complaint-1',
+        requestedBy: 'warden-1',
+      }),
+      expect.anything(),
+    );
+    expect(unitOfWork.run).toHaveBeenCalled();
   });
 
   // 67. Warden can view own hostel complaints.

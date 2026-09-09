@@ -7,9 +7,11 @@
 // HostelWardenModule, already registered), but still pending.
 
 import { Module } from '@nestjs/common';
+import { ApprovalsModule } from '../approvals/approvals.module';
 import { ParentModule } from '../parent/parent.module';
 import { CallRequestsController } from './call-requests.controller';
 import { CallRequestsService } from './call-requests.service';
+import { ComplaintApprovalHandlers } from './complaint-approval-handlers.service';
 import { ComplaintsController } from './complaints.controller';
 import { ComplaintsService } from './complaints.service';
 import { HostelWardenModule } from './hostel-warden.module';
@@ -26,7 +28,12 @@ import { StudySessionsService } from './study-sessions.service';
   // HostelWardenModule: reuses WardenContextService/StudentHostelRepository (already
   // exported or provided there) rather than a second copy. ParentModule: reuses
   // GuardianLinkRepository for the parent-initiated Call Request creation flow.
-  imports: [HostelWardenModule, ParentModule],
+  // ApprovalsModule: so ComplaintsService can route a new complaint to PRINCIPAL via
+  // the generic engine, and ComplaintApprovalHandlers can register 'complaint' with
+  // SubjectStateRegistry (HostelWardenModule already imports ApprovalsModule too, for
+  // its own outing_request handler -- importing it again here for this module's own
+  // providers is normal Nest module composition, not a duplicate/conflicting registration).
+  imports: [HostelWardenModule, ParentModule, ApprovalsModule],
   controllers: [
     StudySessionsController,
     CallRequestsController,
@@ -42,6 +49,7 @@ import { StudySessionsService } from './study-sessions.service';
     ParentCallRequestsService,
     HostelComplaintRepository,
     ComplaintsService,
+    ComplaintApprovalHandlers,
   ],
 })
 export class HostelWardenPendingModule {}

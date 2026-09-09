@@ -65,6 +65,17 @@ import { VehiclesService } from './vehicles.service';
     GpsDeviceMappingRepository,
     StudentTransportAllocationRepository,
   ],
-  exports: [StudentTransportAllocationsService],
+  // VehiclesService/RoutesService/DriversService/VehicleRouteAssignmentsService:
+  // so transport-ops (Bus Tracking / Boarding Monitor) can resolve vehicle/route/
+  // driver/current-assignment through the real existing services instead of a
+  // second copy of these queries -- same cross-module reuse pattern used
+  // throughout this codebase.
+  exports: [
+    StudentTransportAllocationsService,
+    VehiclesService,
+    RoutesService,
+    DriversService,
+    VehicleRouteAssignmentsService,
+  ],
 })
 export class TransportModule {}

@@ -12,6 +12,7 @@ export interface HostelAllocationRow {
   studentLastName: string | null;
   admissionNo: string;
   stateStudentId: string | null;
+  rollNo: number | null;
   photoUrl: string | null;
   bedId: string;
   bedNo: string;
@@ -60,7 +61,7 @@ export interface UnallocatedHostelStudentRow {
 
 const COLUMNS = `a.id, a.student_id AS "studentId", p.first_name AS "studentFirstName",
   p.last_name AS "studentLastName", s.admission_no AS "admissionNo",
-  s.state_student_id AS "stateStudentId",
+  s.state_student_id AS "stateStudentId", se.roll_no AS "rollNo",
   ${personPhotoPublicUrlSql('p.photo_object_key')} AS "photoUrl",
   a.bed_id AS "bedId", bed.bed_no AS "bedNo", r.id AS "roomId", r.room_no AS "roomNo", f.floor_no AS "floorNo",
   bl.id AS "blockId", bl.name AS "blockName", h.name AS "hostelName", g.name AS "gradeName", sec.name AS "sectionName",

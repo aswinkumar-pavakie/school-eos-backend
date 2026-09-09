@@ -22,9 +22,13 @@ export interface NightAttendanceRosterRow {
   admissionNo: string;
   roomNo: string | null;
   bedNo: string | null;
+  blockId: string | null;
+  blockName: string | null;
+  floorNo: number | null;
   attendanceId: string | null;
   status: string | null;
   recordedAt: Date | null;
+  hasApprovedLeaveToday: boolean;
 }
 
 export interface MarkNightAttendanceEntry {
@@ -34,7 +38,13 @@ export interface MarkNightAttendanceEntry {
 
 const ROSTER_COLUMNS = `s.id AS "studentId", p.first_name AS "firstName", p.last_name AS "lastName",
   s.admission_no AS "admissionNo", r.room_no AS "roomNo", bed.bed_no AS "bedNo",
-  ha.id AS "attendanceId", ha.status, ha.recorded_at AS "recordedAt"`;
+  bl.id AS "blockId", bl.name AS "blockName", f.floor_no AS "floorNo",
+  ha.id AS "attendanceId", ha.status, ha.recorded_at AS "recordedAt",
+  EXISTS (
+    SELECT 1 FROM student_leave_request slr
+    WHERE slr.student_id = a.student_id AND slr.state = 'APPROVED'
+      AND $2::date BETWEEN slr.from_date AND slr.to_date
+  ) AS "hasApprovedLeaveToday"`;
 
 @Injectable()
 export class HostelAttendanceRepository {
@@ -42,7 +52,10 @@ export class HostelAttendanceRepository {
 
   /** Roster = every student with an ACTIVE hostel_allocation in one of the Warden's
    * hostels, left-joined to that date's hostel_attendance row (null status = not yet
-   * marked, never defaulted to absent). */
+   * marked, never defaulted to absent -- the DB row itself is never auto-written).
+   * `hasApprovedLeaveToday` flags an APPROVED student_leave_request covering this date
+   * so the frontend can *display* an Absent default instead of Unmarked; it never
+   * changes what's actually stored. */
   async findRoster(
     hostelIds: string[],
     date: string,

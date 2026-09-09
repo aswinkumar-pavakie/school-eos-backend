@@ -139,6 +139,7 @@ function buildService(
     >;
     activePrincipalIds?: string[];
     targetIsActiveFaculty?: boolean;
+    activePrincipalPersonId?: string | null;
   } = {},
 ) {
   const conversation =
@@ -373,6 +374,13 @@ function buildService(
     isActiveFaculty: jest
       .fn()
       .mockResolvedValue(opts.targetIsActiveFaculty ?? true),
+    findActivePrincipalPersonId: jest
+      .fn()
+      .mockResolvedValue(
+        opts.activePrincipalPersonId === undefined
+          ? 'principal-1'
+          : opts.activePrincipalPersonId,
+      ),
   } as any;
 
   const translationService = {
@@ -1244,6 +1252,82 @@ describe('MessagingService - Principal to Faculty (STAFF_DIRECT)', () => {
       'ta',
     );
     expect(result.translatedText).toBeTruthy();
+  });
+});
+
+describe('MessagingService - Faculty to Principal (STAFF_DIRECT)', () => {
+  it('Faculty can start a direct conversation with the (server-resolved) active Principal', async () => {
+    const staffDirect = makeStaffDirectConversation();
+    const { service, conversationRepo, principalRepo, auditService } =
+      buildService({
+        staffDirectConversation: staffDirect,
+      });
+
+    const result = await service.startPrincipalConversation(FACULTY_ACTOR);
+
+    expect(principalRepo.findActivePrincipalPersonId).toHaveBeenCalled();
+    expect(conversationRepo.findOrCreateStaffDirect).toHaveBeenCalledWith(
+      'faculty-1',
+      'principal-1',
+    );
+    expect(result.conversationType).toBe('STAFF_DIRECT');
+    expect(auditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'STAFF_DIRECT_CONVERSATION_STARTED',
+        outcome: 'SUCCESS',
+      }),
+    );
+  });
+
+  it('a non-Faculty actor (Parent) cannot start a conversation with the Principal', async () => {
+    const { service, conversationRepo } = buildService();
+    await expect(
+      service.startPrincipalConversation(PARENT_ACTOR),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(conversationRepo.findOrCreateStaffDirect).not.toHaveBeenCalled();
+  });
+
+  it('404s when no Principal is currently assigned, rather than starting a conversation with nobody', async () => {
+    const { service, conversationRepo } = buildService({
+      activePrincipalPersonId: null,
+    });
+    await expect(
+      service.startPrincipalConversation(FACULTY_ACTOR),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(conversationRepo.findOrCreateStaffDirect).not.toHaveBeenCalled();
+  });
+
+  it('starting it twice resolves to the identical conversation (idempotent find-or-create, never a duplicate thread)', async () => {
+    const staffDirect = makeStaffDirectConversation();
+    const { service, conversationRepo } = buildService({
+      staffDirectConversation: staffDirect,
+    });
+
+    const first = await service.startPrincipalConversation(FACULTY_ACTOR);
+    const second = await service.startPrincipalConversation(FACULTY_ACTOR);
+
+    expect(first.id).toBe(second.id);
+    expect(conversationRepo.findOrCreateStaffDirect).toHaveBeenCalledTimes(2);
+  });
+
+  it('a Principal-initiated thread and this Faculty-initiated one to the same pair are the same conversation (order-independent find-or-create)', async () => {
+    const staffDirect = makeStaffDirectConversation();
+    const { service } = buildService({
+      staff: {
+        id: 'staff-principal',
+        personId: 'principal-1',
+        status: 'ACTIVE',
+      },
+      staffDirectConversation: staffDirect,
+    });
+
+    const fromFaculty = await service.startPrincipalConversation(FACULTY_ACTOR);
+    const fromPrincipal = await service.startStaffDirectConversation(
+      PRINCIPAL_ACTOR,
+      'faculty-1',
+    );
+
+    expect(fromFaculty.id).toBe(fromPrincipal.id);
   });
 });
 

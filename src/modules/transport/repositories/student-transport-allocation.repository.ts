@@ -57,6 +57,8 @@ export interface RouteAssignedStudentRow {
   studentFirstName: string;
   studentLastName: string | null;
   admissionNo: string;
+  gradeName: string | null;
+  sectionName: string | null;
   routeStopId: string;
   stopName: string;
   direction: string;
@@ -144,12 +146,17 @@ export class StudentTransportAllocationRepository {
     const { rows } = await executor.query<RouteAssignedStudentRow>(
       `SELECT sta.id, sta.student_id AS "studentId", p.first_name AS "studentFirstName",
               p.last_name AS "studentLastName", s.admission_no AS "admissionNo",
+              g.name AS "gradeName", sec.name AS "sectionName",
               sta.route_stop_id AS "routeStopId", rs.stop_name AS "stopName",
               sta.direction, sta.fee_slab AS "feeSlab", sta.valid_from AS "validFrom", sta.status
        FROM student_transport_allocation sta
        JOIN route_stop rs ON rs.id = sta.route_stop_id
        JOIN student s ON s.id = sta.student_id
        JOIN person p ON p.id = s.person_id
+       LEFT JOIN student_enrolment se ON se.student_id = s.id AND se.status = 'ACTIVE'
+         AND se.academic_year_id = (SELECT id FROM academic_year WHERE is_current LIMIT 1)
+       LEFT JOIN section sec ON sec.id = se.section_id
+       LEFT JOIN grade g ON g.id = sec.grade_id
        WHERE rs.route_id = $1
        ORDER BY sta.status = 'ACTIVE' DESC, rs.sequence_no, p.first_name, p.last_name`,
       [routeId],

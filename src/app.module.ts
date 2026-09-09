@@ -40,6 +40,7 @@ import { StaffAttendanceModule } from './modules/staff-attendance/staff-attendan
 import { StudentEventsModule } from './modules/student-events/student-events.module';
 import { TimetableModule } from './modules/timetable/timetable.module';
 import { TransportModule } from './modules/transport/transport.module';
+import { TransportOpsModule } from './modules/transport-ops/transport-ops.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { TransportModule } from './modules/transport/transport.module';
     AcademicModule,
     PeopleModule,
     TransportModule,
+    TransportOpsModule,
     HostelModule,
     HostelWardenModule,
     HostelWardenPendingModule,

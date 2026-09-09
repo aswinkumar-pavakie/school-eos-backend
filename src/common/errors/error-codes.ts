@@ -102,6 +102,7 @@ export const MESSAGING_ERRORS = {
     'The selected person is not an active faculty member',
   STUDENT_NOT_FOUND: 'Student not found or has no current enrolment',
   NO_ACTIVE_GUARDIAN: 'This student has no active guardian on record',
+  NO_ACTIVE_PRINCIPAL: 'No active Principal is currently assigned',
 } as const;
 
 // Same "not found" message for "doesn't exist" and "isn't yours" (cross-hostel

@@ -162,6 +162,19 @@ export class MessagingController {
     return { data: result };
   }
 
+  // ---- Faculty: start a conversation with the Principal ----------------------
+  // No target-id/search needed -- PRINCIPAL is single-holder, resolved
+  // server-side (see MessagingService.startPrincipalConversation).
+
+  @Roles('FACULTY')
+  @Post('faculty/conversations/principal')
+  @HttpCode(HttpStatus.OK)
+  async startPrincipalConversation(@CurrentActor() actor: AuthenticatedUser) {
+    const result =
+      await this.messagingService.startPrincipalConversation(actor);
+    return { data: result };
+  }
+
   // ---- Principal: search directories (messaging targets only) ---------------
   // Thin wrappers over the existing ADMIN-facing StaffService/StudentsService
   // (already exported by PeopleModule for exactly this kind of cross-module

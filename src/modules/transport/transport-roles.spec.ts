@@ -16,15 +16,18 @@ import { StudentTransportAllocationsController } from './student-transport-alloc
 import { VehicleRouteAssignmentsController } from './vehicle-route-assignments.controller';
 import { VehiclesController } from './vehicles.controller';
 
-function classRolesOf(ctor: new (...args: never[]) => unknown): string[] | undefined {
+function classRolesOf(
+  ctor: new (...args: never[]) => unknown,
+): string[] | undefined {
   return Reflect.getMetadata(ROLES_KEY, ctor);
 }
 
 function methodRolesOf(
-  ctor: { prototype: Record<string, unknown> },
+  ctor: new (...args: never[]) => unknown,
   methodName: string,
 ): string[] | undefined {
-  return Reflect.getMetadata(ROLES_KEY, ctor.prototype[methodName] as never);
+  const proto = ctor.prototype as Record<string, unknown>;
+  return Reflect.getMetadata(ROLES_KEY, proto[methodName] as never);
 }
 
 describe('Transport controllers — TRANSPORT_MANAGER route boundaries', () => {
@@ -42,29 +45,65 @@ describe('Transport controllers — TRANSPORT_MANAGER route boundaries', () => {
   });
 
   it('read routes on VehiclesController/RoutesController/DriversController/AttendantsController/StudentTransportAllocationsController are widened to ADMIN+TRANSPORT_MANAGER', () => {
-    expect(methodRolesOf(VehiclesController, 'list')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
-    expect(methodRolesOf(VehiclesController, 'get')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
+    expect(methodRolesOf(VehiclesController, 'list')).toEqual([
+      'ADMIN',
+      'TRANSPORT_MANAGER',
+    ]);
+    expect(methodRolesOf(VehiclesController, 'get')).toEqual([
+      'ADMIN',
+      'TRANSPORT_MANAGER',
+    ]);
 
-    expect(methodRolesOf(RoutesController, 'list')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
-    expect(methodRolesOf(RoutesController, 'get')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
-    expect(methodRolesOf(RoutesController, 'listStops')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
-    expect(methodRolesOf(RoutesController, 'listAssignedStudents')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
+    expect(methodRolesOf(RoutesController, 'list')).toEqual([
+      'ADMIN',
+      'TRANSPORT_MANAGER',
+    ]);
+    expect(methodRolesOf(RoutesController, 'get')).toEqual([
+      'ADMIN',
+      'TRANSPORT_MANAGER',
+    ]);
+    expect(methodRolesOf(RoutesController, 'listStops')).toEqual([
+      'ADMIN',
+      'TRANSPORT_MANAGER',
+    ]);
+    expect(methodRolesOf(RoutesController, 'listAssignedStudents')).toEqual([
+      'ADMIN',
+      'TRANSPORT_MANAGER',
+    ]);
 
-    expect(methodRolesOf(DriversController, 'list')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
-    expect(methodRolesOf(DriversController, 'get')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
+    expect(methodRolesOf(DriversController, 'list')).toEqual([
+      'ADMIN',
+      'TRANSPORT_MANAGER',
+    ]);
+    expect(methodRolesOf(DriversController, 'get')).toEqual([
+      'ADMIN',
+      'TRANSPORT_MANAGER',
+    ]);
 
-    expect(methodRolesOf(AttendantsController, 'list')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
-    expect(methodRolesOf(AttendantsController, 'get')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
+    expect(methodRolesOf(AttendantsController, 'list')).toEqual([
+      'ADMIN',
+      'TRANSPORT_MANAGER',
+    ]);
+    expect(methodRolesOf(AttendantsController, 'get')).toEqual([
+      'ADMIN',
+      'TRANSPORT_MANAGER',
+    ]);
 
-    expect(methodRolesOf(StudentTransportAllocationsController, 'list')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
-    expect(methodRolesOf(StudentTransportAllocationsController, 'get')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
+    expect(
+      methodRolesOf(StudentTransportAllocationsController, 'list'),
+    ).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
+    expect(methodRolesOf(StudentTransportAllocationsController, 'get')).toEqual(
+      ['ADMIN', 'TRANSPORT_MANAGER'],
+    );
   });
 
   it('write routes (create/update/documents/maintenance/stops-write/cancel) have NO method-level override -- they fall back to the class-level ADMIN-only metadata', () => {
     expect(methodRolesOf(VehiclesController, 'create')).toBeUndefined();
     expect(methodRolesOf(VehiclesController, 'update')).toBeUndefined();
     expect(methodRolesOf(VehiclesController, 'createDocument')).toBeUndefined();
-    expect(methodRolesOf(VehiclesController, 'createMaintenance')).toBeUndefined();
+    expect(
+      methodRolesOf(VehiclesController, 'createMaintenance'),
+    ).toBeUndefined();
 
     expect(methodRolesOf(RoutesController, 'create')).toBeUndefined();
     expect(methodRolesOf(RoutesController, 'update')).toBeUndefined();
@@ -80,16 +119,34 @@ describe('Transport controllers — TRANSPORT_MANAGER route boundaries', () => {
 
     // Student transport allocation is Admin's configuration, never Transport
     // Manager's -- create/update/cancel must NOT be widened, only list/get.
-    expect(methodRolesOf(StudentTransportAllocationsController, 'create')).toBeUndefined();
-    expect(methodRolesOf(StudentTransportAllocationsController, 'update')).toBeUndefined();
-    expect(methodRolesOf(StudentTransportAllocationsController, 'cancel')).toBeUndefined();
+    expect(
+      methodRolesOf(StudentTransportAllocationsController, 'create'),
+    ).toBeUndefined();
+    expect(
+      methodRolesOf(StudentTransportAllocationsController, 'update'),
+    ).toBeUndefined();
+    expect(
+      methodRolesOf(StudentTransportAllocationsController, 'cancel'),
+    ).toBeUndefined();
   });
 
   it('VehicleRouteAssignmentsController is the one exception: TRANSPORT_MANAGER gets create/update too, not just read -- the real driver<->vehicle assignment action', () => {
-    expect(methodRolesOf(VehicleRouteAssignmentsController, 'list')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
-    expect(methodRolesOf(VehicleRouteAssignmentsController, 'get')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
-    expect(methodRolesOf(VehicleRouteAssignmentsController, 'create')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
-    expect(methodRolesOf(VehicleRouteAssignmentsController, 'update')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
+    expect(methodRolesOf(VehicleRouteAssignmentsController, 'list')).toEqual([
+      'ADMIN',
+      'TRANSPORT_MANAGER',
+    ]);
+    expect(methodRolesOf(VehicleRouteAssignmentsController, 'get')).toEqual([
+      'ADMIN',
+      'TRANSPORT_MANAGER',
+    ]);
+    expect(methodRolesOf(VehicleRouteAssignmentsController, 'create')).toEqual([
+      'ADMIN',
+      'TRANSPORT_MANAGER',
+    ]);
+    expect(methodRolesOf(VehicleRouteAssignmentsController, 'update')).toEqual([
+      'ADMIN',
+      'TRANSPORT_MANAGER',
+    ]);
   });
 
   it('no route anywhere in this module grants TRANSPORT_MANAGER something ADMIN itself lacks -- every allowed-roles array that includes TRANSPORT_MANAGER also includes ADMIN', () => {

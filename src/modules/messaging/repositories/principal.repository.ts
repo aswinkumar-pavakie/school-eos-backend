@@ -58,4 +58,17 @@ export class PrincipalRepository {
     );
     return rows.length > 0;
   }
+
+  /** PRINCIPAL is a single-holder role -- Faculty's own "Message the Principal"
+   * flow resolves who that is server-side (never lets the client pick), the
+   * same way every other messaging target here is server-verified. Null if
+   * the role is currently unassigned, never fabricated. */
+  async findActivePrincipalPersonId(
+    executor: Queryable = this.postgres,
+  ): Promise<string | null> {
+    const { rows } = await executor.query<{ person_id: string }>(
+      `SELECT person_id FROM v_active_role_assignment WHERE role_code = 'PRINCIPAL' LIMIT 1`,
+    );
+    return rows[0]?.person_id ?? null;
+  }
 }

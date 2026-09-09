@@ -32,6 +32,8 @@ const PRINCIPAL_ONLY_ROUTES = [
   'searchStudents',
 ] as const;
 
+const FACULTY_ONLY_ROUTES = ['startPrincipalConversation'] as const;
+
 describe('MessagingController — route roles', () => {
   it('every shared conversation route accepts FACULTY, PARENT and PRINCIPAL', () => {
     for (const method of SHARED_CONVERSATION_ROUTES) {
@@ -49,6 +51,12 @@ describe('MessagingController — route roles', () => {
   it('Principal-only routes (start a conversation, search directories) accept ONLY PRINCIPAL — never FACULTY or PARENT', () => {
     for (const method of PRINCIPAL_ONLY_ROUTES) {
       expect(rolesFor(method)).toEqual(['PRINCIPAL']);
+    }
+  });
+
+  it('the Faculty-only route (start a conversation with the Principal) accepts ONLY FACULTY — never PARENT or PRINCIPAL', () => {
+    for (const method of FACULTY_ONLY_ROUTES) {
+      expect(rolesFor(method)).toEqual(['FACULTY']);
     }
   });
 });
