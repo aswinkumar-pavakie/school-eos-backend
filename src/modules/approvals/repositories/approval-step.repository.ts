@@ -7,6 +7,7 @@ export interface ApprovalStepRow {
   sequenceNo: number;
   approverRoleCode: string;
   decidedBy: string | null;
+  decidedByName: string | null;
   decision: string | null;
   comment: string | null;
   decidedAt: Date | null;
@@ -20,6 +21,7 @@ function mapRow(row: any): ApprovalStepRow {
     sequenceNo: row.sequence_no,
     approverRoleCode: row.approver_role_code,
     decidedBy: row.decided_by,
+    decidedByName: row.decided_by_name ?? null,
     decision: row.decision,
     comment: row.comment,
     decidedAt: row.decided_at,
@@ -59,14 +61,20 @@ export class ApprovalStepRepository {
     return rows.length ? mapRow(rows[0]) : null;
   }
 
+  /** decidedByName is a real name, not just an id -- every "approved/rejected
+   * by whom" display in the app (HR Payroll, Payslip request, Appraisal,
+   * etc.) reads this instead of resolving the id separately. */
   async listByRequest(
     requestId: string,
     executor: Queryable = this.postgres,
   ): Promise<ApprovalStepRow[]> {
     const { rows } = await executor.query(
-      `SELECT id, request_id, sequence_no, approver_role_code, decided_by, decision, comment,
-              decided_at, escalated_at
-       FROM approval_step WHERE request_id = $1 ORDER BY sequence_no ASC`,
+      `SELECT st.id, st.request_id, st.sequence_no, st.approver_role_code, st.decided_by,
+              (p.first_name || COALESCE(' ' || p.last_name, '')) AS decided_by_name,
+              st.decision, st.comment, st.decided_at, st.escalated_at
+       FROM approval_step st
+       LEFT JOIN person p ON p.id = st.decided_by
+       WHERE st.request_id = $1 ORDER BY st.sequence_no ASC`,
       [requestId],
     );
     return rows.map(mapRow);

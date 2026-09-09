@@ -39,6 +39,13 @@ export interface AnnouncementFilter {
   /** A real, active role_code -- matches announcements sent to the whole school
    * (audience_type='SCHOOL') OR specifically targeted at this role. */
   roleCode?: string;
+  /** Matches SCHOOL-wide announcements plus any SECTION-targeted announcement
+   * whose target_id is one of these sections -- the Faculty "my announcements"
+   * feed's own scoping (their advisor + teaching sections). Combines with
+   * `roleCode` via OR when both are given. */
+  sectionIds?: string[];
+  /** Restrict to announcements this actor created (Faculty CRUD ownership). */
+  createdBy?: string;
   includeArchived?: boolean;
 }
 
@@ -72,12 +79,23 @@ export class AnnouncementRepository {
     if (!filter.includeArchived) {
       conditions.push(`a.state NOT IN ('ARCHIVED', 'CANCELLED')`);
     }
-    if (filter.roleCode) {
-      params.push(filter.roleCode);
+    if (filter.roleCode || (filter.sectionIds && filter.sectionIds.length > 0)) {
+      const audienceOrs: string[] = [`aud.audience_type = 'SCHOOL'`];
+      if (filter.roleCode) {
+        params.push(filter.roleCode);
+        audienceOrs.push(`(aud.audience_type = 'ROLE' AND aud.target_role = $${params.length})`);
+      }
+      if (filter.sectionIds && filter.sectionIds.length > 0) {
+        params.push(filter.sectionIds);
+        audienceOrs.push(`(aud.audience_type = 'SECTION' AND aud.target_id = ANY($${params.length}))`);
+      }
       conditions.push(
-        `EXISTS (SELECT 1 FROM announcement_audience aud WHERE aud.announcement_id = a.id
-                 AND (aud.audience_type = 'SCHOOL' OR (aud.audience_type = 'ROLE' AND aud.target_role = $${params.length})))`,
+        `EXISTS (SELECT 1 FROM announcement_audience aud WHERE aud.announcement_id = a.id AND (${audienceOrs.join(' OR ')}))`,
       );
+    }
+    if (filter.createdBy) {
+      params.push(filter.createdBy);
+      conditions.push(`a.created_by = $${params.length}`);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -133,5 +151,53 @@ export class AnnouncementRepository {
     );
     if (rows.length === 0) return null;
     return this.findById(id, executor);
+  }
+
+  /** Partial field update -- only columns present on `input` are touched.
+   * Passing `audiences` replaces the announcement's whole audience set
+   * (simplest correct semantics for "edit this announcement's targeting"). */
+  async update(
+    id: string,
+    input: Partial<Omit<CreateAnnouncementInput, 'createdBy'>>,
+    executor: Queryable = this.postgres,
+  ): Promise<AnnouncementRow | null> {
+    const sets: string[] = [];
+    const params: unknown[] = [];
+    const push = (col: string, val: unknown) => {
+      params.push(val);
+      sets.push(`${col} = $${params.length}`);
+    };
+
+    if (input.title !== undefined) push('title', input.title);
+    if (input.body !== undefined) push('body', input.body);
+    if (input.category !== undefined) push('category', input.category);
+    if (input.priority !== undefined) push('priority', input.priority);
+    if (input.isEmergency !== undefined) push('is_emergency', input.isEmergency);
+    if (input.expiresAt !== undefined) push('expires_at', input.expiresAt);
+
+    if (sets.length > 0) {
+      params.push(id);
+      await executor.query(`UPDATE announcement SET ${sets.join(', ')}, updated_at = now() WHERE id = $${params.length}`, params);
+    }
+
+    if (input.audiences) {
+      await executor.query(`DELETE FROM announcement_audience WHERE announcement_id = $1`, [id]);
+      for (const audience of input.audiences) {
+        await executor.query(
+          `INSERT INTO announcement_audience (announcement_id, audience_type, target_id, target_stage, target_role)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [id, audience.audienceType, audience.targetId ?? null, audience.targetStage ?? null, audience.targetRole ?? null],
+        );
+      }
+    }
+
+    return this.findById(id, executor);
+  }
+
+  /** Hard delete -- children first (no assumption of ON DELETE CASCADE). */
+  async delete(id: string, executor: Queryable = this.postgres): Promise<void> {
+    await executor.query(`DELETE FROM announcement_read WHERE announcement_id = $1`, [id]);
+    await executor.query(`DELETE FROM announcement_audience WHERE announcement_id = $1`, [id]);
+    await executor.query(`DELETE FROM announcement WHERE id = $1`, [id]);
   }
 }

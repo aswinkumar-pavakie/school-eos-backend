@@ -18,12 +18,19 @@ import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 
 // Class-level role broadened to PRINCIPAL for read-only oversight (Phase 17),
 // and to COMMUNITY (Phase 4 of the separate standalone-Community-login
-// initiative -- same read-only tier) -- every write method below keeps its
-// own narrower @Roles('ADMIN') override.
+// initiative). COMMUNITY was originally read-only there too; now broadened
+// further so a Community login can send its own notices directly (no
+// approval gate -- same direct-publish authority Admin already has over
+// these same rows, just scoped to the caller's own community). PRINCIPAL
+// stays read-only -- not part of this request, no method-level override
+// added for it.
 // These are community-scoped announcements (posts within one community),
 // distinct from the separate, school-wide Announcements sidebar module --
 // not a duplicate, no cross-module boundary crossed.
-@Roles('ADMIN', 'PRINCIPAL', 'COMMUNITY')
+// VICE_PRINCIPAL added (Vice Principal mobile Communities module) -- same
+// read-only tier as Principal; create/update stay ADMIN/COMMUNITY-only,
+// unaffected since those keep their own narrower method-level override.
+@Roles('ADMIN', 'PRINCIPAL', 'COMMUNITY', 'VICE_PRINCIPAL')
 @Controller()
 export class CommunityAnnouncementsController {
   constructor(
@@ -36,22 +43,22 @@ export class CommunityAnnouncementsController {
   }
 
   @Post('communities/:id/announcements')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'COMMUNITY')
   @HttpCode(HttpStatus.CREATED)
   async create(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateAnnouncementDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
     return {
-      data: await this.announcementsService.create(id, dto, actor.personId),
+      data: await this.announcementsService.create(id, dto, actor),
     };
   }
 
   @Patch('community-announcements/:announcementId')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'COMMUNITY')
   async update(
-    @Param('announcementId') announcementId: string,
+    @Param('announcementId', ParseUUIDPipe) announcementId: string,
     @Body() dto: UpdateAnnouncementDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
@@ -59,7 +66,7 @@ export class CommunityAnnouncementsController {
       data: await this.announcementsService.update(
         announcementId,
         dto,
-        actor.personId,
+        actor,
       ),
     };
   }

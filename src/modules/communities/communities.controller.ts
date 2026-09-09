@@ -23,7 +23,9 @@ import { UpdateCommunityDto } from './dto/update-community.dto';
 // summary, Phase 3 of that separate initiative -- read-only here too, same
 // as Principal's) -- every write method below keeps its own narrower
 // @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL', 'COMMUNITY')
+// VICE_PRINCIPAL added (Vice Principal mobile Communities module) for the
+// exact same read-only oversight scope as Principal, nothing more.
+@Roles('ADMIN', 'PRINCIPAL', 'COMMUNITY', 'VICE_PRINCIPAL')
 @Controller('communities')
 export class CommunitiesController {
   constructor(private readonly communitiesService: CommunitiesService) {}

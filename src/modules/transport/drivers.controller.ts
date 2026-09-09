@@ -6,11 +6,12 @@ import { DriversService } from './drivers.service';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { UpdateDriverDto } from './dto/update-driver.dto';
 
-// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 11);
-// every write method below keeps its own narrower @Roles('ADMIN') override.
-// Drivers remain plain transport master records, never application users --
-// no driver login/role is introduced here.
-@Roles('ADMIN', 'PRINCIPAL')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 11),
+// and to VICE_PRINCIPAL (Phase 13 mobile Transport module -- same oversight
+// need) -- every write method below keeps its own narrower @Roles('ADMIN')
+// override. Drivers remain plain transport master records, never application
+// users -- no driver login/role is introduced here.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller('drivers')
 export class DriversController {
   constructor(private readonly driversService: DriversService) {}

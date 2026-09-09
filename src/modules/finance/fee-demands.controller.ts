@@ -7,7 +7,9 @@ import { FeeDemandsService } from './fee-demands.service';
 // list -- Admin -> Finance section 3. No create/update/delete here -- Finance
 // owns fee_demand's actual lifecycle (collection, waivers, cancellation).
 // PRINCIPAL added (Phase 16) -- same read-only oversight scope; 100% GET.
-@Roles('ADMIN', 'PRINCIPAL')
+// VICE_PRINCIPAL added (Vice Principal mobile Finance module) for the exact
+// same read-only oversight scope as Principal, nothing more.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller('fee-demands')
 export class FeeDemandsController {
   constructor(private readonly feeDemandsService: FeeDemandsService) {}

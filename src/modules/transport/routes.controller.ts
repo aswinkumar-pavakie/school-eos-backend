@@ -18,9 +18,12 @@ import { UpdateRouteDto } from './dto/update-route.dto';
 import { CreateRouteStopDto } from './dto/create-route-stop.dto';
 import { UpdateRouteStopDto } from './dto/update-route-stop.dto';
 
-// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 11);
-// every write method below keeps its own narrower @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 11),
+// and to VICE_PRINCIPAL (Phase 13 mobile Transport module -- same oversight
+// need, covers list/get/listStops/listAssignedStudents, all explicitly
+// requested this phase) -- every write method below keeps its own narrower
+// @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller()
 export class RoutesController {
   constructor(private readonly routesService: RoutesService) {}

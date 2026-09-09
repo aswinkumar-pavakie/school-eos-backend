@@ -57,3 +57,4 @@ query.md
 # ---- User-uploaded files (local disk storage, see PersonsController photo endpoints) ----
 uploads/*
 !uploads/.gitkeep
+API_REFERENCE.md

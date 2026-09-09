@@ -24,17 +24,27 @@ import { UpdateVehicleMaintenanceDto } from './dto/update-vehicle-maintenance.dt
 // every write method below keeps its own narrower @Roles('ADMIN') override --
 // RolesGuard's Reflector.getAllAndOverride means a method-level @Roles fully
 // replaces, never merges with, the class-level one.
+//
+// VICE_PRINCIPAL (Phase 13 mobile Transport module) is granted access on
+// list/get ONLY, via their own method-level overrides below -- deliberately
+// NOT a class-level change. listDocuments/listMaintenance stay
+// ADMIN+PRINCIPAL only: vehicle maintenance is literally "Repair &
+// Maintenance", a module Phase 13's own instructions explicitly exclude
+// ("Do NOT start or modify: ... Repair & Maintenance"), and vehicle
+// documents were never requested by this phase either.
 @Roles('ADMIN', 'PRINCIPAL')
 @Controller()
 export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
 
   @Get('vehicles')
+  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
   async list() {
     return { data: await this.vehiclesService.list() };
   }
 
   @Get('vehicles/:id')
+  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
   async get(@Param('id') id: string) {
     return { data: await this.vehiclesService.get(id) };
   }

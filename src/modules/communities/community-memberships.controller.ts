@@ -18,7 +18,9 @@ import { CreateMembershipDto } from './dto/create-membership.dto';
 // and to COMMUNITY (Phase 4 of the separate standalone-Community-login
 // initiative -- same read-only tier) -- every write method below keeps its
 // own narrower @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL', 'COMMUNITY')
+// VICE_PRINCIPAL added (Vice Principal mobile Communities module) for the
+// exact same read-only oversight scope as Principal, nothing more.
+@Roles('ADMIN', 'PRINCIPAL', 'COMMUNITY', 'VICE_PRINCIPAL')
 @Controller()
 export class CommunityMembershipsController {
   constructor(

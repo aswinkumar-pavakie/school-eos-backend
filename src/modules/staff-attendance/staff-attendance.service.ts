@@ -29,6 +29,29 @@ export class StaffAttendanceService {
     };
   }
 
+  /** The caller's own attendance history for one calendar month (defaults to
+   * the current month), plus that month's counts and the existing lifetime
+   * summary alongside it -- self-scoped to the staffId the controller
+   * resolved from the authenticated actor, never a client-supplied one. */
+  async getMyAttendanceHistory(staffId: string, month?: string) {
+    const effectiveMonth = month ?? new Date().toISOString().slice(0, 7);
+    const [days, monthlySummary, allTimeCounts] = await Promise.all([
+      this.staffAttendanceRepo.findEventsForStaff(staffId, effectiveMonth),
+      this.staffAttendanceRepo.getAttendanceSummaryForStaffInMonth(staffId, effectiveMonth),
+      this.staffAttendanceRepo.getAttendanceSummaryForStaff(staffId),
+    ]);
+    const withPercentage = (c: { presentCount: number; totalCount: number }) => ({
+      ...c,
+      percentage: c.totalCount > 0 ? Math.round((c.presentCount / c.totalCount) * 100) : null,
+    });
+    return {
+      month: effectiveMonth,
+      monthlySummary: withPercentage(monthlySummary),
+      allTimeSummary: withPercentage(allTimeCounts),
+      days,
+    };
+  }
+
   async markBulk(dto: MarkStaffAttendanceDto, actorPersonId: string) {
     const eventType = dto.status === 'PRESENT' ? 'CHECK_IN' : 'ABSENT';
     // A fixed representative time for the day (9 AM) -- this is a whole-day

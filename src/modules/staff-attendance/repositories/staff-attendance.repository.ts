@@ -14,7 +14,10 @@ export interface StaffDailyStatusRow {
 
 export interface MarkEventInput {
   staffId: string;
-  eventType: 'CHECK_IN' | 'ABSENT';
+  // 'ON_DUTY' is only ever written by the Faculty Employee Leave & OD
+  // approval handler (an approved OD request auto-marks this) -- the Admin
+  // bulk-mark DTO itself still only accepts CHECK_IN/ABSENT, unchanged.
+  eventType: 'CHECK_IN' | 'ABSENT' | 'ON_DUTY';
   occurredAt: string;
   reason: string;
   recordedBy: string;
@@ -111,6 +114,83 @@ export class StaffAttendanceRepository {
       presentCount: parseInt(rows[0].present_count, 10),
       totalCount: parseInt(rows[0].total_count, 10),
     };
+  }
+
+  /** Same "one row per distinct day, latest event by received_at wins" rule
+   * as getAttendanceSummaryForStaff (this is that same CTE, just returning
+   * the day rows instead of only the aggregate counts) -- optionally
+   * narrowed to one calendar month. Backs Vice Principal's own My Attendance
+   * screen (Phase 27) via the self-scoped GET /staff/me/attendance-history;
+   * any authenticated staff member's own history could equally reuse it. */
+  async findEventsForStaff(
+    staffId: string,
+    month: string | undefined,
+    executor: Queryable = this.postgres,
+  ): Promise<{ date: string; status: string; occurredAt: Date; reason: string | null }[]> {
+    const params: unknown[] = [staffId];
+    let monthFilter = '';
+    if (month) {
+      params.push(`${month}-01`);
+      monthFilter = `AND date_trunc('month', e.occurred_at) = date_trunc('month', $${params.length}::date)`;
+    }
+    const { rows } = await executor.query<{ date: string; status: string; occurred_at: Date; reason: string | null }>(
+      `SELECT DISTINCT ON (e.occurred_at::date)
+              e.occurred_at::date AS date, e.event_type AS status, e.occurred_at, e.reason
+       FROM staff_attendance_event e
+       WHERE e.staff_id = $1 AND e.event_type IN ('CHECK_IN', 'ABSENT') ${monthFilter}
+       ORDER BY e.occurred_at::date DESC, e.received_at DESC`,
+      params,
+    );
+    return rows.map((r) => ({ date: r.date, status: r.status, occurredAt: r.occurred_at, reason: r.reason }));
+  }
+
+  /** Same dedup rule, aggregated -- used for the monthly summary in My
+   * Attendance, alongside the existing lifetime getAttendanceSummaryForStaff. */
+  async getAttendanceSummaryForStaffInMonth(
+    staffId: string,
+    month: string,
+    executor: Queryable = this.postgres,
+  ): Promise<{ presentCount: number; totalCount: number }> {
+    const { rows } = await executor.query<{ present_count: string; total_count: string }>(
+      `WITH daily AS (
+         SELECT DISTINCT ON (e.occurred_at::date) e.occurred_at::date AS day, e.event_type
+         FROM staff_attendance_event e
+         WHERE e.staff_id = $1 AND e.event_type IN ('CHECK_IN', 'ABSENT')
+           AND date_trunc('month', e.occurred_at) = date_trunc('month', $2::date)
+         ORDER BY e.occurred_at::date, e.received_at DESC
+       )
+       SELECT count(*) FILTER (WHERE event_type = 'CHECK_IN') AS present_count, count(*) AS total_count
+       FROM daily`,
+      [staffId, `${month}-01`],
+    );
+    return {
+      presentCount: parseInt(rows[0].present_count, 10),
+      totalCount: parseInt(rows[0].total_count, 10),
+    };
+  }
+
+  /** Every raw event for one staff member in a date range, oldest first (then
+   * by received_at, so a later correction on the same occurred_at date sorts
+   * after the row it corrects) -- Faculty's own "My Attendance" view derives
+   * daily status/punch times from this itself (richer than the daily-roster
+   * query above, which only needs the single winning CHECK_IN/ABSENT verdict
+   * per day, not actual punch times or ON_DUTY). Same `occurred_at::date`
+   * convention as the rest of this repository -- no timezone conversion, the
+   * stored wall-clock value is already the intended local school-day time. */
+  async findEventsInRange(
+    staffId: string,
+    dateFrom: string,
+    dateTo: string,
+    executor: Queryable = this.postgres,
+  ): Promise<{ eventType: string; occurredAt: Date; receivedAt: Date }[]> {
+    const { rows } = await executor.query(
+      `SELECT event_type AS "eventType", occurred_at AS "occurredAt", received_at AS "receivedAt"
+       FROM staff_attendance_event
+       WHERE staff_id = $1 AND occurred_at::date BETWEEN $2::date AND $3::date
+       ORDER BY occurred_at::date, received_at`,
+      [staffId, dateFrom, dateTo],
+    );
+    return rows;
   }
 
   async markMany(inputs: MarkEventInput[], executor: Queryable = this.postgres): Promise<void> {

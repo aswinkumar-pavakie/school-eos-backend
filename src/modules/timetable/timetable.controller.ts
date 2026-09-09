@@ -8,9 +8,12 @@ import { TimetableService } from './timetable.service';
 // discovered (a prior assumption that "Timetable isn't built yet" was wrong; the
 // schema and data already existed, just with no API in front of it). Broadened
 // to include PRINCIPAL for read-only oversight (Principal's own Class Timetable
-// module) -- no method-level override needed anywhere in this controller, since
-// every endpoint here is already GET-only for every role, Admin included.
-@Roles('ADMIN', 'PRINCIPAL')
+// module), and to VICE_PRINCIPAL (Phase 9 mobile Class Timetable module -- same
+// oversight need) -- no method-level override needed anywhere in this
+// controller, since every endpoint here is already GET-only for every role,
+// Admin included -- there is no write endpoint on this controller at all, so
+// this class-level broadening carries zero risk of granting write access.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller('timetable')
 export class TimetableController {
   constructor(private readonly timetableService: TimetableService) {}

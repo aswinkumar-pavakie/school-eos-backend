@@ -16,9 +16,11 @@ import { RepairRequestsService } from './repair-requests.service';
 // extension so Principal Inventory's item-detail page can show the real repair
 // requests raised against that item (see Phase 13's Inventory -> Maintenance
 // integration requirement) without duplicating this module or building the
-// full Principal Maintenance module yet. Every write method below keeps its
-// own narrower @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL')
+// full Principal Maintenance module yet. VICE_PRINCIPAL added (Vice Principal
+// mobile Repair & Maintenance module) for the same read-only oversight scope
+// as Principal, nothing more. Every write method below keeps its own
+// narrower @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller('repair-requests')
 export class RepairRequestsController {
   constructor(private readonly repairRequestsService: RepairRequestsService) {}

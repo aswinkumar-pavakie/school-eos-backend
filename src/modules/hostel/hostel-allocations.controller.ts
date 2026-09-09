@@ -7,9 +7,11 @@ import { HostelAllocationQueryDto } from './dto/hostel-allocation-query.dto';
 import { VacateHostelAllocationDto } from './dto/vacate-hostel-allocation.dto';
 import { HostelAllocationsService } from './hostel-allocations.service';
 
-// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 12);
-// every write method below keeps its own narrower @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 12),
+// and to VICE_PRINCIPAL (Vice Principal mobile Hostel module -- same
+// oversight need) -- every write method below keeps its own narrower
+// @Roles('ADMIN') override.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller('hostel-allocations')
 export class HostelAllocationsController {
   constructor(private readonly hostelAllocationsService: HostelAllocationsService) {}

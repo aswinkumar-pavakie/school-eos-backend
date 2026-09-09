@@ -8,11 +8,13 @@ import { UpdateAcademicYearDto } from './dto/update-academic-year.dto';
 
 // Class-level @Roles broadened to include PRINCIPAL for read-only oversight
 // (Principal's Students module needs grade/section/academic-year names for
-// enrolment display) -- every write method below has its own narrower
-// @Roles('ADMIN') override (RolesGuard's Reflector.getAllAndOverride means a
-// method-level @Roles fully replaces the class-level one), so Principal never
-// gains create/update/set-current/close access even by calling the API directly.
-@Roles('ADMIN', 'PRINCIPAL')
+// enrolment display), and to VICE_PRINCIPAL (Phase 8 mobile Academics module
+// -- same read-only oversight need) -- every write method below has its own
+// narrower @Roles('ADMIN') override (RolesGuard's Reflector.getAllAndOverride
+// means a method-level @Roles fully replaces the class-level one), so neither
+// Principal nor Vice Principal ever gains create/update/set-current/close
+// access even by calling the API directly.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller('academic-years')
 export class AcademicYearsController {
   constructor(private readonly academicYearsService: AcademicYearsService) {}

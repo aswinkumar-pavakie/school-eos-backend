@@ -7,7 +7,9 @@ import { PaymentsService } from './payments.service';
 // Deliberately no collect/confirm/refund/reconcile actions here; those are
 // Finance operational responsibilities, not Admin's.
 // PRINCIPAL added (Phase 16) -- same read-only oversight scope; 100% GET.
-@Roles('ADMIN', 'PRINCIPAL')
+// VICE_PRINCIPAL added (Vice Principal mobile Finance module) for the exact
+// same read-only oversight scope as Principal, nothing more.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}

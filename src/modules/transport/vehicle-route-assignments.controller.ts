@@ -7,9 +7,12 @@ import { CreateVehicleRouteAssignmentDto } from './dto/create-vehicle-route-assi
 import { UpdateVehicleRouteAssignmentDto } from './dto/update-vehicle-route-assignment.dto';
 import { VehicleRouteAssignmentQueryDto } from './dto/vehicle-route-assignment-query.dto';
 
-// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 11);
-// every write method below keeps its own narrower @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL')
+// Class-level role broadened to PRINCIPAL for read-only oversight (Phase 11),
+// and to VICE_PRINCIPAL (Phase 13 mobile Transport module -- same oversight
+// need, this is exactly the vehicle<->route<->driver linkage that module
+// needs) -- every write method below keeps its own narrower @Roles('ADMIN')
+// override.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller('vehicle-route-assignments')
 export class VehicleRouteAssignmentsController {
   constructor(private readonly assignmentsService: VehicleRouteAssignmentsService) {}

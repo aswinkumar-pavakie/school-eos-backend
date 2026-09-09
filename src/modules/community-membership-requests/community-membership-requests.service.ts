@@ -77,6 +77,31 @@ export class CommunityMembershipRequestsService {
     }
   }
 
+  /** A student can have at most one open ADD request per community at a
+   * time -- community_membership only gains a row on approval, so
+   * assertNoExistingMembershipRow alone lets the same student be
+   * re-submitted while an earlier request for them is still PENDING
+   * (confirmed live: two concurrent PENDING ADD rows for the same student
+   * existed in this community before this check was added). REJECTED
+   * requests are terminal (per this module's own design, see the migration
+   * comment) so they're excluded here -- only PENDING blocks a resubmit. */
+  private async assertNoPendingAddRequest(
+    communityId: string,
+    studentId: string,
+  ): Promise<void> {
+    const { rows } = await this.postgres.query<{ id: string }>(
+      `SELECT id FROM community_membership_request
+       WHERE community_id = $1 AND student_id = $2 AND action = 'ADD' AND status = 'PENDING'
+       LIMIT 1`,
+      [communityId, studentId],
+    );
+    if (rows[0]) {
+      throw new ConflictException(
+        'A request to add this student is already pending Principal review.',
+      );
+    }
+  }
+
   /** community.max_members is NULL-able (no cap) -- otherwise counts every
    * seat that's currently occupied (ACTIVE or PENDING_CONSENT; REMOVED frees
    * the seat back up). Checked here for immediate feedback at submission
@@ -113,6 +138,7 @@ export class CommunityMembershipRequestsService {
   ): Promise<CommunityMembershipRequestRow> {
     const communityId = await this.resolveAuthorizedCommunityId(actor.personId);
     await this.assertNoExistingMembershipRow(communityId, dto.studentId);
+    await this.assertNoPendingAddRequest(communityId, dto.studentId);
     await this.assertUnderCapacity(communityId);
 
     return this.unitOfWork.run(async (client) => {
@@ -251,8 +277,9 @@ export class CommunityMembershipRequestsService {
   /** Minimal fields only (id, name, admissionNo) -- same shape
    * StudentPersonPicker already exposes elsewhere. Excludes students who
    * already have a community_membership row here (active OR removed) --
-   * both would fail assertNoExistingMembershipRow anyway, so there's no
-   * reason to ever surface them as a valid pick. */
+   * both would fail assertNoExistingMembershipRow anyway -- and students
+   * with a PENDING ADD request here (would fail assertNoPendingAddRequest)
+   * -- so there's no reason to ever surface either as a valid pick. */
   async searchStudents(
     search: string,
     actor: AuthenticatedUser,
@@ -280,6 +307,10 @@ export class CommunityMembershipRequestsService {
        WHERE s.status = 'ACTIVE'
          AND NOT EXISTS (
            SELECT 1 FROM community_membership cm WHERE cm.community_id = $1 AND cm.student_id = s.id
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM community_membership_request cmr
+           WHERE cmr.community_id = $1 AND cmr.student_id = s.id AND cmr.action = 'ADD' AND cmr.status = 'PENDING'
          )
          AND (p.first_name ILIKE $2 OR p.last_name ILIKE $2 OR s.admission_no ILIKE $2)
        ORDER BY p.first_name

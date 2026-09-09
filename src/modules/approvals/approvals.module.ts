@@ -24,6 +24,10 @@ import { SubjectStateRegistry } from './subject-state.registry';
   // ApprovalsService: so other feature modules can call createRequest() in-process,
   // inside their own transaction. SubjectStateRegistry: so the owning feature module
   // can register its own subject_object_type -> state-transition handler.
-  exports: [ApprovalsService, SubjectStateRegistry],
+  // ApprovalStepRepository: so a feature that already owns its own authorization
+  // check (e.g. Faculty's own HR/Payslip/Appraisal requests, scoped to the
+  // caller's own staffId) can read the real decidedByName/role trail directly,
+  // without going through getById's own separate requester-or-approver check.
+  exports: [ApprovalsService, SubjectStateRegistry, ApprovalStepRepository],
 })
 export class ApprovalsModule {}
