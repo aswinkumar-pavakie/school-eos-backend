@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CurrentActor } from '../../../common/auth/current-actor.decorator';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
 import { Roles } from '../../../common/auth/roles.decorator';
@@ -23,13 +34,19 @@ export class ConcessionsController {
   async list(@Query() query: ListConcessionsQueryDto) {
     const { page, pageSize, ...filter } = query;
     const { rows, total } = await this.service.list(filter, { page, pageSize });
-    return { data: rows, meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 } };
+    return {
+      data: rows,
+      meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 },
+    };
   }
 
   @Post()
   @Roles('FINANCE', 'ADMIN')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateConcessionDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateConcessionDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const data = await this.service.create(dto, actor);
     return { data };
   }

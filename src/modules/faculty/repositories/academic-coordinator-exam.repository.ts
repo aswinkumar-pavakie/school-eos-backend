@@ -6,7 +6,10 @@
 // only ever reads `mark` to report completion, never writes to it.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface CoordinatorExamRow {
   examId: string;
@@ -51,7 +54,10 @@ const FORWARD_TRANSITIONS: Record<string, string> = {
 export class AcademicCoordinatorExamRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findExamsForGrades(gradeIds: string[], executor: Queryable = this.postgres): Promise<CoordinatorExamRow[]> {
+  async findExamsForGrades(
+    gradeIds: string[],
+    executor: Queryable = this.postgres,
+  ): Promise<CoordinatorExamRow[]> {
     if (gradeIds.length === 0) return [];
     const { rows } = await executor.query(
       `SELECT e.id AS exam_id, e.name, e.exam_type, e.term, e.state, array_agg(DISTINCT g.name) AS grade_names
@@ -73,14 +79,24 @@ export class AcademicCoordinatorExamRepository {
     }));
   }
 
-  async findExamGradeIds(examId: string, executor: Queryable = this.postgres): Promise<string[]> {
-    const { rows } = await executor.query(`SELECT grade_id FROM exam_grade WHERE exam_id = $1`, [examId]);
+  async findExamGradeIds(
+    examId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string[]> {
+    const { rows } = await executor.query(
+      `SELECT grade_id FROM exam_grade WHERE exam_id = $1`,
+      [examId],
+    );
     return rows.map((r: any) => r.grade_id);
   }
 
-  async createExam(
-    input: { academicYearId: string; name: string; examType: string; term?: string | null; gradeIds: string[] },
-  ): Promise<string> {
+  async createExam(input: {
+    academicYearId: string;
+    name: string;
+    examType: string;
+    term?: string | null;
+    gradeIds: string[];
+  }): Promise<string> {
     const client = await this.postgres.connect();
     try {
       await client.query('BEGIN');
@@ -90,7 +106,10 @@ export class AcademicCoordinatorExamRepository {
       );
       const examId = rows[0].id;
       for (const gradeId of input.gradeIds) {
-        await client.query(`INSERT INTO exam_grade (exam_id, grade_id) VALUES ($1, $2)`, [examId, gradeId]);
+        await client.query(
+          `INSERT INTO exam_grade (exam_id, grade_id) VALUES ($1, $2)`,
+          [examId, gradeId],
+        );
       }
       await client.query('COMMIT');
       return examId;
@@ -102,8 +121,14 @@ export class AcademicCoordinatorExamRepository {
     }
   }
 
-  async findExamById(examId: string, executor: Queryable = this.postgres): Promise<{ state: string } | null> {
-    const { rows } = await executor.query(`SELECT state FROM exam WHERE id = $1`, [examId]);
+  async findExamById(
+    examId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<{ state: string } | null> {
+    const { rows } = await executor.query(
+      `SELECT state FROM exam WHERE id = $1`,
+      [examId],
+    );
     return rows[0] ?? null;
   }
 
@@ -112,16 +137,26 @@ export class AcademicCoordinatorExamRepository {
    * Coordinator's own remit (see spec section 24: Coordinator prepares,
    * Principal/exam-office finalizes). Returns the new state, or null if the
    * requested transition isn't a legal forward step from the current one. */
-  async advanceExamState(examId: string, executor: Queryable = this.postgres): Promise<string | null> {
+  async advanceExamState(
+    examId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string | null> {
     const current = await this.findExamById(examId, executor);
     if (!current) return null;
     const next = FORWARD_TRANSITIONS[current.state];
     if (!next) return null;
-    await executor.query(`UPDATE exam SET state = $2, updated_at = now() WHERE id = $1`, [examId, next]);
+    await executor.query(
+      `UPDATE exam SET state = $2, updated_at = now() WHERE id = $1`,
+      [examId, next],
+    );
     return next;
   }
 
-  async findExamSubjects(examId: string, gradeIds: string[], executor: Queryable = this.postgres): Promise<CoordinatorExamSubjectRow[]> {
+  async findExamSubjects(
+    examId: string,
+    gradeIds: string[],
+    executor: Queryable = this.postgres,
+  ): Promise<CoordinatorExamSubjectRow[]> {
     if (gradeIds.length === 0) return [];
     const { rows } = await executor.query(
       `SELECT es.id AS exam_subject_id, es.exam_id, es.subject_offering_id, subj.name AS subject_name,
@@ -179,8 +214,15 @@ export class AcademicCoordinatorExamRepository {
   async updateExamSubject(
     examSubjectId: string,
     input: Partial<{
-      examDate: string; startTime: string; durationMinutes: number; room: string;
-      maxMarks: number; passMarks: number; hasPractical: boolean; practicalMax: number; internalMax: number;
+      examDate: string;
+      startTime: string;
+      durationMinutes: number;
+      room: string;
+      maxMarks: number;
+      passMarks: number;
+      hasPractical: boolean;
+      practicalMax: number;
+      internalMax: number;
     }>,
     executor: Queryable = this.postgres,
   ): Promise<void> {
@@ -201,15 +243,28 @@ export class AcademicCoordinatorExamRepository {
     push('practical_max', input.practicalMax);
     push('internal_max', input.internalMax);
     if (sets.length === 0) return;
-    await executor.query(`UPDATE exam_subject SET ${sets.join(', ')} WHERE id = $1`, params);
+    await executor.query(
+      `UPDATE exam_subject SET ${sets.join(', ')} WHERE id = $1`,
+      params,
+    );
   }
 
-  async findExamSubjectOffering(examSubjectId: string, executor: Queryable = this.postgres): Promise<string | null> {
-    const { rows } = await executor.query(`SELECT subject_offering_id FROM exam_subject WHERE id = $1`, [examSubjectId]);
+  async findExamSubjectOffering(
+    examSubjectId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string | null> {
+    const { rows } = await executor.query(
+      `SELECT subject_offering_id FROM exam_subject WHERE id = $1`,
+      [examSubjectId],
+    );
     return rows[0]?.subject_offering_id ?? null;
   }
 
-  async findReadiness(examId: string, gradeIds: string[], executor: Queryable = this.postgres): Promise<ExamReadinessRow[]> {
+  async findReadiness(
+    examId: string,
+    gradeIds: string[],
+    executor: Queryable = this.postgres,
+  ): Promise<ExamReadinessRow[]> {
     if (gradeIds.length === 0) return [];
     const { rows } = await executor.query(
       `SELECT es.id AS exam_subject_id, es.exam_id, es.subject_offering_id, subj.name AS subject_name,

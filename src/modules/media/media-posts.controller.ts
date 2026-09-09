@@ -43,13 +43,22 @@ export class MediaPostsController {
     @Body() dto: ReplyMediaPostCommentDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.service.replyToComment(commentId, dto.reply, actor.personId) };
+    return {
+      data: await this.service.replyToComment(
+        commentId,
+        dto.reply,
+        actor.personId,
+      ),
+    };
   }
 
   @Delete('comments/:commentId')
   @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
-  async deleteComment(@Param('commentId') commentId: string, @CurrentActor() actor: AuthenticatedUser) {
+  async deleteComment(
+    @Param('commentId') commentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.service.deleteComment(commentId, actor.personId);
     return { data: { deleted: true } };
   }
@@ -62,8 +71,13 @@ export class MediaPostsController {
   // posts must never leak outside Media Room's own privileged callers.
   @Get()
   @Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL', 'FACULTY', 'PARENT')
-  async list(@Query() query: MediaPostQueryDto, @CurrentActor() actor: AuthenticatedUser) {
-    const privileged = actor.roles.some((r) => ['MEDIA_ROOM', 'ADMIN', 'PRINCIPAL'].includes(r));
+  async list(
+    @Query() query: MediaPostQueryDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    const privileged = actor.roles.some((r) =>
+      ['MEDIA_ROOM', 'ADMIN', 'PRINCIPAL'].includes(r),
+    );
     const filter = privileged ? query : { state: 'PUBLISHED' };
     return { data: await this.service.list(filter) };
   }
@@ -93,14 +107,21 @@ export class MediaPostsController {
 
   @Patch(':id')
   @Roles('MEDIA_ROOM', 'ADMIN')
-  async update(@Param('id') id: string, @Body() dto: UpdateMediaPostDto, @CurrentActor() actor: AuthenticatedUser) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateMediaPostDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.update(id, dto, actor.personId) };
   }
 
   @Post(':id/cancel')
   @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
-  async cancel(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async cancel(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.service.cancel(id, actor.personId);
     return { data: { cancelled: true } };
   }
@@ -108,7 +129,10 @@ export class MediaPostsController {
   @Delete(':id')
   @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.OK)
-  async delete(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async delete(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.service.delete(id, actor.personId);
     return { data: { deleted: true } };
   }

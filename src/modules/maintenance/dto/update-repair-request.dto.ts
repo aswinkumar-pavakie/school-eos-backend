@@ -13,7 +13,14 @@ export class UpdateRepairRequestDto {
   inventoryItemId?: string;
 
   @IsOptional()
-  @IsIn(['ELECTRICAL', 'PLUMBING', 'CIVIL', 'IT_EQUIPMENT', 'FURNITURE', 'OTHER'])
+  @IsIn([
+    'ELECTRICAL',
+    'PLUMBING',
+    'CIVIL',
+    'IT_EQUIPMENT',
+    'FURNITURE',
+    'OTHER',
+  ])
   issueType?: string;
 
   @IsOptional()

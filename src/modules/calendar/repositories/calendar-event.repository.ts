@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface CalendarEventRow {
   id: string;
@@ -46,7 +49,10 @@ const COLUMNS = `id, academic_year_id AS "academicYearId", title, description,
 export class CalendarEventRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findMany(filter: CalendarEventFilter, executor: Queryable = this.postgres): Promise<CalendarEventRow[]> {
+  async findMany(
+    filter: CalendarEventFilter,
+    executor: Queryable = this.postgres,
+  ): Promise<CalendarEventRow[]> {
     const conditions: string[] = [];
     const params: unknown[] = [];
 
@@ -63,7 +69,8 @@ export class CalendarEventRepository {
       conditions.push(`start_date <= $${params.length}`);
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { rows } = await executor.query<CalendarEventRow>(
       `SELECT ${COLUMNS} FROM calendar_event ${where} ORDER BY start_date`,
       params,
@@ -71,7 +78,10 @@ export class CalendarEventRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<CalendarEventRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<CalendarEventRow | null> {
     const { rows } = await executor.query<CalendarEventRow>(
       `SELECT ${COLUMNS} FROM calendar_event WHERE id = $1`,
       [id],
@@ -79,7 +89,10 @@ export class CalendarEventRepository {
     return rows[0] ?? null;
   }
 
-  async create(input: CreateCalendarEventInput, executor: Queryable = this.postgres): Promise<CalendarEventRow> {
+  async create(
+    input: CreateCalendarEventInput,
+    executor: Queryable = this.postgres,
+  ): Promise<CalendarEventRow> {
     const { rows } = await executor.query<CalendarEventRow>(
       `INSERT INTO calendar_event
          (academic_year_id, title, description, event_type, is_holiday, start_date, end_date,
@@ -103,8 +116,14 @@ export class CalendarEventRepository {
     return rows[0];
   }
 
-  async delete(id: string, executor: Queryable = this.postgres): Promise<boolean> {
-    const { rowCount } = await executor.query(`DELETE FROM calendar_event WHERE id = $1`, [id]);
+  async delete(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<boolean> {
+    const { rowCount } = await executor.query(
+      `DELETE FROM calendar_event WHERE id = $1`,
+      [id],
+    );
     return (rowCount ?? 0) > 0;
   }
 }

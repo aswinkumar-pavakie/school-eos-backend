@@ -49,7 +49,10 @@ export class RequestEffectsService {
     private readonly repairRequestsService: RepairRequestsService,
   ) {}
 
-  async apply(request: ApprovalRequestRow, actorPersonId: string): Promise<Record<string, unknown> | undefined> {
+  async apply(
+    request: ApprovalRequestRow,
+    actorPersonId: string,
+  ): Promise<Record<string, unknown> | undefined> {
     const payload = request.payload ?? {};
 
     switch (request.requestType) {
@@ -68,11 +71,16 @@ export class RequestEffectsService {
         // on it through whatever existing screen the request actually concerns.
         return undefined;
       default:
-        throw new BadRequestException(`Unknown request type: ${request.requestType}`);
+        throw new BadRequestException(
+          `Unknown request type: ${request.requestType}`,
+        );
     }
   }
 
-  private async applyAdminAccess(payload: Record<string, unknown>, actorPersonId: string) {
+  private async applyAdminAccess(
+    payload: Record<string, unknown>,
+    actorPersonId: string,
+  ) {
     const action = payload.action;
     const targetPersonId = payload.targetPersonId;
     if (typeof targetPersonId !== 'string' && action !== 'REVOKE_ROLE') {
@@ -80,11 +88,17 @@ export class RequestEffectsService {
     }
 
     if (action === 'ACTIVATE') {
-      await this.personsService.activate(targetPersonId as string, actorPersonId);
+      await this.personsService.activate(
+        targetPersonId as string,
+        actorPersonId,
+      );
       return { appliedAction: 'ACTIVATE', targetPersonId };
     }
     if (action === 'DEACTIVATE') {
-      await this.personsService.deactivate(targetPersonId as string, actorPersonId);
+      await this.personsService.deactivate(
+        targetPersonId as string,
+        actorPersonId,
+      );
       return { appliedAction: 'DEACTIVATE', targetPersonId };
     }
     if (action === 'GRANT_ROLE') {
@@ -96,69 +110,121 @@ export class RequestEffectsService {
         scopeStage: payload.scopeStage as string | undefined,
         academicYearId: payload.academicYearId as string | undefined,
       };
-      const created = await this.roleAssignmentsService.grant(dto, actorPersonId);
+      const created = await this.roleAssignmentsService.grant(
+        dto,
+        actorPersonId,
+      );
       return { appliedAction: 'GRANT_ROLE', roleAssignmentId: created.id };
     }
     if (action === 'REVOKE_ROLE') {
       const roleAssignmentId = payload.roleAssignmentId;
       if (typeof roleAssignmentId !== 'string') {
-        throw new BadRequestException('This request is missing roleAssignmentId.');
+        throw new BadRequestException(
+          'This request is missing roleAssignmentId.',
+        );
       }
       await this.roleAssignmentsService.revoke(roleAssignmentId, actorPersonId);
       return { appliedAction: 'REVOKE_ROLE', roleAssignmentId };
     }
-    throw new BadRequestException(`Unknown admin access action: ${String(action)}`);
+    throw new BadRequestException(
+      `Unknown admin access action: ${String(action)}`,
+    );
   }
 
-  private async applyAttendanceCorrection(payload: Record<string, unknown>, actorPersonId: string) {
+  private async applyAttendanceCorrection(
+    payload: Record<string, unknown>,
+    actorPersonId: string,
+  ) {
     const attendanceRecordId = payload.attendanceRecordId;
     if (typeof attendanceRecordId !== 'string') {
-      throw new BadRequestException('This request is missing attendanceRecordId.');
+      throw new BadRequestException(
+        'This request is missing attendanceRecordId.',
+      );
     }
     const dto: CorrectAttendanceRecordDto = {
       newStatus: payload.newStatus as string,
       reason: (payload.reason as string) ?? 'Approved via Requests & Approvals',
     };
-    const result = await this.attendanceRecordsService.correct(attendanceRecordId, dto, actorPersonId);
+    const result = await this.attendanceRecordsService.correct(
+      attendanceRecordId,
+      dto,
+      actorPersonId,
+    );
     return { attendanceRecordId, correctionId: result.correction.id };
   }
 
-  private async applyStudentRecordCorrection(payload: Record<string, unknown>, actorPersonId: string) {
+  private async applyStudentRecordCorrection(
+    payload: Record<string, unknown>,
+    actorPersonId: string,
+  ) {
     const studentId = payload.studentId;
     const field = payload.field;
     if (typeof studentId !== 'string' || typeof field !== 'string') {
-      throw new BadRequestException('This request is missing studentId or field.');
+      throw new BadRequestException(
+        'This request is missing studentId or field.',
+      );
     }
-    if (!STUDENT_CORRECTION_FIELDS.includes(field as (typeof STUDENT_CORRECTION_FIELDS)[number])) {
+    if (
+      !STUDENT_CORRECTION_FIELDS.includes(
+        field as (typeof STUDENT_CORRECTION_FIELDS)[number],
+      )
+    ) {
       throw new BadRequestException(
         `"${field}" isn't an administrative field this workflow can change -- academic fields aren't handled here.`,
       );
     }
-    const updated = await this.studentsService.update(studentId, { [field]: payload.newValue }, actorPersonId);
-    return { studentId, field, appliedValue: (updated as unknown as Record<string, unknown>)[field] };
+    const updated = await this.studentsService.update(
+      studentId,
+      { [field]: payload.newValue },
+      actorPersonId,
+    );
+    return {
+      studentId,
+      field,
+      appliedValue: (updated as unknown as Record<string, unknown>)[field],
+    };
   }
 
-  private async applyInventoryRequest(payload: Record<string, unknown>, actorPersonId: string) {
+  private async applyInventoryRequest(
+    payload: Record<string, unknown>,
+    actorPersonId: string,
+  ) {
     const itemId = payload.itemId;
-    if (typeof itemId !== 'string') throw new BadRequestException('This request is missing itemId.');
+    if (typeof itemId !== 'string')
+      throw new BadRequestException('This request is missing itemId.');
 
     if (payload.action === 'ISSUE') {
       const dto: IssueInventoryItemDto = {
         assignedToPersonId: payload.assignedToPersonId as string,
         assignedOn: payload.assignedOn as string | undefined,
       };
-      const updated = await this.inventoryItemsService.issue(itemId, dto, actorPersonId);
+      const updated = await this.inventoryItemsService.issue(
+        itemId,
+        dto,
+        actorPersonId,
+      );
       return { itemId, appliedAction: 'ISSUE', status: updated.status };
     }
     if (payload.action === 'TRANSFER') {
-      const dto: TransferInventoryItemDto = { location: payload.location as string };
-      const updated = await this.inventoryItemsService.transfer(itemId, dto, actorPersonId);
+      const dto: TransferInventoryItemDto = {
+        location: payload.location as string,
+      };
+      const updated = await this.inventoryItemsService.transfer(
+        itemId,
+        dto,
+        actorPersonId,
+      );
       return { itemId, appliedAction: 'TRANSFER', location: updated.location };
     }
-    throw new BadRequestException(`Unknown inventory request action: ${String(payload.action)}`);
+    throw new BadRequestException(
+      `Unknown inventory request action: ${String(payload.action)}`,
+    );
   }
 
-  private async applyRepairRequest(payload: Record<string, unknown>, actorPersonId: string) {
+  private async applyRepairRequest(
+    payload: Record<string, unknown>,
+    actorPersonId: string,
+  ) {
     const dto: CreateRepairRequestDto = {
       title: payload.title as string,
       inventoryItemId: payload.inventoryItemId as string | undefined,

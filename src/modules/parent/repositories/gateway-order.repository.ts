@@ -3,7 +3,10 @@
 // confirms the payment and that split gets actually applied (see ParentFeesService).
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface AllocationLine {
   feeDemandId: string;
@@ -53,7 +56,14 @@ export class GatewayOrderRepository {
       `INSERT INTO gateway_order (payment_id, student_id, gateway, gateway_order_id, allocations, created_by)
        VALUES ($1, $2, $3, $4, $5::jsonb, $6)
        RETURNING *`,
-      [input.paymentId, input.studentId, input.gateway, input.gatewayOrderId, JSON.stringify(input.allocations), input.createdBy],
+      [
+        input.paymentId,
+        input.studentId,
+        input.gateway,
+        input.gatewayOrderId,
+        JSON.stringify(input.allocations),
+        input.createdBy,
+      ],
     );
     return mapRow(rows[0]);
   }

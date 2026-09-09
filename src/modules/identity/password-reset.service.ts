@@ -43,14 +43,18 @@ export class PasswordResetService {
   ) {}
 
   async requestReset(dto: PasswordResetRequestDto): Promise<void> {
-    const identifier = await this.loginIdentifierRepo.findVerifiedByValue(dto.identifier);
+    const identifier = await this.loginIdentifierRepo.findVerifiedByValue(
+      dto.identifier,
+    );
     if (!identifier) {
       // Same "never reveal existence" posture as login: no-op, indistinguishable from
       // the success path to the caller.
       return;
     }
 
-    const credential = await this.userCredentialRepo.findByPersonId(identifier.personId);
+    const credential = await this.userCredentialRepo.findByPersonId(
+      identifier.personId,
+    );
     if (!credential) {
       return;
     }
@@ -87,7 +91,9 @@ export class PasswordResetService {
   }
 
   async completeReset(dto: PasswordResetCompleteDto): Promise<void> {
-    const identifier = await this.loginIdentifierRepo.findVerifiedByValue(dto.identifier);
+    const identifier = await this.loginIdentifierRepo.findVerifiedByValue(
+      dto.identifier,
+    );
     if (!identifier) {
       throw new BadRequestException(AUTH_ERRORS.INVALID_OTP);
     }
@@ -116,7 +122,11 @@ export class PasswordResetService {
     const passwordHash = await argon2.hash(dto.newPassword, ARGON2_OPTIONS);
 
     await this.unitOfWork.run(async (client) => {
-      await this.userCredentialRepo.completeSelfServiceReset(identifier.personId, passwordHash, client);
+      await this.userCredentialRepo.completeSelfServiceReset(
+        identifier.personId,
+        passwordHash,
+        client,
+      );
       await this.otpChallengeRepo.markConsumed(challenge.id, client);
       // A reset implies the old credential may have been compromised — every existing
       // session is revoked so it can't be ridden out after the password changes.
@@ -147,7 +157,11 @@ export class PasswordResetService {
     const passwordHash = await argon2.hash(newPassword, ARGON2_OPTIONS);
 
     await this.unitOfWork.run(async (client) => {
-      await this.userCredentialRepo.completeAdminReset(personId, passwordHash, client);
+      await this.userCredentialRepo.completeAdminReset(
+        personId,
+        passwordHash,
+        client,
+      );
       await this.sessionRepo.deleteAllForPerson(personId, client);
     });
 

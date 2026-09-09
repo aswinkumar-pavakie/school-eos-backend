@@ -3,8 +3,14 @@
 // payment.reconciled_at existed. See that migration's header comment for why.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
-import { PageQuery, toOffsetLimit } from '../../../../common/pagination/pagination.util';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PageQuery,
+  toOffsetLimit,
+} from '../../../../common/pagination/pagination.util';
 
 export interface ReconciliationRow {
   id: string;
@@ -75,25 +81,49 @@ export class ReconciliationRepository {
   constructor(private readonly postgres: PostgresService) {}
 
   async create(
-    input: { gateway: string; periodFrom: string; periodTo: string; settlementObjectKey: string | null; createdBy: string },
+    input: {
+      gateway: string;
+      periodFrom: string;
+      periodTo: string;
+      settlementObjectKey: string | null;
+      createdBy: string;
+    },
     executor: Queryable = this.postgres,
   ): Promise<ReconciliationRow> {
     const { rows } = await executor.query(
       `INSERT INTO reconciliation (gateway, period_from, period_to, settlement_object_key, created_by, state)
        VALUES ($1, $2, $3, $4, $5, 'DRAFT')
        RETURNING *`,
-      [input.gateway, input.periodFrom, input.periodTo, input.settlementObjectKey, input.createdBy],
+      [
+        input.gateway,
+        input.periodFrom,
+        input.periodTo,
+        input.settlementObjectKey,
+        input.createdBy,
+      ],
     );
     return mapReconciliation(rows[0]);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<ReconciliationRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM reconciliation WHERE id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ReconciliationRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM reconciliation WHERE id = $1`,
+      [id],
+    );
     return rows.length ? mapReconciliation(rows[0]) : null;
   }
 
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<ReconciliationRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM reconciliation WHERE id = $1 FOR UPDATE`, [id]);
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<ReconciliationRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM reconciliation WHERE id = $1 FOR UPDATE`,
+      [id],
+    );
     return rows.length ? mapReconciliation(rows[0]) : null;
   }
 
@@ -116,15 +146,22 @@ export class ReconciliationRepository {
   }
 
   async delete(id: string, executor: Queryable): Promise<void> {
-    await executor.query(`DELETE FROM reconciliation_entry WHERE reconciliation_id = $1`, [id]);
+    await executor.query(
+      `DELETE FROM reconciliation_entry WHERE reconciliation_id = $1`,
+      [id],
+    );
     await executor.query(`DELETE FROM reconciliation WHERE id = $1`, [id]);
   }
 
-  async setState(id: string, state: string, executor: Queryable): Promise<void> {
-    await executor.query(`UPDATE reconciliation SET state = $2, updated_at = now() WHERE id = $1`, [
-      id,
-      state,
-    ]);
+  async setState(
+    id: string,
+    state: string,
+    executor: Queryable,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE reconciliation SET state = $2, updated_at = now() WHERE id = $1`,
+      [id, state],
+    );
   }
 
   async markRun(id: string, executor: Queryable): Promise<void> {
@@ -134,7 +171,11 @@ export class ReconciliationRepository {
     );
   }
 
-  async markClosed(id: string, closedBy: string, executor: Queryable): Promise<void> {
+  async markClosed(
+    id: string,
+    closedBy: string,
+    executor: Queryable,
+  ): Promise<void> {
     await executor.query(
       `UPDATE reconciliation SET state = 'CLOSED', closed_by = $2, closed_at = now(), updated_at = now()
        WHERE id = $1`,
@@ -189,7 +230,10 @@ export class ReconciliationRepository {
     return mapEntry(rows[0]);
   }
 
-  async listEntries(reconciliationId: string, executor: Queryable = this.postgres): Promise<ReconciliationEntryRow[]> {
+  async listEntries(
+    reconciliationId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ReconciliationEntryRow[]> {
     const { rows } = await executor.query(
       `SELECT * FROM reconciliation_entry WHERE reconciliation_id = $1 ORDER BY created_at ASC`,
       [reconciliationId],
@@ -197,8 +241,14 @@ export class ReconciliationRepository {
     return rows.map(mapEntry);
   }
 
-  async findEntryByIdForUpdate(id: string, executor: Queryable): Promise<ReconciliationEntryRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM reconciliation_entry WHERE id = $1 FOR UPDATE`, [id]);
+  async findEntryByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<ReconciliationEntryRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM reconciliation_entry WHERE id = $1 FOR UPDATE`,
+      [id],
+    );
     return rows.length ? mapEntry(rows[0]) : null;
   }
 

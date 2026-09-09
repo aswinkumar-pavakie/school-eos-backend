@@ -1,4 +1,13 @@
-import { ArrayMinSize, IsArray, IsBoolean, IsDateString, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsIn,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 const PRIORITIES = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
 

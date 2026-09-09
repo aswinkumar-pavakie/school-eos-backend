@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -29,7 +39,10 @@ export class SectionsController {
   @Post()
   @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateSectionDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateSectionDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.sectionsService.create(dto, actor.personId) };
   }
 

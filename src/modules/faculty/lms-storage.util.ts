@@ -17,9 +17,11 @@ const ALLOWED_MIME_TO_EXT: Record<string, string> = {
   'image/png': '.png',
   'image/webp': '.webp',
   'application/msword': '.doc',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+    '.docx',
   'application/vnd.ms-powerpoint': '.ppt',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+    '.pptx',
   'application/vnd.ms-excel': '.xls',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
 };
@@ -29,16 +31,29 @@ export const LMS_FILE_MAX_SIZE_BYTES = 25 * 1024 * 1024;
 export const lmsFileMulterOptions = {
   storage: memoryStorage(),
   limits: { fileSize: LMS_FILE_MAX_SIZE_BYTES },
-  fileFilter: (_req: unknown, file: Express.Multer.File, cb: (error: Error | null, accept: boolean) => void) => {
+  fileFilter: (
+    _req: unknown,
+    file: Express.Multer.File,
+    cb: (error: Error | null, accept: boolean) => void,
+  ) => {
     if (!ALLOWED_MIME_TO_EXT[file.mimetype]) {
-      cb(new BadRequestException('File must be a PDF, Office document, or image.'), false);
+      cb(
+        new BadRequestException(
+          'File must be a PDF, Office document, or image.',
+        ),
+        false,
+      );
       return;
     }
     cb(null, true);
   },
 };
 
-export function lmsFileObjectKeyFor(folderId: string, file: Express.Multer.File): string {
-  const ext = ALLOWED_MIME_TO_EXT[file.mimetype] ?? extname(file.originalname) ?? '';
+export function lmsFileObjectKeyFor(
+  folderId: string,
+  file: Express.Multer.File,
+): string {
+  const ext =
+    ALLOWED_MIME_TO_EXT[file.mimetype] ?? extname(file.originalname) ?? '';
   return `lms/${folderId}/${randomUUID()}${ext}`;
 }

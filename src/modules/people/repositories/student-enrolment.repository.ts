@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface StudentEnrolmentRow {
   id: string;
@@ -64,7 +67,10 @@ export class StudentEnrolmentRepository {
     return rows[0] ?? null;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<StudentEnrolmentRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StudentEnrolmentRow | null> {
     const { rows } = await executor.query<StudentEnrolmentRow>(
       `SELECT ${COLUMNS} FROM student_enrolment WHERE id = $1`,
       [id],
@@ -127,7 +133,13 @@ export class StudentEnrolmentRepository {
          updated_at = now()
        WHERE id = $1
        RETURNING ${COLUMNS}`,
-      [id, input.rollNo ?? null, input.status ?? null, input.outcome ?? null, input.remarks ?? null],
+      [
+        id,
+        input.rollNo ?? null,
+        input.status ?? null,
+        input.outcome ?? null,
+        input.remarks ?? null,
+      ],
     );
     return rows[0] ?? null;
   }
@@ -151,7 +163,11 @@ export class StudentEnrolmentRepository {
    * had are frozen here as real history, never overwritten. Only the partial unique
    * index (student_id, academic_year_id) WHERE status='ACTIVE' lets a new ACTIVE row
    * for the same year coexist with this once it's no longer ACTIVE. */
-  async supersede(id: string, remarks: string | null, executor: Queryable): Promise<StudentEnrolmentRow | null> {
+  async supersede(
+    id: string,
+    remarks: string | null,
+    executor: Queryable,
+  ): Promise<StudentEnrolmentRow | null> {
     const { rows } = await executor.query<StudentEnrolmentRow>(
       `UPDATE student_enrolment SET
          status = 'TRANSFERRED_SECTION',
@@ -164,8 +180,14 @@ export class StudentEnrolmentRepository {
     return rows[0] ?? null;
   }
 
-  async delete(id: string, executor: Queryable = this.postgres): Promise<boolean> {
-    const { rowCount } = await executor.query(`DELETE FROM student_enrolment WHERE id = $1`, [id]);
+  async delete(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<boolean> {
+    const { rowCount } = await executor.query(
+      `DELETE FROM student_enrolment WHERE id = $1`,
+      [id],
+    );
     return (rowCount ?? 0) > 0;
   }
 }

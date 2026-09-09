@@ -4,7 +4,11 @@
 // actually enforces "only visible/actionable after Finance approval" here --
 // nothing bespoke needed for that gating.
 
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { ApprovalsService } from '../approvals/approvals.service';
@@ -29,19 +33,35 @@ export class FacultyHrRequestsService {
     const staffId = await this.scopeRepo.getStaffId(personId);
     if (!staffId) return [];
     const requests = await this.hrRequestRepo.findByStaffId(staffId);
-    return Promise.all(requests.map(async (r) => ({ ...r, approvalTrail: await getApprovalTrail(this.stepRepo, r.approvalRequestId) })));
+    return Promise.all(
+      requests.map(async (r) => ({
+        ...r,
+        approvalTrail: await getApprovalTrail(
+          this.stepRepo,
+          r.approvalRequestId,
+        ),
+      })),
+    );
   }
 
   async get(personId: string, id: string) {
     const staffId = await this.scopeRepo.getStaffId(personId);
     const request = await this.hrRequestRepo.findById(id);
-    if (!request || !staffId || request.staffId !== staffId) throw new NotFoundException('Request not found');
-    return { ...request, approvalTrail: await getApprovalTrail(this.stepRepo, request.approvalRequestId) };
+    if (!request || !staffId || request.staffId !== staffId)
+      throw new NotFoundException('Request not found');
+    return {
+      ...request,
+      approvalTrail: await getApprovalTrail(
+        this.stepRepo,
+        request.approvalRequestId,
+      ),
+    };
   }
 
   async create(personId: string, dto: CreateStaffHrRequestDto) {
     const staffId = await this.scopeRepo.getStaffId(personId);
-    if (!staffId) throw new ForbiddenException('No active staff record for this account.');
+    if (!staffId)
+      throw new ForbiddenException('No active staff record for this account.');
 
     return this.unitOfWork.run(async (client) => {
       const request = await this.hrRequestRepo.create(
@@ -65,7 +85,11 @@ export class FacultyHrRequestsService {
         },
         client,
       );
-      await this.hrRequestRepo.linkApprovalRequest(request.id, approvalRequest.id, client);
+      await this.hrRequestRepo.linkApprovalRequest(
+        request.id,
+        approvalRequest.id,
+        client,
+      );
       await this.audit.record(
         {
           actorPersonId: personId,

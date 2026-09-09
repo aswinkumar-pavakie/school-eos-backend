@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CreateHostelBlockDto } from './dto/create-hostel-block.dto';
 import { CreateHostelDto } from './dto/create-hostel.dto';
@@ -39,7 +43,8 @@ export class HostelsService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A hostel with this name already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException('A hostel with this name already exists.');
       throw err;
     }
   }
@@ -60,7 +65,8 @@ export class HostelsService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A hostel with this name already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException('A hostel with this name already exists.');
       throw err;
     }
   }
@@ -70,7 +76,11 @@ export class HostelsService {
     return this.hostelBlockRepo.findByHostelId(hostelId);
   }
 
-  async createBlock(hostelId: string, dto: CreateHostelBlockDto, actorPersonId: string) {
+  async createBlock(
+    hostelId: string,
+    dto: CreateHostelBlockDto,
+    actorPersonId: string,
+  ) {
     await this.get(hostelId);
     try {
       const created = await this.hostelBlockRepo.create(hostelId, dto);
@@ -85,13 +95,19 @@ export class HostelsService {
       return created;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A block with this name already exists in this hostel.');
+        throw new ConflictException(
+          'A block with this name already exists in this hostel.',
+        );
       }
       throw err;
     }
   }
 
-  async updateBlock(blockId: string, dto: UpdateHostelBlockDto, actorPersonId: string) {
+  async updateBlock(
+    blockId: string,
+    dto: UpdateHostelBlockDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.hostelBlockRepo.findById(blockId);
     if (!existing) throw new NotFoundException('Hostel block not found');
     try {
@@ -109,7 +125,9 @@ export class HostelsService {
       return updated;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A block with this name already exists in this hostel.');
+        throw new ConflictException(
+          'A block with this name already exists in this hostel.',
+        );
       }
       throw err;
     }

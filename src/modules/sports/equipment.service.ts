@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
@@ -36,10 +40,14 @@ export class EquipmentService {
       return created;
     } catch (err) {
       if (isCheckViolation(err)) {
-        throw new BadRequestException('quantityAvailable cannot exceed quantityTotal.');
+        throw new BadRequestException(
+          'quantityAvailable cannot exceed quantityTotal.',
+        );
       }
       if (isForeignKeyViolation(err)) {
-        throw new BadRequestException('sportId does not refer to an existing sport.');
+        throw new BadRequestException(
+          'sportId does not refer to an existing sport.',
+        );
       }
       throw err;
     }
@@ -62,10 +70,14 @@ export class EquipmentService {
       return updated;
     } catch (err) {
       if (isCheckViolation(err)) {
-        throw new BadRequestException('quantityAvailable cannot exceed quantityTotal.');
+        throw new BadRequestException(
+          'quantityAvailable cannot exceed quantityTotal.',
+        );
       }
       if (isForeignKeyViolation(err)) {
-        throw new BadRequestException('sportId does not refer to an existing sport.');
+        throw new BadRequestException(
+          'sportId does not refer to an existing sport.',
+        );
       }
       throw err;
     }

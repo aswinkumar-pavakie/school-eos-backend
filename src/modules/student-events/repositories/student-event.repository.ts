@@ -3,7 +3,10 @@
 // joined from staff/person at read time here, never duplicated into this row.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface StudentEventRow {
   id: string;
@@ -29,7 +32,9 @@ function mapRow(row: any): StudentEventRow {
     startsAt: row.starts_at,
     endsAt: row.ends_at,
     monitoringTeacherPersonId: row.monitoring_teacher_person_id,
-    monitoringTeacherName: [row.teacher_first_name, row.teacher_last_name].filter(Boolean).join(' '),
+    monitoringTeacherName: [row.teacher_first_name, row.teacher_last_name]
+      .filter(Boolean)
+      .join(' '),
     monitoringTeacherDesignation: row.teacher_designation,
     createdBy: row.created_by,
     createdAt: row.created_at,
@@ -67,27 +72,51 @@ export class StudentEventRepository {
       `INSERT INTO student_event (name, location, purpose, starts_at, ends_at, monitoring_teacher_person_id, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id`,
-      [input.name, input.location, input.purpose, input.startsAt, input.endsAt, input.monitoringTeacherPersonId, input.createdBy],
+      [
+        input.name,
+        input.location,
+        input.purpose,
+        input.startsAt,
+        input.endsAt,
+        input.monitoringTeacherPersonId,
+        input.createdBy,
+      ],
     );
     return (await this.findById(rows[0].id, executor))!;
   }
 
   /** Every event created by this exact faculty member -- own-events-only, the
    * real authorization boundary every :id route re-checks before acting. */
-  async findByCreator(createdBy: string, executor: Queryable = this.postgres): Promise<StudentEventRow[]> {
-    const { rows } = await executor.query(`${`SELECT ${COLUMNS}`} ${FROM} WHERE se.created_by = $1 ORDER BY se.starts_at DESC`, [
-      createdBy,
-    ]);
+  async findByCreator(
+    createdBy: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StudentEventRow[]> {
+    const { rows } = await executor.query(
+      `${`SELECT ${COLUMNS}`} ${FROM} WHERE se.created_by = $1 ORDER BY se.starts_at DESC`,
+      [createdBy],
+    );
     return rows.map(mapRow);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<StudentEventRow | null> {
-    const { rows } = await executor.query(`${`SELECT ${COLUMNS}`} ${FROM} WHERE se.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StudentEventRow | null> {
+    const { rows } = await executor.query(
+      `${`SELECT ${COLUMNS}`} ${FROM} WHERE se.id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<{ id: string; createdBy: string } | null> {
-    const { rows } = await executor.query(`SELECT id, created_by AS "createdBy" FROM student_event WHERE id = $1 FOR UPDATE`, [id]);
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<{ id: string; createdBy: string } | null> {
+    const { rows } = await executor.query(
+      `SELECT id, created_by AS "createdBy" FROM student_event WHERE id = $1 FOR UPDATE`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 

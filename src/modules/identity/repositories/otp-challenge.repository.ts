@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
-export type OtpPurpose = 'LOGIN' | 'PASSWORD_RESET' | 'PASSWORD_CHANGE' | 'SENSITIVE_ACTION';
+export type OtpPurpose =
+  'LOGIN' | 'PASSWORD_RESET' | 'PASSWORD_CHANGE' | 'SENSITIVE_ACTION';
 
 export interface OtpChallengeRow {
   id: string;
@@ -74,13 +78,23 @@ export class OtpChallengeRepository {
 
   /** Only call when attemptCount < maxAttempts (checked by the caller) — the table's
    * CHECK (attempt_count <= max_attempts) would otherwise reject the update. */
-  async incrementAttempt(id: string, executor: Queryable = this.postgres): Promise<void> {
-    await executor.query(`UPDATE otp_challenge SET attempt_count = attempt_count + 1 WHERE id = $1`, [
-      id,
-    ]);
+  async incrementAttempt(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE otp_challenge SET attempt_count = attempt_count + 1 WHERE id = $1`,
+      [id],
+    );
   }
 
-  async markConsumed(id: string, executor: Queryable = this.postgres): Promise<void> {
-    await executor.query(`UPDATE otp_challenge SET consumed_at = now() WHERE id = $1`, [id]);
+  async markConsumed(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE otp_challenge SET consumed_at = now() WHERE id = $1`,
+      [id],
+    );
   }
 }

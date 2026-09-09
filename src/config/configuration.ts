@@ -61,14 +61,18 @@ export default (): AppConfig => ({
   auth: {
     lockoutThreshold: parseInt(process.env.AUTH_LOCKOUT_THRESHOLD ?? '5', 10),
     lockoutMinutes: parseInt(process.env.AUTH_LOCKOUT_MINUTES ?? '15', 10),
-    refreshTokenTtlDays: parseInt(process.env.AUTH_REFRESH_TOKEN_TTL_DAYS ?? '30', 10),
+    refreshTokenTtlDays: parseInt(
+      process.env.AUTH_REFRESH_TOKEN_TTL_DAYS ?? '30',
+      10,
+    ),
     otpTtlMinutes: parseInt(process.env.AUTH_OTP_TTL_MINUTES ?? '10', 10),
   },
   finance: {
     paymentWebhookSecret: process.env.FINANCE_PAYMENT_WEBHOOK_SECRET ?? '',
     // ₹5,000 default — a school's actual threshold is a business decision, not a
     // literal spec value; override via env, never hardcode a second copy elsewhere.
-    refundAutoApproveThresholdPaise: process.env.FINANCE_REFUND_AUTO_APPROVE_THRESHOLD_PAISE ?? '500000',
+    refundAutoApproveThresholdPaise:
+      process.env.FINANCE_REFUND_AUTO_APPROVE_THRESHOLD_PAISE ?? '500000',
   },
   razorpay: {
     keyId: process.env.RAZORPAY_KEY_ID ?? '',

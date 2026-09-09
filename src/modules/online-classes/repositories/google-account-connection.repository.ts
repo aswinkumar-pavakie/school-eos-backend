@@ -3,7 +3,10 @@
 // never here.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface GoogleAccountConnectionRow {
   staffId: string;
@@ -66,7 +69,10 @@ export class GoogleAccountConnectionRepository {
    * faculty changed their Google password). The stored ciphertext is left in place
    * (harmless, no longer usable) rather than deleted, so reconnecting via /connect just
    * overwrites it the same way any other reconnect does. */
-  async markNeedsReauth(staffId: string, executor: Queryable = this.postgres): Promise<void> {
+  async markNeedsReauth(
+    staffId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
     await executor.query(
       `UPDATE google_account_connection SET status = 'NEEDS_REAUTH', updated_at = now() WHERE staff_id = $1`,
       [staffId],

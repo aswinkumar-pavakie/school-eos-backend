@@ -4,7 +4,10 @@
 // against a staff repository this module doesn't have.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface DepartmentRow {
   id: string;
@@ -37,14 +40,19 @@ const COLUMNS = `id, name, code, hod_staff_id AS "hodStaffId", status,
 export class DepartmentRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findMany(executor: Queryable = this.postgres): Promise<DepartmentRow[]> {
+  async findMany(
+    executor: Queryable = this.postgres,
+  ): Promise<DepartmentRow[]> {
     const { rows } = await executor.query<DepartmentRow>(
       `SELECT ${COLUMNS} FROM department ORDER BY name`,
     );
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<DepartmentRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<DepartmentRow | null> {
     const { rows } = await executor.query<DepartmentRow>(
       `SELECT ${COLUMNS} FROM department WHERE id = $1`,
       [id],
@@ -60,7 +68,12 @@ export class DepartmentRepository {
       `INSERT INTO department (name, code, hod_staff_id, status)
        VALUES ($1, $2, $3, COALESCE($4, 'ACTIVE'))
        RETURNING ${COLUMNS}`,
-      [input.name, input.code ?? null, input.hodStaffId ?? null, input.status ?? null],
+      [
+        input.name,
+        input.code ?? null,
+        input.hodStaffId ?? null,
+        input.status ?? null,
+      ],
     );
     return rows[0];
   }
@@ -79,7 +92,13 @@ export class DepartmentRepository {
          updated_at = now()
        WHERE id = $1
        RETURNING ${COLUMNS}`,
-      [id, input.name ?? null, input.code ?? null, input.hodStaffId ?? null, input.status ?? null],
+      [
+        id,
+        input.name ?? null,
+        input.code ?? null,
+        input.hodStaffId ?? null,
+        input.status ?? null,
+      ],
     );
     return rows[0] ?? null;
   }

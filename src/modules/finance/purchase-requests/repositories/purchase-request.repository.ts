@@ -1,9 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
-import { PageQuery, toOffsetLimit } from '../../../../common/pagination/pagination.util';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PageQuery,
+  toOffsetLimit,
+} from '../../../../common/pagination/pagination.util';
 
 export type PurchaseRequestType = 'GOODS' | 'SERVICE';
-export type PurchaseRequestState = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+export type PurchaseRequestState =
+  'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 
 export interface PurchaseRequestRow {
   id: string;
@@ -57,7 +64,11 @@ function mapRow(row: any): PurchaseRequestRow {
 }
 
 function isUniqueViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as { code?: string }).code === '23505';
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as { code?: string }).code === '23505'
+  );
 }
 
 const SELECT_WITH_JOINS = `
@@ -119,35 +130,63 @@ export class PurchaseRequestRepository {
         if (!isUniqueViolation(err) || attempt === 4) throw err;
       }
     }
-    throw new Error('Could not allocate a unique purchase request reference number');
+    throw new Error(
+      'Could not allocate a unique purchase request reference number',
+    );
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<PurchaseRequestRow | null> {
-    const { rows } = await executor.query(`${SELECT_WITH_JOINS} WHERE pr.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<PurchaseRequestRow | null> {
+    const { rows } = await executor.query(
+      `${SELECT_WITH_JOINS} WHERE pr.id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<PurchaseRequestRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM purchase_request WHERE id = $1 FOR UPDATE`, [id]);
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<PurchaseRequestRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM purchase_request WHERE id = $1 FOR UPDATE`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
-  async linkApprovalRequest(id: string, approvalRequestId: string, executor: Queryable): Promise<void> {
-    await executor.query(`UPDATE purchase_request SET approval_request_id = $2 WHERE id = $1`, [
-      id,
-      approvalRequestId,
-    ]);
+  async linkApprovalRequest(
+    id: string,
+    approvalRequestId: string,
+    executor: Queryable,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE purchase_request SET approval_request_id = $2 WHERE id = $1`,
+      [id, approvalRequestId],
+    );
   }
 
-  async setState(id: string, state: PurchaseRequestState, executor: Queryable): Promise<void> {
-    await executor.query(`UPDATE purchase_request SET state = $2, updated_at = now() WHERE id = $1`, [
-      id,
-      state,
-    ]);
+  async setState(
+    id: string,
+    state: PurchaseRequestState,
+    executor: Queryable,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE purchase_request SET state = $2, updated_at = now() WHERE id = $1`,
+      [id, state],
+    );
   }
 
   async list(
-    filter: { state?: string; requestType?: string; requestedBy?: string; departmentId?: string; search?: string },
+    filter: {
+      state?: string;
+      requestType?: string;
+      requestedBy?: string;
+      departmentId?: string;
+      search?: string;
+    },
     page: PageQuery,
     executor: Queryable = this.postgres,
   ): Promise<{ rows: PurchaseRequestRow[]; total: number }> {
@@ -184,7 +223,10 @@ export class PurchaseRequestRepository {
   }
 
   /** Real, DB-computed aggregates for the POP/SOP Approval dashboard's KPI cards — never a client-side reduce over a capped page. */
-  async summary(requestType: PurchaseRequestType, executor: Queryable = this.postgres): Promise<PurchaseRequestSummary> {
+  async summary(
+    requestType: PurchaseRequestType,
+    executor: Queryable = this.postgres,
+  ): Promise<PurchaseRequestSummary> {
     const { rows } = await executor.query(
       `SELECT
          COUNT(*) FILTER (WHERE state = 'PENDING')::int AS pending_count,

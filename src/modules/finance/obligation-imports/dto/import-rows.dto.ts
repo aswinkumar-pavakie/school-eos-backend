@@ -1,5 +1,15 @@
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsInt, IsISO8601, IsOptional, IsUUID, Matches, Min, ValidateNested } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsInt,
+  IsISO8601,
+  IsOptional,
+  IsUUID,
+  Matches,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 
 export class ImportRowDto {
   @IsUUID()
@@ -16,11 +26,15 @@ export class ImportRowDto {
   @Min(1)
   instalmentNo!: number;
 
-  @Matches(/^[0-9]+$/, { message: 'amountPaise must be a non-negative integer string' })
+  @Matches(/^[0-9]+$/, {
+    message: 'amountPaise must be a non-negative integer string',
+  })
   amountPaise!: string;
 
   @IsOptional()
-  @Matches(/^[0-9]+$/, { message: 'lateFeePaise must be a non-negative integer string' })
+  @Matches(/^[0-9]+$/, {
+    message: 'lateFeePaise must be a non-negative integer string',
+  })
   lateFeePaise?: string;
 
   @IsISO8601({ strict: true })

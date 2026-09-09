@@ -12,7 +12,12 @@
 // with a clear conflict, matching the same double-action-prevention pattern
 // InventoryItemsService already uses for stock/status changes.
 
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { StorageService } from '../../infrastructure/storage/storage.service';
@@ -43,15 +48,22 @@ export class ParentPermissionsService {
     return this.participantRepo.findForGuardian(actorPersonId);
   }
 
-  private async assertAccess(actorPersonId: string, participantId: string): Promise<void> {
-    const access = await this.participantRepo.findGuardianAccess(actorPersonId, participantId);
+  private async assertAccess(
+    actorPersonId: string,
+    participantId: string,
+  ): Promise<void> {
+    const access = await this.participantRepo.findGuardianAccess(
+      actorPersonId,
+      participantId,
+    );
     if (!access) throw new NotFoundException('Permission request not found');
   }
 
   async get(participantId: string, actorPersonId: string) {
     await this.assertAccess(actorPersonId, participantId);
     const participant = await this.participantRepo.findById(participantId);
-    if (!participant) throw new NotFoundException('Permission request not found');
+    if (!participant)
+      throw new NotFoundException('Permission request not found');
     const event = await this.eventRepo.findById(participant.eventId);
     return { participant, event };
   }
@@ -59,14 +71,21 @@ export class ParentPermissionsService {
   async reject(participantId: string, actorPersonId: string): Promise<void> {
     await this.assertAccess(actorPersonId, participantId);
     await this.unitOfWork.run(async (client) => {
-      const locked = await this.participantRepo.findByIdForUpdate(participantId, client);
+      const locked = await this.participantRepo.findByIdForUpdate(
+        participantId,
+        client,
+      );
       if (!locked) throw new NotFoundException('Permission request not found');
       if (locked.state !== 'PENDING') {
         throw new ConflictException('This request has already been decided.');
       }
       const updated = await this.participantRepo.setDecision(
         participantId,
-        { state: 'REJECTED', decidedByPersonId: actorPersonId, signatureObjectKey: null },
+        {
+          state: 'REJECTED',
+          decidedByPersonId: actorPersonId,
+          signatureObjectKey: null,
+        },
         client,
       );
       await this.audit.record(
@@ -84,7 +103,11 @@ export class ParentPermissionsService {
     });
   }
 
-  async sign(participantId: string, signaturePngBase64: string, actorPersonId: string): Promise<void> {
+  async sign(
+    participantId: string,
+    signaturePngBase64: string,
+    actorPersonId: string,
+  ): Promise<void> {
     // Plain base64 in a JSON field, not a multipart file -- React Native's own
     // Blob polyfill cannot construct a Blob from raw bytes (only from strings
     // or other Blobs), so a real multipart upload built from a captured
@@ -96,7 +119,8 @@ export class ParentPermissionsService {
     } catch {
       throw new BadRequestException('The signature could not be read.');
     }
-    if (buffer.length === 0) throw new BadRequestException('A signature image is required.');
+    if (buffer.length === 0)
+      throw new BadRequestException('A signature image is required.');
     if (buffer.length > SIGNATURE_MAX_SIZE_BYTES) {
       throw new BadRequestException('The signature image is too large.');
     }
@@ -113,18 +137,30 @@ export class ParentPermissionsService {
     // commits in) to fail fast on an already-decided request before ever
     // uploading a signature image nobody will use.
     await this.unitOfWork.run(async (client) => {
-      const locked = await this.participantRepo.findByIdForUpdate(participantId, client);
+      const locked = await this.participantRepo.findByIdForUpdate(
+        participantId,
+        client,
+      );
       if (!locked) throw new NotFoundException('Permission request not found');
       if (locked.state !== 'PENDING') {
         throw new ConflictException('This request has already been decided.');
       }
 
       const objectKey = signatureObjectKeyFor(participantId);
-      await this.storage.upload(EVENT_SIGNATURES_BUCKET, objectKey, buffer, 'image/png');
+      await this.storage.upload(
+        EVENT_SIGNATURES_BUCKET,
+        objectKey,
+        buffer,
+        'image/png',
+      );
 
       const updated = await this.participantRepo.setDecision(
         participantId,
-        { state: 'APPROVED', decidedByPersonId: actorPersonId, signatureObjectKey: objectKey },
+        {
+          state: 'APPROVED',
+          decidedByPersonId: actorPersonId,
+          signatureObjectKey: objectKey,
+        },
         client,
       );
       await this.audit.record(

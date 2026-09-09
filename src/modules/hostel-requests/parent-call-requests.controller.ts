@@ -1,4 +1,11 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -17,7 +24,10 @@ export class ParentCallRequestsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateCallRequestDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateCallRequestDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.create(actor.personId, dto) };
   }
 }

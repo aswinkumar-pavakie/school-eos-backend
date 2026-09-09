@@ -11,7 +11,10 @@ export class ParentHealthService {
 
   private async assertGuardian(personId: string, studentId: string) {
     const link = await this.guardianRepo.findActiveLink(personId, studentId);
-    if (!link) throw new ForbiddenException('You are not a registered guardian of this student.');
+    if (!link)
+      throw new ForbiddenException(
+        'You are not a registered guardian of this student.',
+      );
   }
 
   async getOverview(personId: string, studentId: string) {

@@ -1,4 +1,11 @@
-import { IsBoolean, IsDateString, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 export class CreateStudentLeaveRequestDto {
   @IsUUID()

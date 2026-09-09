@@ -1,4 +1,11 @@
-import { IsIn, IsNotEmpty, IsObject, IsOptional, IsString, Matches } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+  Matches,
+} from 'class-validator';
 
 // amount_paise is a Postgres bigint — carried as a numeric string end-to-end (see
 // prisma/schema.prisma research notes) so it never round-trips through a JS number and
@@ -21,7 +28,9 @@ export class CreateApprovalRequestDto {
   payload?: Record<string, unknown>;
 
   @IsOptional()
-  @Matches(/^[0-9]+$/, { message: 'amountPaise must be a non-negative integer string' })
+  @Matches(/^[0-9]+$/, {
+    message: 'amountPaise must be a non-negative integer string',
+  })
   amountPaise?: string;
 
   @IsOptional()

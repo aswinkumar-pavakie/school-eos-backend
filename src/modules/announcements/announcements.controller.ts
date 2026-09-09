@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -34,15 +45,25 @@ export class AnnouncementsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateAnnouncementDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.announcementsService.create(dto, actor.personId) };
+  async create(
+    @Body() dto: CreateAnnouncementDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.announcementsService.create(dto, actor.personId),
+    };
   }
 
   @Post(':id/archive')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
-  async archive(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.announcementsService.archive(id, actor.personId) };
+  async archive(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.announcementsService.archive(id, actor.personId),
+    };
   }
 
   // Explicit ADMIN-only override added during the hot-fix-sri merge: these
@@ -55,14 +76,23 @@ export class AnnouncementsController {
   // PRINCIPAL would silently gain edit/delete authority sri never intended.
   @Patch(':id')
   @Roles('ADMIN')
-  async update(@Param('id') id: string, @Body() dto: UpdateAnnouncementDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.announcementsService.update(id, dto, actor.personId) };
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateAnnouncementDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.announcementsService.update(id, dto, actor.personId),
+    };
   }
 
   @Delete(':id')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async remove(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.announcementsService.remove(id, actor.personId);
   }
 }

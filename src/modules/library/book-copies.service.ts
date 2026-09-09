@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { CreateCopyDto } from './dto/create-copy.dto';
@@ -43,7 +47,10 @@ export class BookCopiesService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A copy with this copy code already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A copy with this copy code already exists.',
+        );
       throw err;
     }
   }
@@ -64,7 +71,10 @@ export class BookCopiesService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A copy with this copy code already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A copy with this copy code already exists.',
+        );
       throw err;
     }
   }
@@ -79,7 +89,10 @@ export class BookCopiesService {
     return this.unitOfWork.run(async (client) => {
       const locked = await this.copyRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Copy not found');
-      if (locked.status === 'RETIRED') throw new ConflictException('This copy is retired -- its status can no longer change.');
+      if (locked.status === 'RETIRED')
+        throw new ConflictException(
+          'This copy is retired -- its status can no longer change.',
+        );
 
       const activeIssue = await this.issueRepo.findActiveByCopyId(id, client);
       const updatedCopy = (await this.copyRepo.setStatus(id, status, client))!;
@@ -116,12 +129,20 @@ export class BookCopiesService {
       await this.auditService.record(
         {
           actorPersonId,
-          action: status === 'LOST' ? 'LIBRARY_COPY_MARKED_LOST' : 'LIBRARY_COPY_MARKED_DAMAGED',
+          action:
+            status === 'LOST'
+              ? 'LIBRARY_COPY_MARKED_LOST'
+              : 'LIBRARY_COPY_MARKED_DAMAGED',
           objectType: 'library_book_copy',
           objectId: id,
           outcome: 'SUCCESS',
           beforeData: locked,
-          afterData: { ...updatedCopy, fineAssessed: fine ?? null, reason, notes },
+          afterData: {
+            ...updatedCopy,
+            fineAssessed: fine ?? null,
+            reason,
+            notes,
+          },
         },
         client,
       );
@@ -133,7 +154,12 @@ export class BookCopiesService {
     return this.markUnavailable(id, 'LOST', actorPersonId, reason, notes);
   }
 
-  markDamaged(id: string, actorPersonId: string, reason?: string, notes?: string) {
+  markDamaged(
+    id: string,
+    actorPersonId: string,
+    reason?: string,
+    notes?: string,
+  ) {
     return this.markUnavailable(id, 'DAMAGED', actorPersonId, reason, notes);
   }
 
@@ -142,7 +168,9 @@ export class BookCopiesService {
       const locked = await this.copyRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Copy not found');
       if (locked.status !== 'AVAILABLE') {
-        throw new ConflictException(`This copy is currently ${locked.status.toLowerCase()} -- only an available copy can be withdrawn.`);
+        throw new ConflictException(
+          `This copy is currently ${locked.status.toLowerCase()} -- only an available copy can be withdrawn.`,
+        );
       }
       const updated = (await this.copyRepo.setStatus(id, 'RETIRED', client))!;
       await this.auditService.record(
@@ -168,9 +196,15 @@ export class BookCopiesService {
       const locked = await this.copyRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Copy not found');
       if (locked.status !== 'AVAILABLE') {
-        throw new ConflictException(`This copy is currently ${locked.status.toLowerCase()} -- only an available copy can be sent for repair.`);
+        throw new ConflictException(
+          `This copy is currently ${locked.status.toLowerCase()} -- only an available copy can be sent for repair.`,
+        );
       }
-      const updated = (await this.copyRepo.setStatus(id, 'UNDER_REPAIR', client))!;
+      const updated = (await this.copyRepo.setStatus(
+        id,
+        'UNDER_REPAIR',
+        client,
+      ))!;
       await this.auditService.record(
         {
           actorPersonId,
@@ -193,7 +227,9 @@ export class BookCopiesService {
       const locked = await this.copyRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Copy not found');
       if (locked.status !== 'UNDER_REPAIR') {
-        throw new ConflictException(`This copy is currently ${locked.status.toLowerCase()} -- only a copy under repair can be restored.`);
+        throw new ConflictException(
+          `This copy is currently ${locked.status.toLowerCase()} -- only a copy under repair can be restored.`,
+        );
       }
       const updated = (await this.copyRepo.setStatus(id, 'AVAILABLE', client))!;
       await this.auditService.record(

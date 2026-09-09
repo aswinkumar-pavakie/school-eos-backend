@@ -8,7 +8,10 @@
 // constraint, not invented.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface ParentChildRow {
   studentId: string;
@@ -41,7 +44,10 @@ export class GuardianLinkRepository {
   constructor(private readonly postgres: PostgresService) {}
 
   /** Every active child linked to this parent, via the real v_parent_children view (already joins student/person/enrolment/section/grade/medium, ACTIVE-only, ordered oldest-grade-first). */
-  async listChildren(personId: string, executor: Queryable = this.postgres): Promise<ParentChildRow[]> {
+  async listChildren(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ParentChildRow[]> {
     const { rows } = await executor.query(
       `SELECT * FROM v_parent_children WHERE parent_person_id = $1 ORDER BY display_order`,
       [personId],

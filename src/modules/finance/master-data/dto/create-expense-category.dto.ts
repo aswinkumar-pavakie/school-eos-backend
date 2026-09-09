@@ -10,6 +10,8 @@ export class CreateExpenseCategoryDto {
   code?: string;
 
   @IsOptional()
-  @Matches(/^[0-9]+$/, { message: 'pettyLimitPaise must be a non-negative integer string' })
+  @Matches(/^[0-9]+$/, {
+    message: 'pettyLimitPaise must be a non-negative integer string',
+  })
   pettyLimitPaise?: string;
 }

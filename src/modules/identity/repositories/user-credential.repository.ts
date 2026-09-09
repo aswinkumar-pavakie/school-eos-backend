@@ -2,7 +2,10 @@
 // at database/migrations/0001_user_credential_reset_allowance.sql has been applied.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface UserCredentialRow {
   personId: string;
@@ -71,10 +74,16 @@ export class UserCredentialRepository {
       [personId, lockoutThreshold, lockoutMinutes],
     );
     const row = rows[0];
-    return { failedAttemptCount: row.failed_attempt_count, lockedUntil: row.locked_until };
+    return {
+      failedAttemptCount: row.failed_attempt_count,
+      lockedUntil: row.locked_until,
+    };
   }
 
-  async recordSuccessfulLogin(personId: string, executor: Queryable = this.postgres): Promise<void> {
+  async recordSuccessfulLogin(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
     await executor.query(
       `UPDATE user_credential
        SET failed_attempt_count = 0,

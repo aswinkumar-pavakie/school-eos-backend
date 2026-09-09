@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface TerminalRow {
   id: string;
@@ -54,14 +57,21 @@ export class TerminalRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<TerminalRow | null> {
-    const { rows } = await executor.query<TerminalRow>(`SELECT ${COLUMNS} FROM terminal WHERE id = $1`, [
-      id,
-    ]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<TerminalRow | null> {
+    const { rows } = await executor.query<TerminalRow>(
+      `SELECT ${COLUMNS} FROM terminal WHERE id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
-  async create(input: CreateTerminalInput, executor: Queryable = this.postgres): Promise<TerminalRow> {
+  async create(
+    input: CreateTerminalInput,
+    executor: Queryable = this.postgres,
+  ): Promise<TerminalRow> {
     const { rows } = await executor.query<TerminalRow>(
       `INSERT INTO terminal
          (terminal_uid, terminal_type, label, vehicle_id, vendor_id, auth_secret_ref,
@@ -97,7 +107,13 @@ export class TerminalRepository {
          updated_at = now()
        WHERE id = $1
        RETURNING ${COLUMNS}`,
-      [id, input.label ?? null, input.firmwareVersion ?? null, input.offlineFloorPaise ?? null, input.status ?? null],
+      [
+        id,
+        input.label ?? null,
+        input.firmwareVersion ?? null,
+        input.offlineFloorPaise ?? null,
+        input.status ?? null,
+      ],
     );
     return rows[0] ?? null;
   }

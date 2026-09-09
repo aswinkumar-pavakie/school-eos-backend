@@ -3,7 +3,10 @@
 // populate a "which department is this for" picker and filter dropdown.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
 
 export interface DepartmentRow {
   id: string;

@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PostgresService } from '../../../infrastructure/postgres/postgres.service';
-import { describeActivity, LIBRARY_OBJECT_TYPES } from '../library-overview.service';
+import {
+  describeActivity,
+  LIBRARY_OBJECT_TYPES,
+} from '../library-overview.service';
 
 export interface LibraryAuditLogRow {
   id: string;
@@ -61,7 +64,9 @@ export class LibraryAuditLogRepository {
       objectId: r.object_id,
       outcome: r.outcome,
       actorPersonId: r.actor_person_id,
-      actorName: r.actor_first_name ? `${r.actor_first_name} ${r.actor_last_name ?? ''}`.trim() : null,
+      actorName: r.actor_first_name
+        ? `${r.actor_first_name} ${r.actor_last_name ?? ''}`.trim()
+        : null,
       actorRoleCode: r.actor_role_code,
       correlationId: r.correlation_id,
       detail: describeActivity(r.after_data, r.before_data),
@@ -71,7 +76,9 @@ export class LibraryAuditLogRepository {
     };
   }
 
-  async findMany(filter: AuditLogFilter): Promise<{ rows: LibraryAuditLogRow[]; total: number }> {
+  async findMany(
+    filter: AuditLogFilter,
+  ): Promise<{ rows: LibraryAuditLogRow[]; total: number }> {
     const conditions: string[] = [`ae.object_type = ANY($1)`];
     const params: unknown[] = [LIBRARY_OBJECT_TYPES];
     if (filter.action) {
@@ -92,7 +99,9 @@ export class LibraryAuditLogRepository {
     }
     if (filter.endDate) {
       params.push(filter.endDate);
-      conditions.push(`ae.occurred_at < ($${params.length}::date + interval '1 day')`);
+      conditions.push(
+        `ae.occurred_at < ($${params.length}::date + interval '1 day')`,
+      );
     }
     const where = `WHERE ${conditions.join(' AND ')}`;
 
@@ -166,7 +175,10 @@ export class LibraryAuditLogRepository {
 
   /** Real distinct values actually present, for filter dropdowns -- never a
    * hardcoded guess list. */
-  async findFilterOptions(): Promise<{ actions: string[]; objectTypes: string[] }> {
+  async findFilterOptions(): Promise<{
+    actions: string[];
+    objectTypes: string[];
+  }> {
     const [actionsResult, objectTypesResult] = await Promise.all([
       this.postgres.query<{ action: string }>(
         `SELECT DISTINCT action FROM audit_event WHERE object_type = ANY($1) ORDER BY action`,

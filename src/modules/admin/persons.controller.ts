@@ -46,7 +46,10 @@ export class PersonsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreatePersonDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreatePersonDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const result = await this.personsService.create(dto, actor.personId);
     return { data: result };
   }
@@ -62,14 +65,20 @@ export class PersonsController {
 
   @Post(':id/activate')
   @HttpCode(HttpStatus.OK)
-  async activate(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async activate(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.personsService.activate(id, actor.personId);
     return { data: { activated: true } };
   }
 
   @Post(':id/deactivate')
   @HttpCode(HttpStatus.OK)
-  async deactivate(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async deactivate(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.personsService.deactivate(id, actor.personId);
     return { data: { deactivated: true } };
   }
@@ -81,7 +90,11 @@ export class PersonsController {
     @Body() dto: GeneralPasswordResetDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    const result = await this.personsService.resetPassword(id, dto, actor.personId);
+    const result = await this.personsService.resetPassword(
+      id,
+      dto,
+      actor.personId,
+    );
     return { data: result };
   }
 
@@ -93,20 +106,31 @@ export class PersonsController {
     @UploadedFile() file: Express.Multer.File | undefined,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    if (!file) throw new BadRequestException('A photo file is required (field name "photo").');
-    return { data: await this.personsService.uploadPhoto(id, file, actor.personId) };
+    if (!file)
+      throw new BadRequestException(
+        'A photo file is required (field name "photo").',
+      );
+    return {
+      data: await this.personsService.uploadPhoto(id, file, actor.personId),
+    };
   }
 
   @Delete(':id/photo')
   @HttpCode(HttpStatus.OK)
-  async removePhoto(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async removePhoto(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.personsService.removePhoto(id, actor.personId);
     return { data: { removed: true } };
   }
 
   @Post(':id/force-sign-out')
   @HttpCode(HttpStatus.OK)
-  async forceSignOut(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async forceSignOut(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.personsService.forceSignOut(id, actor.personId);
     return { data: { signedOut: true } };
   }

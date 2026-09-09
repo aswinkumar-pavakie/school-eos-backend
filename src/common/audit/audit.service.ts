@@ -7,7 +7,10 @@
 // infrastructure/postgres/postgres.service.ts).
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../infrastructure/postgres/postgres.service';
 import { AuditEventInput, AuditEventRow } from './audit.entity';
 
 export interface AuditEventQuery {
@@ -25,7 +28,10 @@ export interface AuditEventQuery {
 export class AuditService {
   constructor(private readonly postgres: PostgresService) {}
 
-  async record(input: AuditEventInput, executor: Queryable = this.postgres): Promise<void> {
+  async record(
+    input: AuditEventInput,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
     await executor.query(
       `INSERT INTO audit_event
          (actor_person_id, actor_role_code, action, object_type, object_id, outcome,
@@ -41,13 +47,17 @@ export class AuditService {
         input.correlationId ?? null,
         input.ipAddress ?? null,
         input.userAgent ?? null,
-        input.beforeData !== undefined ? JSON.stringify(input.beforeData) : null,
+        input.beforeData !== undefined
+          ? JSON.stringify(input.beforeData)
+          : null,
         input.afterData !== undefined ? JSON.stringify(input.afterData) : null,
       ],
     );
   }
 
-  async query(filter: AuditEventQuery = {}): Promise<{ rows: AuditEventRow[]; total: number }> {
+  async query(
+    filter: AuditEventQuery = {},
+  ): Promise<{ rows: AuditEventRow[]; total: number }> {
     const conditions: string[] = [];
     const params: unknown[] = [];
 
@@ -76,7 +86,8 @@ export class AuditService {
       conditions.push(`occurred_at <= $${params.length}`);
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const limit = Math.min(filter.limit ?? 50, 200);
     const offset = filter.offset ?? 0;
 
@@ -126,7 +137,9 @@ export class AuditService {
         id: row.id,
         actorPersonId: row.actor_person_id,
         actorName: row.actor_first_name
-          ? [row.actor_first_name, row.actor_last_name].filter(Boolean).join(' ')
+          ? [row.actor_first_name, row.actor_last_name]
+              .filter(Boolean)
+              .join(' ')
           : null,
         actorRoleCode: row.actor_role_code,
         action: row.action,

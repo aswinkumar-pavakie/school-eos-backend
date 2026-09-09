@@ -3,17 +3,35 @@
 // separate, later feature; this module is real and complete on its own regardless
 // (see database/migrations/0006_media_room.sql's own header note).
 
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { StorageService } from '../../infrastructure/storage/storage.service';
 import { CreateMediaPostDto } from './dto/create-media-post.dto';
 import { UpdateMediaPostDto } from './dto/update-media-post.dto';
-import { MEDIA_POSTS_BUCKET, mediaPostObjectKeyFor, mediaTypeFor } from './media-storage.util';
+import {
+  MEDIA_POSTS_BUCKET,
+  mediaPostObjectKeyFor,
+  mediaTypeFor,
+} from './media-storage.util';
 import { MediaPostCommentRepository } from './repositories/media-post-comment.repository';
-import { MediaPostRepository, MediaPostRow } from './repositories/media-post.repository';
+import {
+  MediaPostRepository,
+  MediaPostRow,
+} from './repositories/media-post.repository';
 
 export interface MediaPostWithAssets extends MediaPostRow {
-  assets: { id: string; objectKey: string; url: string; mediaType: string; sortOrder: number }[];
+  assets: {
+    id: string;
+    objectKey: string;
+    url: string;
+    mediaType: string;
+    sortOrder: number;
+  }[];
   commentCount: number;
   unansweredCommentCount: number;
 }
@@ -35,7 +53,10 @@ export class MediaPostsService {
     const count = counts[post.id] ?? { total: 0, unanswered: 0 };
     return {
       ...post,
-      assets: assets.map((a) => ({ ...a, url: this.storage.getPublicUrl(MEDIA_POSTS_BUCKET, a.objectKey) })),
+      assets: assets.map((a) => ({
+        ...a,
+        url: this.storage.getPublicUrl(MEDIA_POSTS_BUCKET, a.objectKey),
+      })),
       commentCount: count.total,
       unansweredCommentCount: count.unanswered,
     };
@@ -57,9 +78,15 @@ export class MediaPostsService {
     return this.commentRepo.listByPost(mediaPostId);
   }
 
-  async create(dto: CreateMediaPostDto, files: Express.Multer.File[], actorPersonId: string): Promise<MediaPostWithAssets> {
+  async create(
+    dto: CreateMediaPostDto,
+    files: Express.Multer.File[],
+    actorPersonId: string,
+  ): Promise<MediaPostWithAssets> {
     if (dto.saveAsDraft !== 'true' && files.length === 0) {
-      throw new BadRequestException('At least one photo or video is required to publish or schedule a post.');
+      throw new BadRequestException(
+        'At least one photo or video is required to publish or schedule a post.',
+      );
     }
 
     let state = 'PUBLISHED';
@@ -69,7 +96,9 @@ export class MediaPostsService {
       publishAt = dto.publishAt ?? null;
     } else if (dto.publishAt) {
       if (new Date(dto.publishAt).getTime() <= Date.now()) {
-        throw new ConflictException('publishAt must be a future date/time to schedule a post.');
+        throw new ConflictException(
+          'publishAt must be a future date/time to schedule a post.',
+        );
       }
       state = 'SCHEDULED';
       publishAt = dto.publishAt;
@@ -91,8 +120,18 @@ export class MediaPostsService {
     let sortOrder = 0;
     for (const file of files) {
       const objectKey = mediaPostObjectKeyFor(file);
-      await this.storage.upload(MEDIA_POSTS_BUCKET, objectKey, file.buffer, file.mimetype);
-      await this.postRepo.addAsset({ mediaPostId: created.id, objectKey, mediaType: mediaTypeFor(file), sortOrder });
+      await this.storage.upload(
+        MEDIA_POSTS_BUCKET,
+        objectKey,
+        file.buffer,
+        file.mimetype,
+      );
+      await this.postRepo.addAsset({
+        mediaPostId: created.id,
+        objectKey,
+        mediaType: mediaTypeFor(file),
+        sortOrder,
+      });
       sortOrder += 1;
     }
 
@@ -116,8 +155,12 @@ export class MediaPostsService {
       caption: dto.caption,
       firstComment: dto.firstComment,
       linkUrl: dto.linkUrl,
-      pinToTop: dto.pinToTop !== undefined ? dto.pinToTop === 'true' : undefined,
-      allowComments: dto.allowComments !== undefined ? dto.allowComments === 'true' : undefined,
+      pinToTop:
+        dto.pinToTop !== undefined ? dto.pinToTop === 'true' : undefined,
+      allowComments:
+        dto.allowComments !== undefined
+          ? dto.allowComments === 'true'
+          : undefined,
     });
     const updated = await this.get(id);
     await this.audit.record({
@@ -137,7 +180,9 @@ export class MediaPostsService {
     const existing = await this.postRepo.findById(id);
     if (!existing) throw new NotFoundException('Post not found');
     if (existing.state === 'PUBLISHED') {
-      throw new ConflictException('A published post cannot be cancelled -- delete it instead if it must come down.');
+      throw new ConflictException(
+        'A published post cannot be cancelled -- delete it instead if it must come down.',
+      );
     }
     await this.postRepo.setState(id, 'CANCELLED');
     await this.audit.record({
@@ -170,8 +215,15 @@ export class MediaPostsService {
     });
   }
 
-  async replyToComment(commentId: string, reply: string, actorPersonId: string) {
-    const updated = await this.commentRepo.reply(commentId, { staffReply: reply, staffRepliedBy: actorPersonId });
+  async replyToComment(
+    commentId: string,
+    reply: string,
+    actorPersonId: string,
+  ) {
+    const updated = await this.commentRepo.reply(commentId, {
+      staffReply: reply,
+      staffRepliedBy: actorPersonId,
+    });
     if (!updated) throw new NotFoundException('Comment not found');
     await this.audit.record({
       actorPersonId,

@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
-import { PageQuery, toOffsetLimit } from '../../../../common/pagination/pagination.util';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PageQuery,
+  toOffsetLimit,
+} from '../../../../common/pagination/pagination.util';
 
 export interface FeeStructureLineInput {
   feeHeadId: string;
@@ -94,18 +100,36 @@ export class FeeStructureRepository {
       `INSERT INTO fee_structure (academic_year_id, grade_id, medium_id, category, total_paise, state)
        VALUES ($1, $2, $3, $4, $5, 'DRAFT')
        RETURNING *`,
-      [input.academicYearId, input.gradeId, input.mediumId, input.category, input.totalPaise],
+      [
+        input.academicYearId,
+        input.gradeId,
+        input.mediumId,
+        input.category,
+        input.totalPaise,
+      ],
     );
     return mapStructure(rows[0]);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<FeeStructureRow | null> {
-    const { rows } = await executor.query(`${SELECT_WITH_JOINS} WHERE fs.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<FeeStructureRow | null> {
+    const { rows } = await executor.query(
+      `${SELECT_WITH_JOINS} WHERE fs.id = $1`,
+      [id],
+    );
     return rows.length ? mapStructure(rows[0]) : null;
   }
 
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<FeeStructureRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM fee_structure WHERE id = $1 FOR UPDATE`, [id]);
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<FeeStructureRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM fee_structure WHERE id = $1 FOR UPDATE`,
+      [id],
+    );
     return rows.length ? mapStructure(rows[0]) : null;
   }
 
@@ -120,7 +144,11 @@ export class FeeStructureRepository {
        WHERE ($1::uuid IS NULL OR academic_year_id = $1)
          AND ($2::uuid IS NULL OR grade_id = $2)
          AND ($3::text IS NULL OR state = $3)`,
-      [filter.academicYearId ?? null, filter.gradeId ?? null, filter.state ?? null],
+      [
+        filter.academicYearId ?? null,
+        filter.gradeId ?? null,
+        filter.state ?? null,
+      ],
     );
     const { rows } = await executor.query(
       `${SELECT_WITH_JOINS}
@@ -129,7 +157,13 @@ export class FeeStructureRepository {
          AND ($3::text IS NULL OR fs.state = $3)
        ORDER BY fs.created_at DESC
        LIMIT $4 OFFSET $5`,
-      [filter.academicYearId ?? null, filter.gradeId ?? null, filter.state ?? null, limit, offset],
+      [
+        filter.academicYearId ?? null,
+        filter.gradeId ?? null,
+        filter.state ?? null,
+        limit,
+        offset,
+      ],
     );
     return { rows: rows.map(mapStructure), total: countRows[0].total };
   }
@@ -146,14 +180,22 @@ export class FeeStructureRepository {
     );
   }
 
-  async setState(id: string, state: string, executor: Queryable): Promise<void> {
-    await executor.query(`UPDATE fee_structure SET state = $2, updated_at = now() WHERE id = $1`, [
-      id,
-      state,
-    ]);
+  async setState(
+    id: string,
+    state: string,
+    executor: Queryable,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE fee_structure SET state = $2, updated_at = now() WHERE id = $1`,
+      [id, state],
+    );
   }
 
-  async linkApprovalRequest(id: string, approvalRequestId: string, executor: Queryable): Promise<void> {
+  async linkApprovalRequest(
+    id: string,
+    approvalRequestId: string,
+    executor: Queryable,
+  ): Promise<void> {
     await executor.query(
       `UPDATE fee_structure SET approval_request_id = $2, updated_at = now() WHERE id = $1`,
       [id, approvalRequestId],
@@ -161,7 +203,10 @@ export class FeeStructureRepository {
   }
 
   async delete(id: string, executor: Queryable): Promise<void> {
-    await executor.query(`DELETE FROM fee_structure_line WHERE fee_structure_id = $1`, [id]);
+    await executor.query(
+      `DELETE FROM fee_structure_line WHERE fee_structure_id = $1`,
+      [id],
+    );
     await executor.query(`DELETE FROM fee_structure WHERE id = $1`, [id]);
   }
 
@@ -170,7 +215,10 @@ export class FeeStructureRepository {
     lines: FeeStructureLineInput[],
     executor: Queryable,
   ): Promise<void> {
-    await executor.query(`DELETE FROM fee_structure_line WHERE fee_structure_id = $1`, [feeStructureId]);
+    await executor.query(
+      `DELETE FROM fee_structure_line WHERE fee_structure_id = $1`,
+      [feeStructureId],
+    );
     for (const line of lines) {
       await executor.query(
         `INSERT INTO fee_structure_line
@@ -188,7 +236,10 @@ export class FeeStructureRepository {
     }
   }
 
-  async listLines(feeStructureId: string, executor: Queryable = this.postgres): Promise<FeeStructureLineRow[]> {
+  async listLines(
+    feeStructureId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<FeeStructureLineRow[]> {
     const { rows } = await executor.query(
       `SELECT fsl.*, fh.name AS fee_head_name
        FROM fee_structure_line fsl

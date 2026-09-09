@@ -14,6 +14,11 @@ import { TerminalsService } from './terminals.service';
 
 @Module({
   controllers: [TerminalsController, IdCardsController],
-  providers: [TerminalsService, IdCardsService, TerminalRepository, IdCardRepository],
+  providers: [
+    TerminalsService,
+    IdCardsService,
+    TerminalRepository,
+    IdCardRepository,
+  ],
 })
 export class DevicesModule {}

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface EquipmentRow {
   id: string;
@@ -34,18 +37,27 @@ export class EquipmentRepository {
   constructor(private readonly postgres: PostgresService) {}
 
   async findMany(executor: Queryable = this.postgres): Promise<EquipmentRow[]> {
-    const { rows } = await executor.query<EquipmentRow>(`SELECT ${COLUMNS} FROM equipment ORDER BY name`);
+    const { rows } = await executor.query<EquipmentRow>(
+      `SELECT ${COLUMNS} FROM equipment ORDER BY name`,
+    );
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<EquipmentRow | null> {
-    const { rows } = await executor.query<EquipmentRow>(`SELECT ${COLUMNS} FROM equipment WHERE id = $1`, [
-      id,
-    ]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<EquipmentRow | null> {
+    const { rows } = await executor.query<EquipmentRow>(
+      `SELECT ${COLUMNS} FROM equipment WHERE id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
-  async create(input: CreateEquipmentInput, executor: Queryable = this.postgres): Promise<EquipmentRow> {
+  async create(
+    input: CreateEquipmentInput,
+    executor: Queryable = this.postgres,
+  ): Promise<EquipmentRow> {
     const { rows } = await executor.query<EquipmentRow>(
       `INSERT INTO equipment (name, sport_id, quantity_total, quantity_available, condition)
        VALUES ($1, $2, $3::int, COALESCE($4::int, $6::int), $5)

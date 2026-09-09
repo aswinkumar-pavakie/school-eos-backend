@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -28,7 +37,9 @@ export class HostelBlocksController {
     @Body() dto: CreateHostelFloorDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.hostelBlocksService.createFloor(id, dto, actor.personId) };
+    return {
+      data: await this.hostelBlocksService.createFloor(id, dto, actor.personId),
+    };
   }
 
   @Patch('hostel-floors/:floorId')
@@ -38,6 +49,12 @@ export class HostelBlocksController {
     @Body() dto: UpdateHostelFloorDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.hostelBlocksService.updateFloor(floorId, dto, actor.personId) };
+    return {
+      data: await this.hostelBlocksService.updateFloor(
+        floorId,
+        dto,
+        actor.personId,
+      ),
+    };
   }
 }

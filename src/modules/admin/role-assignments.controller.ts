@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -12,7 +21,9 @@ import { RoleAssignmentsService } from './role-assignments.service';
 @Roles('ADMIN', 'PRINCIPAL')
 @Controller('role-assignments')
 export class RoleAssignmentsController {
-  constructor(private readonly roleAssignmentsService: RoleAssignmentsService) {}
+  constructor(
+    private readonly roleAssignmentsService: RoleAssignmentsService,
+  ) {}
 
   @Get()
   async list(@Query() query: RoleAssignmentQueryDto) {
@@ -22,7 +33,10 @@ export class RoleAssignmentsController {
   @Post()
   @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
-  async grant(@Body() dto: GrantRoleAssignmentDto, @CurrentActor() actor: AuthenticatedUser) {
+  async grant(
+    @Body() dto: GrantRoleAssignmentDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const result = await this.roleAssignmentsService.grant(dto, actor.personId);
     return { data: result };
   }
@@ -30,7 +44,10 @@ export class RoleAssignmentsController {
   @Post(':id/revoke')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
-  async revoke(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async revoke(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const result = await this.roleAssignmentsService.revoke(id, actor.personId);
     return { data: result };
   }

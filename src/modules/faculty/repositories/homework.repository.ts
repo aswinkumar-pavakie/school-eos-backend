@@ -11,7 +11,10 @@
 // "Not submitted" roster tabs.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface HomeworkRow {
   id: string;
@@ -74,7 +77,10 @@ export class HomeworkRepository {
   /** Every real homework across every one of this teacher's own
    * subject_offerings -- the combined, filterable-by-class list the design's
    * own "All / per class" chips filter client-side. */
-  async findForOfferings(subjectOfferingIds: string[], executor: Queryable = this.postgres): Promise<HomeworkRow[]> {
+  async findForOfferings(
+    subjectOfferingIds: string[],
+    executor: Queryable = this.postgres,
+  ): Promise<HomeworkRow[]> {
     if (subjectOfferingIds.length === 0) return [];
     const { rows } = await executor.query(
       `${HOMEWORK_WITH_STATS}
@@ -86,7 +92,10 @@ export class HomeworkRepository {
     return rows.map(mapHomeworkRow);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<HomeworkRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<HomeworkRow | null> {
     const { rows } = await executor.query(
       `${HOMEWORK_WITH_STATS}
        WHERE h.id = $1
@@ -115,7 +124,15 @@ export class HomeworkRepository {
       `INSERT INTO homework (subject_offering_id, title, description, attachment_keys, due_date, max_marks, assigned_by, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'PUBLISHED')
        RETURNING id`,
-      [input.subjectOfferingId, input.title, input.description, input.attachmentKeys, input.dueDate, input.maxMarks, input.assignedBy],
+      [
+        input.subjectOfferingId,
+        input.title,
+        input.description,
+        input.attachmentKeys,
+        input.dueDate,
+        input.maxMarks,
+        input.assignedBy,
+      ],
     );
     const homeworkId = rows[0].id;
 
@@ -133,7 +150,14 @@ export class HomeworkRepository {
 
   async update(
     id: string,
-    input: Partial<{ title: string; description: string | null; attachmentKeys: string[] | null; dueDate: string; maxMarks: number | null; status: string }>,
+    input: Partial<{
+      title: string;
+      description: string | null;
+      attachmentKeys: string[] | null;
+      dueDate: string;
+      maxMarks: number | null;
+      status: string;
+    }>,
     executor: Queryable = this.postgres,
   ): Promise<void> {
     const sets: string[] = [];
@@ -144,13 +168,17 @@ export class HomeworkRepository {
     };
     if (input.title !== undefined) push('title', input.title);
     if (input.description !== undefined) push('description', input.description);
-    if (input.attachmentKeys !== undefined) push('attachment_keys', input.attachmentKeys);
+    if (input.attachmentKeys !== undefined)
+      push('attachment_keys', input.attachmentKeys);
     if (input.dueDate !== undefined) push('due_date', input.dueDate);
     if (input.maxMarks !== undefined) push('max_marks', input.maxMarks);
     if (input.status !== undefined) push('status', input.status);
     if (sets.length === 0) return;
     params.push(id);
-    await executor.query(`UPDATE homework SET ${sets.join(', ')} WHERE id = $${params.length}`, params);
+    await executor.query(
+      `UPDATE homework SET ${sets.join(', ')} WHERE id = $${params.length}`,
+      params,
+    );
   }
 
   /** Cascades to homework_submission automatically (ON DELETE CASCADE). */
@@ -197,7 +225,8 @@ export class HomeworkRepository {
       isLate: row.is_late,
       objectKeys: row.object_keys,
       note: row.note,
-      marksAwarded: row.marks_awarded === null ? null : Number(row.marks_awarded),
+      marksAwarded:
+        row.marks_awarded === null ? null : Number(row.marks_awarded),
       feedback: row.feedback,
     }));
   }
@@ -205,7 +234,11 @@ export class HomeworkRepository {
   /** The real object_keys array for one student's submission on one homework
    * -- used only to verify a requested key genuinely belongs to that
    * submission before minting a signed URL for it. */
-  async findSubmissionObjectKeys(homeworkId: string, studentId: string, executor: Queryable = this.postgres): Promise<string[] | null> {
+  async findSubmissionObjectKeys(
+    homeworkId: string,
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string[] | null> {
     const { rows } = await executor.query(
       `SELECT object_keys FROM homework_submission WHERE homework_id = $1 AND student_id = $2`,
       [homeworkId, studentId],

@@ -7,7 +7,10 @@
 // existing generic /approvals/:id/approve|reject endpoints.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface StaffLeaveRequestRow {
   id: string;
@@ -55,13 +58,25 @@ function mapRow(row: any): StaffLeaveRequestRow {
 export class StaffLeaveRequestRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findByStaffId(staffId: string, executor: Queryable = this.postgres): Promise<StaffLeaveRequestRow[]> {
-    const { rows } = await executor.query(`SELECT ${COLUMNS} ${FROM} WHERE slr.staff_id = $1 ORDER BY slr.created_at DESC`, [staffId]);
+  async findByStaffId(
+    staffId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StaffLeaveRequestRow[]> {
+    const { rows } = await executor.query(
+      `SELECT ${COLUMNS} ${FROM} WHERE slr.staff_id = $1 ORDER BY slr.created_at DESC`,
+      [staffId],
+    );
     return rows.map(mapRow);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<StaffLeaveRequestRow | null> {
-    const { rows } = await executor.query(`SELECT ${COLUMNS} ${FROM} WHERE slr.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StaffLeaveRequestRow | null> {
+    const { rows } = await executor.query(
+      `SELECT ${COLUMNS} ${FROM} WHERE slr.id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
@@ -80,12 +95,25 @@ export class StaffLeaveRequestRepository {
     const { rows } = await executor.query(
       `INSERT INTO staff_leave_request (staff_id, leave_type, from_date, to_date, reason, attachment_object_key, attachment_file_name)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [input.staffId, input.leaveType, input.fromDate, input.toDate, input.reason, input.attachmentObjectKey, input.attachmentFileName],
+      [
+        input.staffId,
+        input.leaveType,
+        input.fromDate,
+        input.toDate,
+        input.reason,
+        input.attachmentObjectKey,
+        input.attachmentFileName,
+      ],
     );
     return rows[0].id;
   }
 
-  async setDecision(id: string, state: 'APPROVED' | 'REJECTED', decidedBy: string, executor: Queryable): Promise<void> {
+  async setDecision(
+    id: string,
+    state: 'APPROVED' | 'REJECTED',
+    decidedBy: string,
+    executor: Queryable,
+  ): Promise<void> {
     await executor.query(
       `UPDATE staff_leave_request SET state = $2, decided_by = $3, decided_at = now(), updated_at = now() WHERE id = $1`,
       [id, state, decidedBy],

@@ -4,8 +4,14 @@
 // amount owed, what's been paid so far, due date, and lifecycle state.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
-import { PageQuery, toOffsetLimit } from '../../../../common/pagination/pagination.util';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PageQuery,
+  toOffsetLimit,
+} from '../../../../common/pagination/pagination.util';
 
 export interface FeeDemandRow {
   id: string;
@@ -125,23 +131,43 @@ export class FeeDemandRepository {
     return mapRow(rows[0]);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<FeeDemandRow | null> {
-    const { rows } = await executor.query(`${SELECT_WITH_JOINS} WHERE fd.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<FeeDemandRow | null> {
+    const { rows } = await executor.query(
+      `${SELECT_WITH_JOINS} WHERE fd.id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<FeeDemandRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM fee_demand WHERE id = $1 FOR UPDATE`, [id]);
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<FeeDemandRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM fee_demand WHERE id = $1 FOR UPDATE`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
   async list(
-    filter: { studentId?: string; state?: string; studentSearch?: string; fromDate?: string; toDate?: string },
+    filter: {
+      studentId?: string;
+      state?: string;
+      studentSearch?: string;
+      fromDate?: string;
+      toDate?: string;
+    },
     page: PageQuery,
     executor: Queryable = this.postgres,
   ): Promise<{ rows: FeeDemandRow[]; total: number }> {
     const { offset, limit } = toOffsetLimit(page);
-    const search = filter.studentSearch?.trim() ? `%${filter.studentSearch.trim()}%` : null;
+    const search = filter.studentSearch?.trim()
+      ? `%${filter.studentSearch.trim()}%`
+      : null;
     const params = [
       filter.studentId ?? null,
       filter.state ?? null,
@@ -186,16 +212,25 @@ export class FeeDemandRepository {
            due_date = COALESCE($4, due_date),
            updated_at = now()
        WHERE id = $1`,
-      [id, input.amountPaise ?? null, input.lateFeePaise ?? null, input.dueDate ?? null],
+      [
+        id,
+        input.amountPaise ?? null,
+        input.lateFeePaise ?? null,
+        input.dueDate ?? null,
+      ],
     );
     return (await this.findById(id, executor))!;
   }
 
-  async setState(id: string, state: string, executor: Queryable): Promise<void> {
-    await executor.query(`UPDATE fee_demand SET state = $2, updated_at = now() WHERE id = $1`, [
-      id,
-      state,
-    ]);
+  async setState(
+    id: string,
+    state: string,
+    executor: Queryable,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE fee_demand SET state = $2, updated_at = now() WHERE id = $1`,
+      [id, state],
+    );
   }
 
   async applyAllocation(

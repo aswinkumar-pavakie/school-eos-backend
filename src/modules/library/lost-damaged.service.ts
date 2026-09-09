@@ -8,7 +8,9 @@ import { LibraryLostDamagedReportRepository } from './repositories/library-lost-
 // copy's status actually changes, with this module only reporting on it.
 @Injectable()
 export class LostDamagedService {
-  constructor(private readonly reportRepo: LibraryLostDamagedReportRepository) {}
+  constructor(
+    private readonly reportRepo: LibraryLostDamagedReportRepository,
+  ) {}
 
   async list(query: LostDamagedQueryDto) {
     const page = query.page ?? 1;

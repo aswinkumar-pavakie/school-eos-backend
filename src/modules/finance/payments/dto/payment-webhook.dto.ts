@@ -23,7 +23,9 @@ export class PaymentWebhookDto {
   @IsNotEmpty()
   paymentReference!: string;
 
-  @Matches(/^[1-9][0-9]*$/, { message: 'amountPaise must be a positive integer string' })
+  @Matches(/^[1-9][0-9]*$/, {
+    message: 'amountPaise must be a positive integer string',
+  })
   amountPaise!: string;
 
   @IsIn(['CONFIRMED', 'FAILED'])

@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -23,7 +32,10 @@ export class CoachesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateCoachDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateCoachDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.coachesService.create(dto, actor.personId) };
   }
 

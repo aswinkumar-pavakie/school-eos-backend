@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface VehicleDocumentRow {
   id: string;
@@ -45,7 +48,10 @@ export class VehicleDocumentRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<VehicleDocumentRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<VehicleDocumentRow | null> {
     const { rows } = await executor.query<VehicleDocumentRow>(
       `SELECT ${COLUMNS} FROM vehicle_document WHERE id = $1`,
       [id],
@@ -100,8 +106,14 @@ export class VehicleDocumentRepository {
     return rows[0] ?? null;
   }
 
-  async delete(id: string, executor: Queryable = this.postgres): Promise<boolean> {
-    const { rowCount } = await executor.query(`DELETE FROM vehicle_document WHERE id = $1`, [id]);
+  async delete(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<boolean> {
+    const { rowCount } = await executor.query(
+      `DELETE FROM vehicle_document WHERE id = $1`,
+      [id],
+    );
     return (rowCount ?? 0) > 0;
   }
 }

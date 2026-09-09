@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -20,7 +30,10 @@ export class FacultyStudentLeaveController {
   }
 
   @Get(':id')
-  async get(@Param('id', ParseUUIDPipe) id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async get(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.get(actor.personId, id) };
   }
 }
@@ -36,13 +49,21 @@ export class ParentStudentLeaveController {
   constructor(private readonly service: FacultyStudentLeaveService) {}
 
   @Get()
-  async list(@Query('studentId', ParseUUIDPipe) studentId: string, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.service.listForStudent(actor.personId, studentId) };
+  async list(
+    @Query('studentId', ParseUUIDPipe) studentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.listForStudent(actor.personId, studentId),
+    };
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateStudentLeaveRequestDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateStudentLeaveRequestDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.create(actor.personId, dto) };
   }
 }

@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CreateSportCategoryDto } from './dto/create-sport-category.dto';
 import { CreateSportDto } from './dto/create-sport.dto';
@@ -39,7 +43,8 @@ export class SportsService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A sport with this name already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException('A sport with this name already exists.');
       throw err;
     }
   }
@@ -60,7 +65,8 @@ export class SportsService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A sport with this name already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException('A sport with this name already exists.');
       throw err;
     }
   }
@@ -70,7 +76,11 @@ export class SportsService {
     return this.sportCategoryRepo.findBySportId(sportId);
   }
 
-  async createCategory(sportId: string, dto: CreateSportCategoryDto, actorPersonId: string) {
+  async createCategory(
+    sportId: string,
+    dto: CreateSportCategoryDto,
+    actorPersonId: string,
+  ) {
     await this.get(sportId);
     try {
       const created = await this.sportCategoryRepo.create(sportId, dto);
@@ -85,13 +95,19 @@ export class SportsService {
       return created;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A category with this name already exists for this sport.');
+        throw new ConflictException(
+          'A category with this name already exists for this sport.',
+        );
       }
       throw err;
     }
   }
 
-  async updateCategory(categoryId: string, dto: UpdateSportCategoryDto, actorPersonId: string) {
+  async updateCategory(
+    categoryId: string,
+    dto: UpdateSportCategoryDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.sportCategoryRepo.findById(categoryId);
     if (!existing) throw new NotFoundException('Sport category not found');
     try {
@@ -109,7 +125,9 @@ export class SportsService {
       return updated;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A category with this name already exists for this sport.');
+        throw new ConflictException(
+          'A category with this name already exists for this sport.',
+        );
       }
       throw err;
     }

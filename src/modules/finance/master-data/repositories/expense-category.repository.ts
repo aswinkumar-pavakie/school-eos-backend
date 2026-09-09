@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
 
 export interface ExpenseCategoryRow {
   id: string;
@@ -21,13 +24,23 @@ function mapRow(row: any): ExpenseCategoryRow {
 export class ExpenseCategoryRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async list(executor: Queryable = this.postgres): Promise<ExpenseCategoryRow[]> {
-    const { rows } = await executor.query(`SELECT * FROM expense_category ORDER BY name ASC`);
+  async list(
+    executor: Queryable = this.postgres,
+  ): Promise<ExpenseCategoryRow[]> {
+    const { rows } = await executor.query(
+      `SELECT * FROM expense_category ORDER BY name ASC`,
+    );
     return rows.map(mapRow);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<ExpenseCategoryRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM expense_category WHERE id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ExpenseCategoryRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM expense_category WHERE id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 

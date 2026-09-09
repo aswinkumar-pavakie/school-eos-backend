@@ -17,23 +17,35 @@ const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes — long enough for a consent
 export function signOAuthState(personId: string, secret: string): string {
   const payload = JSON.stringify({ personId, exp: Date.now() + STATE_TTL_MS });
   const payloadB64 = Buffer.from(payload, 'utf8').toString('base64url');
-  const signature = createHmac('sha256', secret).update(payloadB64).digest('base64url');
+  const signature = createHmac('sha256', secret)
+    .update(payloadB64)
+    .digest('base64url');
   return `${payloadB64}.${signature}`;
 }
 
-export function verifyOAuthState(state: string, secret: string): { personId: string } | null {
+export function verifyOAuthState(
+  state: string,
+  secret: string,
+): { personId: string } | null {
   const [payloadB64, signature] = state.split('.');
   if (!payloadB64 || !signature) return null;
 
-  const expectedSignature = createHmac('sha256', secret).update(payloadB64).digest('base64url');
+  const expectedSignature = createHmac('sha256', secret)
+    .update(payloadB64)
+    .digest('base64url');
   const sigBuf = Buffer.from(signature);
   const expectedBuf = Buffer.from(expectedSignature);
-  if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) {
+  if (
+    sigBuf.length !== expectedBuf.length ||
+    !timingSafeEqual(sigBuf, expectedBuf)
+  ) {
     return null;
   }
 
   try {
-    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8')) as {
+    const payload = JSON.parse(
+      Buffer.from(payloadB64, 'base64url').toString('utf8'),
+    ) as {
       personId: string;
       exp: number;
     };

@@ -46,7 +46,10 @@ import { ReceiptRepository } from './payments/repositories/receipt.repository';
 import { RefundRepository } from './payments/repositories/refund.repository';
 import { ReceiptsController } from './payments/receipts.controller';
 import { RefundsController } from './payments/refunds.controller';
-import { PurchaseOrdersController, PurchaseRequestsController } from './purchase-requests/purchase-requests.controller';
+import {
+  PurchaseOrdersController,
+  PurchaseRequestsController,
+} from './purchase-requests/purchase-requests.controller';
 import { PurchaseRequestsService } from './purchase-requests/purchase-requests.service';
 import { PurchaseOrderRepository } from './purchase-requests/repositories/purchase-order.repository';
 import { PurchaseRequestRepository } from './purchase-requests/repositories/purchase-request.repository';

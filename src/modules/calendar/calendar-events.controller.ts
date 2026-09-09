@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -28,14 +38,22 @@ export class CalendarEventsController {
   @Post()
   @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateCalendarEventDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.calendarEventsService.create(dto, actor.personId) };
+  async create(
+    @Body() dto: CreateCalendarEventDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.calendarEventsService.create(dto, actor.personId),
+    };
   }
 
   @Delete(':id')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
-  async remove(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async remove(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.calendarEventsService.remove(id, actor.personId);
     return { data: { removed: true } };
   }

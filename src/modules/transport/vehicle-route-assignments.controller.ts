@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -15,20 +25,36 @@ import { VehicleRouteAssignmentQueryDto } from './dto/vehicle-route-assignment-q
 @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller('vehicle-route-assignments')
 export class VehicleRouteAssignmentsController {
-  constructor(private readonly assignmentsService: VehicleRouteAssignmentsService) {}
+  constructor(
+    private readonly assignmentsService: VehicleRouteAssignmentsService,
+  ) {}
 
+  // Method-level @Roles OVERRIDES the class-level one (RolesGuard uses
+  // getAllAndOverride, not a merge) -- these reads are reachable by
+  // TRANSPORT_MANAGER too, on top of the class-level PRINCIPAL/VICE_PRINCIPAL
+  // oversight grant (a method-level override fully replaces the class
+  // default rather than adding to it, so both must be listed explicitly
+  // here or PRINCIPAL/VICE_PRINCIPAL would silently lose read access).
+  // Unlike the other transport controllers, TRANSPORT_MANAGER gets
+  // create/update here too, not just read -- this is the real
+  // driver<->vehicle assignment action ("assign/manage drivers where
+  // permitted"), the one write Transport Manager is meant to perform.
+  // Vehicle/route/driver/attendant master data and student allocation stay
+  // ADMIN-only.
+  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get()
   async list(@Query() query: VehicleRouteAssignmentQueryDto) {
     return { data: await this.assignmentsService.list(query) };
   }
 
+  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get(':id')
   async get(@Param('id') id: string) {
     return { data: await this.assignmentsService.get(id) };
   }
 
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @Post()
-  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateVehicleRouteAssignmentDto,
@@ -37,13 +63,15 @@ export class VehicleRouteAssignmentsController {
     return { data: await this.assignmentsService.create(dto, actor.personId) };
   }
 
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @Patch(':id')
-  @Roles('ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateVehicleRouteAssignmentDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.assignmentsService.update(id, dto, actor.personId) };
+    return {
+      data: await this.assignmentsService.update(id, dto, actor.personId),
+    };
   }
 }

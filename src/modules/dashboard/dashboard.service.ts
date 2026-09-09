@@ -14,7 +14,12 @@ const ROUTINE_ACTIONS = ['LOGIN_SUCCESS', 'LOGIN_FAILURE'];
 export interface DashboardSummary {
   activeStudents: number;
   activeStaff: number;
-  currentAcademicYear: { id: string; name: string; startDate: string; endDate: string } | null;
+  currentAcademicYear: {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+  } | null;
   hostelOccupancy: { occupiedBeds: number; totalBeds: number };
   sectionsCount: number;
   subjectsCount: number;
@@ -42,16 +47,22 @@ export interface DashboardSummary {
  * action types. Rows from outside this codebase (the concurrent external
  * activity flagged earlier in this project) won't match anything here and
  * fall back to null -- never invented. */
-function describeActivity(afterData: unknown, beforeData: unknown): string | null {
+function describeActivity(
+  afterData: unknown,
+  beforeData: unknown,
+): string | null {
   const data = (afterData ?? beforeData) as Record<string, unknown> | null;
   if (!data || typeof data !== 'object') return null;
 
-  const person = (data.person ?? (typeof data.firstName === 'string' ? data : null)) as
-    | Record<string, unknown>
-    | null;
+  const person = (data.person ??
+    (typeof data.firstName === 'string' ? data : null)) as Record<
+    string,
+    unknown
+  > | null;
   if (person && typeof person.firstName === 'string') {
     const name = [person.firstName, person.lastName].filter(Boolean).join(' ');
-    const extra = data.admissionNo ?? data.employeeNo ?? data.registrationNo ?? null;
+    const extra =
+      data.admissionNo ?? data.employeeNo ?? data.registrationNo ?? null;
     return extra ? `${name} (${extra})` : name || null;
   }
   if (typeof data.name === 'string') return data.name;
@@ -69,10 +80,14 @@ function describeActivity(afterData: unknown, beforeData: unknown): string | nul
   }
   if (typeof record.status === 'string') return record.status;
   if (typeof data.sessionDate === 'string') {
-    const rosterSize = typeof data.rosterSize === 'number' ? `, ${data.rosterSize} students` : '';
+    const rosterSize =
+      typeof data.rosterSize === 'number'
+        ? `, ${data.rosterSize} students`
+        : '';
     return `${data.sessionDate.slice(0, 10)}${rosterSize}`;
   }
-  if (typeof data.isLocked === 'boolean') return data.isLocked ? 'Locked' : 'Unlocked';
+  if (typeof data.isLocked === 'boolean')
+    return data.isLocked ? 'Locked' : 'Unlocked';
 
   return null;
 }
@@ -98,16 +113,29 @@ export class DashboardService {
       idCardsIssuedResult,
       activityResult,
     ] = await Promise.all([
-      this.postgres.query<{ count: string }>(`SELECT count(*) FROM student WHERE status = 'ACTIVE'`),
-      this.postgres.query<{ count: string }>(`SELECT count(*) FROM staff WHERE status = 'ACTIVE'`),
-      this.postgres.query<{ id: string; name: string; start_date: string; end_date: string }>(
+      this.postgres.query<{ count: string }>(
+        `SELECT count(*) FROM student WHERE status = 'ACTIVE'`,
+      ),
+      this.postgres.query<{ count: string }>(
+        `SELECT count(*) FROM staff WHERE status = 'ACTIVE'`,
+      ),
+      this.postgres.query<{
+        id: string;
+        name: string;
+        start_date: string;
+        end_date: string;
+      }>(
         `SELECT id, name, start_date, end_date FROM academic_year WHERE is_current LIMIT 1`,
       ),
       this.postgres.query<{ total: string; occupied: string }>(
         `SELECT count(*) AS total, count(*) FILTER (WHERE status = 'OCCUPIED') AS occupied FROM hostel_bed`,
       ),
-      this.postgres.query<{ count: string }>(`SELECT count(*) FROM section WHERE status = 'ACTIVE'`),
-      this.postgres.query<{ count: string }>(`SELECT count(*) FROM subject WHERE status = 'ACTIVE'`),
+      this.postgres.query<{ count: string }>(
+        `SELECT count(*) FROM section WHERE status = 'ACTIVE'`,
+      ),
+      this.postgres.query<{ count: string }>(
+        `SELECT count(*) FROM subject WHERE status = 'ACTIVE'`,
+      ),
       this.postgres.query<{ count: string }>(
         `SELECT count(*) FROM student s
          WHERE s.status = 'ACTIVE'
@@ -128,9 +156,15 @@ export class DashboardService {
       this.postgres.query<{ count: string }>(
         `SELECT count(*) FROM vehicle WHERE operational_status != 'RETIRED'`,
       ),
-      this.postgres.query<{ count: string }>(`SELECT count(*) FROM route WHERE status = 'ACTIVE'`),
-      this.postgres.query<{ count: string }>(`SELECT count(*) FROM sport WHERE status = 'ACTIVE'`),
-      this.postgres.query<{ count: string }>(`SELECT count(*) FROM id_card WHERE status = 'ACTIVE'`),
+      this.postgres.query<{ count: string }>(
+        `SELECT count(*) FROM route WHERE status = 'ACTIVE'`,
+      ),
+      this.postgres.query<{ count: string }>(
+        `SELECT count(*) FROM sport WHERE status = 'ACTIVE'`,
+      ),
+      this.postgres.query<{ count: string }>(
+        `SELECT count(*) FROM id_card WHERE status = 'ACTIVE'`,
+      ),
       this.postgres.query<{
         id: string;
         action: string;
@@ -201,7 +235,9 @@ export class DashboardService {
         outcome: row.outcome,
         occurredAt: row.occurred_at,
         actorName: row.actor_first_name
-          ? [row.actor_first_name, row.actor_last_name].filter(Boolean).join(' ')
+          ? [row.actor_first_name, row.actor_last_name]
+              .filter(Boolean)
+              .join(' ')
           : null,
         detail: describeActivity(row.after_data, row.before_data),
       })),

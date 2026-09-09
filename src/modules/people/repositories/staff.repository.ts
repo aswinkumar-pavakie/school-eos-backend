@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 import { personPhotoPublicUrlSql } from '../../../infrastructure/storage/public-photo-url.util';
 
 export interface StaffRow {
@@ -49,7 +52,8 @@ export interface UpdateStaffInput {
 
 // A function, not a top-level constant -- see student.repository.ts's columns()
 // for why (SUPABASE_URL isn't in process.env yet at module-load time).
-const columns = () => `s.id, s.person_id AS "personId", p.first_name AS "firstName", p.last_name AS "lastName",
+const columns =
+  () => `s.id, s.person_id AS "personId", p.first_name AS "firstName", p.last_name AS "lastName",
   s.employee_no AS "employeeNo", s.designation, s.teacher_category AS "teacherCategory",
   s.post_type AS "postType", s.state_teacher_id AS "stateTeacherId", s.is_teaching AS "isTeaching",
   s.date_of_joining AS "dateOfJoining", s.date_of_exit AS "dateOfExit", s.exit_reason AS "exitReason",
@@ -104,7 +108,10 @@ export class StaffRepository {
     // table, see Timetable), not on staff itself -- so class/section/subject filters
     // for teaching faculty go through an EXISTS against it rather than a plain column.
     if (filter.gradeId || filter.sectionId || filter.subjectId) {
-      const soConditions = [`so.teacher_staff_id = s.id`, `so.status = 'ACTIVE'`];
+      const soConditions = [
+        `so.teacher_staff_id = s.id`,
+        `so.status = 'ACTIVE'`,
+      ];
       if (filter.sectionId) {
         params.push(filter.sectionId);
         soConditions.push(`so.section_id = $${params.length}`);
@@ -120,7 +127,8 @@ export class StaffRepository {
         `EXISTS (SELECT 1 FROM subject_offering so JOIN section sec ON sec.id = so.section_id WHERE ${soConditions.join(' AND ')})`,
       );
     }
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countResult = await this.postgres.query<{ count: string }>(
       `SELECT count(*) FROM staff s JOIN person p ON p.id = s.person_id ${where}`,
@@ -156,7 +164,10 @@ export class StaffRepository {
     return rows.map((r) => r.designation);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<StaffRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StaffRow | null> {
     const { rows } = await executor.query<StaffRow>(
       `SELECT ${columns()} FROM staff s JOIN person p ON p.id = s.person_id WHERE s.id = $1`,
       [id],
@@ -164,7 +175,10 @@ export class StaffRepository {
     return rows[0] ?? null;
   }
 
-  async findByPersonId(personId: string, executor: Queryable = this.postgres): Promise<StaffRow | null> {
+  async findByPersonId(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StaffRow | null> {
     const { rows } = await executor.query<StaffRow>(
       `SELECT ${columns()} FROM staff s JOIN person p ON p.id = s.person_id WHERE s.person_id = $1`,
       [personId],
@@ -172,7 +186,10 @@ export class StaffRepository {
     return rows[0] ?? null;
   }
 
-  async create(input: CreateStaffInput, executor: Queryable = this.postgres): Promise<StaffRow> {
+  async create(
+    input: CreateStaffInput,
+    executor: Queryable = this.postgres,
+  ): Promise<StaffRow> {
     const { rows } = await executor.query<{ id: string }>(
       `INSERT INTO staff (person_id, employee_no, designation, teacher_category, post_type,
          state_teacher_id, is_teaching, date_of_joining)

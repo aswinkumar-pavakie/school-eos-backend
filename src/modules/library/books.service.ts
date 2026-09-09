@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { BookQueryDto } from './dto/book-query.dto';
 import { CreateBookDto } from './dto/create-book.dto';
@@ -37,7 +41,10 @@ export class BooksService {
 
   async create(dto: CreateBookDto, actorPersonId: string) {
     try {
-      const created = await this.bookRepo.create({ ...dto, createdBy: actorPersonId });
+      const created = await this.bookRepo.create({
+        ...dto,
+        createdBy: actorPersonId,
+      });
       await this.auditService.record({
         actorPersonId,
         action: 'LIBRARY_BOOK_CREATED',
@@ -48,7 +55,8 @@ export class BooksService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A book with this ISBN already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException('A book with this ISBN already exists.');
       throw err;
     }
   }
@@ -69,7 +77,8 @@ export class BooksService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A book with this ISBN already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException('A book with this ISBN already exists.');
       throw err;
     }
   }
@@ -77,7 +86,8 @@ export class BooksService {
   async withdraw(id: string, actorPersonId: string) {
     const existing = await this.bookRepo.findById(id);
     if (!existing) throw new NotFoundException('Book not found');
-    if (existing.status === 'WITHDRAWN') throw new ConflictException('This book is already withdrawn.');
+    if (existing.status === 'WITHDRAWN')
+      throw new ConflictException('This book is already withdrawn.');
     const updated = (await this.bookRepo.setStatus(id, 'WITHDRAWN'))!;
     await this.auditService.record({
       actorPersonId,

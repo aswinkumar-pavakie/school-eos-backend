@@ -57,15 +57,24 @@ export class OnlineClassesController {
     @Headers('idempotency-key') idempotencyKey?: string,
   ) {
     if (!idempotencyKey) {
-      throw new BadRequestException(ONLINE_CLASS_ERRORS.IDEMPOTENCY_KEY_REQUIRED);
+      throw new BadRequestException(
+        ONLINE_CLASS_ERRORS.IDEMPOTENCY_KEY_REQUIRED,
+      );
     }
-    const result = await this.onlineClassesService.schedule(actor, dto, idempotencyKey);
+    const result = await this.onlineClassesService.schedule(
+      actor,
+      dto,
+      idempotencyKey,
+    );
     return { data: result };
   }
 
   @Roles('FACULTY', 'PARENT')
   @Get()
-  async list(@CurrentActor() actor: AuthenticatedUser, @Query() query: ListOnlineClassesDto) {
+  async list(
+    @CurrentActor() actor: AuthenticatedUser,
+    @Query() query: ListOnlineClassesDto,
+  ) {
     // A user holding both roles (unusual, but not impossible in this role model) keeps
     // getting exactly the existing Faculty behavior — this branch order never changes
     // what a Faculty caller sees.
@@ -73,7 +82,10 @@ export class OnlineClassesController {
       const result = await this.onlineClassesService.list(actor, query.view);
       return { data: result };
     }
-    const result = await this.parentOnlineClassesService.list(actor, query.view);
+    const result = await this.parentOnlineClassesService.list(
+      actor,
+      query.view,
+    );
     return { data: result };
   }
 

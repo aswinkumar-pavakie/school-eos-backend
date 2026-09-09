@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
 
 export interface ReceiptLineItemRow {
   feeHeadId: string | null;
@@ -45,7 +48,10 @@ export class PaymentAllocationRepository {
     return mapRow(rows[0]);
   }
 
-  async listByPayment(paymentId: string, executor: Queryable = this.postgres): Promise<PaymentAllocationRow[]> {
+  async listByPayment(
+    paymentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<PaymentAllocationRow[]> {
     const { rows } = await executor.query(
       `SELECT * FROM payment_allocation WHERE payment_id = $1 ORDER BY allocated_at ASC`,
       [paymentId],
@@ -53,7 +59,10 @@ export class PaymentAllocationRepository {
     return rows.map(mapRow);
   }
 
-  async sumAllocatedForPayment(paymentId: string, executor: Queryable = this.postgres): Promise<string> {
+  async sumAllocatedForPayment(
+    paymentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string> {
     const { rows } = await executor.query(
       `SELECT COALESCE(SUM(amount_paise), 0)::text AS total FROM payment_allocation WHERE payment_id = $1`,
       [paymentId],

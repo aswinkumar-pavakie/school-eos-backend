@@ -6,7 +6,18 @@
 // edit/delete, exactly the way every other Faculty feature in this module
 // derives scope from the caller rather than trusting client-supplied ids.
 
-import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -24,10 +35,14 @@ export class FacultyAnnouncementsController {
   ) {}
 
   private async assertOwnSections(personId: string, sectionIds: string[]) {
-    const scoped = new Set(await this.scopeRepo.getAllScopedSectionIds(personId));
+    const scoped = new Set(
+      await this.scopeRepo.getAllScopedSectionIds(personId),
+    );
     const notMine = sectionIds.filter((id) => !scoped.has(id));
     if (notMine.length > 0) {
-      throw new ForbiddenException('You can only target classes you advise or teach.');
+      throw new ForbiddenException(
+        'You can only target classes you advise or teach.',
+      );
     }
   }
 
@@ -36,9 +51,16 @@ export class FacultyAnnouncementsController {
    * with whether this caller can edit/delete it (their own posts only). */
   @Get()
   async list(@CurrentActor() actor: AuthenticatedUser) {
-    const sectionIds = await this.scopeRepo.getAllScopedSectionIds(actor.personId);
+    const sectionIds = await this.scopeRepo.getAllScopedSectionIds(
+      actor.personId,
+    );
     const rows = await this.announcementsService.listForFaculty(sectionIds);
-    return { data: rows.map((r) => ({ ...r, canEdit: r.createdBy === actor.personId })) };
+    return {
+      data: rows.map((r) => ({
+        ...r,
+        canEdit: r.createdBy === actor.personId,
+      })),
+    };
   }
 
   /** Just this caller's own posts (for a "manage my announcements" view) --
@@ -51,7 +73,10 @@ export class FacultyAnnouncementsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: FacultyCreateAnnouncementDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: FacultyCreateAnnouncementDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.assertOwnSections(actor.personId, dto.targetSectionIds);
     const created = await this.announcementsService.create(
       { ...dto, audienceType: 'SECTION' },
@@ -61,7 +86,11 @@ export class FacultyAnnouncementsController {
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() dto: FacultyUpdateAnnouncementDto, @CurrentActor() actor: AuthenticatedUser) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: FacultyUpdateAnnouncementDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     if (dto.targetSectionIds) {
       await this.assertOwnSections(actor.personId, dto.targetSectionIds);
     }
@@ -76,7 +105,10 @@ export class FacultyAnnouncementsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async remove(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.announcementsService.remove(id, actor.personId, actor.personId);
   }
 }

@@ -6,7 +6,10 @@
 // user's own explicit instruction.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface StaffBusAssignment {
   role: 'DRIVER' | 'ATTENDANT';
@@ -18,7 +21,11 @@ export interface StaffBusAssignment {
   routeName: string;
   routeCode: string | null;
   direction: string;
-  stops: { stopName: string; sequenceNo: number; scheduledTime: string | null }[];
+  stops: {
+    stopName: string;
+    sequenceNo: number;
+    scheduledTime: string | null;
+  }[];
 }
 
 @Injectable()
@@ -29,7 +36,10 @@ export class StaffBusRepository {
    * person as its driver or attendant -- null (an honest "not assigned",
    * never fabricated) if neither table has a row for them, or nothing is
    * currently effective. */
-  async findAssignmentForPerson(personId: string, executor: Queryable = this.postgres): Promise<StaffBusAssignment | null> {
+  async findAssignmentForPerson(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StaffBusAssignment | null> {
     const { rows } = await executor.query(
       `SELECT
          CASE WHEN d.id IS NOT NULL THEN 'DRIVER' ELSE 'ATTENDANT' END AS role,
@@ -62,7 +72,11 @@ export class StaffBusRepository {
       routeName: row.route_name,
       routeCode: row.route_code,
       direction: row.direction,
-      stops: stopRows.map((s: any) => ({ stopName: s.stop_name, sequenceNo: s.sequence_no, scheduledTime: s.scheduled_time })),
+      stops: stopRows.map((s: any) => ({
+        stopName: s.stop_name,
+        sequenceNo: s.sequence_no,
+        scheduledTime: s.scheduled_time,
+      })),
     };
   }
 }

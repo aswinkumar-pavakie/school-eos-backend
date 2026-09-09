@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { InventoryItemRepository } from '../inventory/repositories/inventory-item.repository';
@@ -50,7 +54,10 @@ export class RepairRequestsService {
 
   async create(dto: CreateRepairRequestDto, actorPersonId: string) {
     try {
-      const created = await this.repairRequestRepo.create({ ...dto, requestedBy: actorPersonId });
+      const created = await this.repairRequestRepo.create({
+        ...dto,
+        requestedBy: actorPersonId,
+      });
       await this.auditService.record({
         actorPersonId,
         action: 'REPAIR_REQUEST_CREATED',
@@ -61,7 +68,10 @@ export class RepairRequestsService {
       });
       return created;
     } catch (err) {
-      if (isForeignKeyViolation(err)) throw new NotFoundException('inventoryItemId does not refer to an existing item.');
+      if (isForeignKeyViolation(err))
+        throw new NotFoundException(
+          'inventoryItemId does not refer to an existing item.',
+        );
       throw err;
     }
   }
@@ -82,7 +92,10 @@ export class RepairRequestsService {
       });
       return updated;
     } catch (err) {
-      if (isForeignKeyViolation(err)) throw new NotFoundException('inventoryItemId does not refer to an existing item.');
+      if (isForeignKeyViolation(err))
+        throw new NotFoundException(
+          'inventoryItemId does not refer to an existing item.',
+        );
       throw err;
     }
   }
@@ -95,9 +108,12 @@ export class RepairRequestsService {
       const locked = await this.repairRequestRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Repair request not found');
       if (!OPEN_STATUSES.includes(locked.status)) {
-        throw new ConflictException(`This request is ${locked.status.toLowerCase()} -- it can't be (re)assigned.`);
+        throw new ConflictException(
+          `This request is ${locked.status.toLowerCase()} -- it can't be (re)assigned.`,
+        );
       }
-      const nextStatus = locked.status === 'REQUESTED' ? 'ASSIGNED' : locked.status;
+      const nextStatus =
+        locked.status === 'REQUESTED' ? 'ASSIGNED' : locked.status;
       try {
         const updated = (await this.repairRequestRepo.assign(
           id,
@@ -120,7 +136,10 @@ export class RepairRequestsService {
         );
         return updated;
       } catch (err) {
-        if (isForeignKeyViolation(err)) throw new NotFoundException('assignedToPersonId does not refer to an existing person.');
+        if (isForeignKeyViolation(err))
+          throw new NotFoundException(
+            'assignedToPersonId does not refer to an existing person.',
+          );
         throw err;
       }
     });
@@ -131,9 +150,15 @@ export class RepairRequestsService {
       const locked = await this.repairRequestRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Repair request not found');
       if (locked.status !== 'ASSIGNED') {
-        throw new ConflictException('Only an assigned request can be moved to in progress.');
+        throw new ConflictException(
+          'Only an assigned request can be moved to in progress.',
+        );
       }
-      const updated = (await this.repairRequestRepo.setStatus(id, 'IN_PROGRESS', client))!;
+      const updated = (await this.repairRequestRepo.setStatus(
+        id,
+        'IN_PROGRESS',
+        client,
+      ))!;
       await this.auditService.record(
         {
           actorPersonId,
@@ -155,14 +180,21 @@ export class RepairRequestsService {
    * Inventory <-> Repair integration point in the spec. The item's own audit
    * trail gets a matching entry (correlationId = this repair request), so its
    * history stays linked without a second, disconnected history mechanism. */
-  async complete(id: string, dto: CompleteRepairRequestDto, actorPersonId: string) {
+  async complete(
+    id: string,
+    dto: CompleteRepairRequestDto,
+    actorPersonId: string,
+  ) {
     return this.unitOfWork.run(async (client) => {
       const locked = await this.repairRequestRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Repair request not found');
       if (!OPEN_STATUSES.includes(locked.status)) {
-        throw new ConflictException(`This request is already ${locked.status.toLowerCase()}.`);
+        throw new ConflictException(
+          `This request is already ${locked.status.toLowerCase()}.`,
+        );
       }
-      const completedOn = dto.completedOn ?? new Date().toISOString().slice(0, 10);
+      const completedOn =
+        dto.completedOn ?? new Date().toISOString().slice(0, 10);
       const updated = (await this.repairRequestRepo.complete(
         id,
         {
@@ -187,9 +219,15 @@ export class RepairRequestsService {
       );
 
       if (locked.inventoryItemId) {
-        const item = await this.inventoryItemRepo.findByIdForUpdate(locked.inventoryItemId, client);
+        const item = await this.inventoryItemRepo.findByIdForUpdate(
+          locked.inventoryItemId,
+          client,
+        );
         if (item && item.status === 'DAMAGED') {
-          const restoredItem = (await this.inventoryItemRepo.restoreToAvailable(item.id, client))!;
+          const restoredItem = (await this.inventoryItemRepo.restoreToAvailable(
+            item.id,
+            client,
+          ))!;
           await this.auditService.record(
             {
               actorPersonId,
@@ -215,9 +253,15 @@ export class RepairRequestsService {
       const locked = await this.repairRequestRepo.findByIdForUpdate(id, client);
       if (!locked) throw new NotFoundException('Repair request not found');
       if (!OPEN_STATUSES.includes(locked.status)) {
-        throw new ConflictException(`This request is already ${locked.status.toLowerCase()}.`);
+        throw new ConflictException(
+          `This request is already ${locked.status.toLowerCase()}.`,
+        );
       }
-      const updated = (await this.repairRequestRepo.setStatus(id, 'CANCELLED', client))!;
+      const updated = (await this.repairRequestRepo.setStatus(
+        id,
+        'CANCELLED',
+        client,
+      ))!;
       await this.auditService.record(
         {
           actorPersonId,

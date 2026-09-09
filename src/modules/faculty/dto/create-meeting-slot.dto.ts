@@ -6,7 +6,9 @@ export class CreateMeetingSlotDto {
   @IsDateString()
   meetingDate!: string;
 
-  @Matches(TIME_PATTERN, { message: 'fromTime must be in HH:MM 24-hour format' })
+  @Matches(TIME_PATTERN, {
+    message: 'fromTime must be in HH:MM 24-hour format',
+  })
   fromTime!: string;
 
   @Matches(TIME_PATTERN, { message: 'toTime must be in HH:MM 24-hour format' })

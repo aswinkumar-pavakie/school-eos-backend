@@ -8,17 +8,33 @@ interface PgErrorLike {
 }
 
 export function isUniqueViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as PgErrorLike).code === '23505';
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as PgErrorLike).code === '23505'
+  );
 }
 
 export function isForeignKeyViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as PgErrorLike).code === '23503';
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as PgErrorLike).code === '23503'
+  );
 }
 
 export function isCheckViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as PgErrorLike).code === '23514';
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as PgErrorLike).code === '23514'
+  );
 }
 
 export function isExclusionViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as PgErrorLike).code === '23P01';
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as PgErrorLike).code === '23P01'
+  );
 }

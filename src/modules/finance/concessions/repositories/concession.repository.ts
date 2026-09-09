@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
-import { PageQuery, toOffsetLimit } from '../../../../common/pagination/pagination.util';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PageQuery,
+  toOffsetLimit,
+} from '../../../../common/pagination/pagination.util';
 
 export interface ConcessionRow {
   id: string;
@@ -75,13 +81,25 @@ export class ConcessionRepository {
     return mapRow(rows[0]);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<ConcessionRow | null> {
-    const { rows } = await executor.query(`${SELECT_WITH_JOINS} WHERE c.id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ConcessionRow | null> {
+    const { rows } = await executor.query(
+      `${SELECT_WITH_JOINS} WHERE c.id = $1`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<ConcessionRow | null> {
-    const { rows } = await executor.query(`SELECT * FROM concession WHERE id = $1 FOR UPDATE`, [id]);
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<ConcessionRow | null> {
+    const { rows } = await executor.query(
+      `SELECT * FROM concession WHERE id = $1 FOR UPDATE`,
+      [id],
+    );
     return rows.length ? mapRow(rows[0]) : null;
   }
 
@@ -91,7 +109,9 @@ export class ConcessionRepository {
     executor: Queryable = this.postgres,
   ): Promise<{ rows: ConcessionRow[]; total: number }> {
     const { offset, limit } = toOffsetLimit(page);
-    const search = filter.studentSearch?.trim() ? `%${filter.studentSearch.trim()}%` : null;
+    const search = filter.studentSearch?.trim()
+      ? `%${filter.studentSearch.trim()}%`
+      : null;
     const params = [filter.studentId ?? null, filter.state ?? null, search];
     const whereClause = `
       WHERE ($1::uuid IS NULL OR c.student_id = $1)
@@ -117,7 +137,11 @@ export class ConcessionRepository {
 
   async update(
     id: string,
-    input: { amountPaise?: string | null; percent?: string | null; reason?: string },
+    input: {
+      amountPaise?: string | null;
+      percent?: string | null;
+      reason?: string;
+    },
     executor: Queryable,
   ): Promise<void> {
     await executor.query(
@@ -126,18 +150,34 @@ export class ConcessionRepository {
            percent = COALESCE($3, percent),
            reason = COALESCE($4, reason)
        WHERE id = $1`,
-      [id, input.amountPaise ?? null, input.percent ?? null, input.reason ?? null],
+      [
+        id,
+        input.amountPaise ?? null,
+        input.percent ?? null,
+        input.reason ?? null,
+      ],
     );
   }
 
-  async linkApprovalRequest(id: string, approvalRequestId: string, executor: Queryable): Promise<void> {
-    await executor.query(`UPDATE concession SET approval_request_id = $2 WHERE id = $1`, [
-      id,
-      approvalRequestId,
-    ]);
+  async linkApprovalRequest(
+    id: string,
+    approvalRequestId: string,
+    executor: Queryable,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE concession SET approval_request_id = $2 WHERE id = $1`,
+      [id, approvalRequestId],
+    );
   }
 
-  async setState(id: string, state: string, executor: Queryable): Promise<void> {
-    await executor.query(`UPDATE concession SET state = $2 WHERE id = $1`, [id, state]);
+  async setState(
+    id: string,
+    state: string,
+    executor: Queryable,
+  ): Promise<void> {
+    await executor.query(`UPDATE concession SET state = $2 WHERE id = $1`, [
+      id,
+      state,
+    ]);
   }
 }

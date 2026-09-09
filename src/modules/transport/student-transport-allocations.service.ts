@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CancelStudentTransportAllocationDto } from './dto/cancel-student-transport-allocation.dto';
 import { CreateStudentTransportAllocationDto } from './dto/create-student-transport-allocation.dto';
@@ -26,11 +30,15 @@ export class StudentTransportAllocationsService {
 
   async get(id: string) {
     const allocation = await this.allocationRepo.findById(id);
-    if (!allocation) throw new NotFoundException('Student transport allocation not found');
+    if (!allocation)
+      throw new NotFoundException('Student transport allocation not found');
     return allocation;
   }
 
-  async create(dto: CreateStudentTransportAllocationDto, actorPersonId: string) {
+  async create(
+    dto: CreateStudentTransportAllocationDto,
+    actorPersonId: string,
+  ) {
     try {
       const created = await this.allocationRepo.create(dto);
       await this.auditService.record({
@@ -49,17 +57,24 @@ export class StudentTransportAllocationsService {
         );
       }
       if (isForeignKeyViolation(err)) {
-        throw new NotFoundException('studentId, routeStopId, or academicYearId does not refer to an existing record.');
+        throw new NotFoundException(
+          'studentId, routeStopId, or academicYearId does not refer to an existing record.',
+        );
       }
       throw err;
     }
   }
 
-  async update(id: string, dto: UpdateStudentTransportAllocationDto, actorPersonId: string) {
+  async update(
+    id: string,
+    dto: UpdateStudentTransportAllocationDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.get(id);
     try {
       const updated = await this.allocationRepo.update(id, dto);
-      if (!updated) throw new NotFoundException('Student transport allocation not found');
+      if (!updated)
+        throw new NotFoundException('Student transport allocation not found');
       await this.auditService.record({
         actorPersonId,
         action: 'STUDENT_TRANSPORT_ALLOCATION_UPDATED',
@@ -72,13 +87,19 @@ export class StudentTransportAllocationsService {
       return updated;
     } catch (err) {
       if (isForeignKeyViolation(err)) {
-        throw new NotFoundException('routeStopId does not refer to an existing record.');
+        throw new NotFoundException(
+          'routeStopId does not refer to an existing record.',
+        );
       }
       throw err;
     }
   }
 
-  async cancel(id: string, dto: CancelStudentTransportAllocationDto, actorPersonId: string) {
+  async cancel(
+    id: string,
+    dto: CancelStudentTransportAllocationDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.get(id);
     if (existing.status !== 'ACTIVE') {
       throw new ConflictException('This allocation is not currently active.');

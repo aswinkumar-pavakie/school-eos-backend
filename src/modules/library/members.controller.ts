@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -44,27 +54,41 @@ export class MembersController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @Roles('LIBRARY')
-  async create(@Body() dto: CreateMemberDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateMemberDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.membersService.create(dto, actor.personId) };
   }
 
   @Patch(':id')
   @Roles('LIBRARY')
-  async update(@Param('id') id: string, @Body() dto: UpdateMemberDto, @CurrentActor() actor: AuthenticatedUser) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateMemberDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.membersService.update(id, dto, actor.personId) };
   }
 
   @Post(':id/suspend')
   @HttpCode(HttpStatus.OK)
   @Roles('LIBRARY')
-  async suspend(@Param('id') id: string, @Body() dto: SuspendMemberDto, @CurrentActor() actor: AuthenticatedUser) {
+  async suspend(
+    @Param('id') id: string,
+    @Body() dto: SuspendMemberDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.membersService.suspend(id, dto, actor.personId) };
   }
 
   @Post(':id/reactivate')
   @HttpCode(HttpStatus.OK)
   @Roles('LIBRARY')
-  async reactivate(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async reactivate(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.membersService.reactivate(id, actor.personId) };
   }
 }

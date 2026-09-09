@@ -7,7 +7,9 @@ import { AuthenticatedUser } from './authenticated-user.interface';
 
 export const CurrentActor = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): AuthenticatedUser => {
-    const request = ctx.switchToHttp().getRequest<Request & { user: AuthenticatedUser }>();
+    const request = ctx
+      .switchToHttp()
+      .getRequest<Request & { user: AuthenticatedUser }>();
     return request.user;
   },
 );

@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -24,14 +33,20 @@ export class ReservationsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @Roles('LIBRARY')
-  async create(@Body() dto: CreateReservationDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateReservationDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.reservationsService.create(dto, actor.personId) };
   }
 
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
   @Roles('LIBRARY')
-  async cancel(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async cancel(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.reservationsService.cancel(id, actor.personId) };
   }
 }

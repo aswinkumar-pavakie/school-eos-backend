@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface AcademicYearRow {
   id: string;
@@ -34,14 +37,19 @@ const COLUMNS = `id, name, start_date AS "startDate", end_date AS "endDate", sta
 export class AcademicYearRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findMany(executor: Queryable = this.postgres): Promise<AcademicYearRow[]> {
+  async findMany(
+    executor: Queryable = this.postgres,
+  ): Promise<AcademicYearRow[]> {
     const { rows } = await executor.query<AcademicYearRow>(
       `SELECT ${COLUMNS} FROM academic_year ORDER BY start_date DESC`,
     );
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<AcademicYearRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<AcademicYearRow | null> {
     const { rows } = await executor.query<AcademicYearRow>(
       `SELECT ${COLUMNS} FROM academic_year WHERE id = $1`,
       [id],
@@ -76,7 +84,13 @@ export class AcademicYearRepository {
          updated_at = now()
        WHERE id = $1
        RETURNING ${COLUMNS}`,
-      [id, input.name ?? null, input.startDate ?? null, input.endDate ?? null, input.status ?? null],
+      [
+        id,
+        input.name ?? null,
+        input.startDate ?? null,
+        input.endDate ?? null,
+        input.status ?? null,
+      ],
     );
     return rows[0] ?? null;
   }
@@ -85,10 +99,15 @@ export class AcademicYearRepository {
    * transaction (UnitOfWork) so the partial-unique index on is_current never sees two
    * true rows even momentarily under concurrent requests. */
   async clearCurrent(executor: Queryable): Promise<void> {
-    await executor.query(`UPDATE academic_year SET is_current = false WHERE is_current = true`);
+    await executor.query(
+      `UPDATE academic_year SET is_current = false WHERE is_current = true`,
+    );
   }
 
-  async setCurrent(id: string, executor: Queryable): Promise<AcademicYearRow | null> {
+  async setCurrent(
+    id: string,
+    executor: Queryable,
+  ): Promise<AcademicYearRow | null> {
     const { rows } = await executor.query<AcademicYearRow>(
       `UPDATE academic_year SET is_current = true, updated_at = now() WHERE id = $1 RETURNING ${COLUMNS}`,
       [id],
@@ -96,7 +115,10 @@ export class AcademicYearRepository {
     return rows[0] ?? null;
   }
 
-  async close(id: string, executor: Queryable = this.postgres): Promise<AcademicYearRow | null> {
+  async close(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<AcademicYearRow | null> {
     const { rows } = await executor.query<AcademicYearRow>(
       `UPDATE academic_year SET status = 'CLOSED', closed_at = now(), updated_at = now()
        WHERE id = $1

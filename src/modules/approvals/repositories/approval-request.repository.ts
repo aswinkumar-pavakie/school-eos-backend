@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface ApprovalRequestRow {
   id: string;
@@ -84,7 +87,10 @@ export class ApprovalRequestRepository {
     return mapRow(rows[0]);
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<ApprovalRequestRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ApprovalRequestRow | null> {
     const { rows } = await executor.query(
       `SELECT ar.*, p.display_name AS requested_by_name
        FROM approval_request ar
@@ -96,7 +102,10 @@ export class ApprovalRequestRepository {
   }
 
   /** Locks the row for the duration of the caller's transaction — required before any decision write. */
-  async findByIdForUpdate(id: string, executor: Queryable): Promise<ApprovalRequestRow | null> {
+  async findByIdForUpdate(
+    id: string,
+    executor: Queryable,
+  ): Promise<ApprovalRequestRow | null> {
     const { rows } = await executor.query(
       `SELECT ${SELECT_COLUMNS} FROM approval_request WHERE id = $1 FOR UPDATE`,
       [id],
@@ -185,7 +194,13 @@ export class ApprovalRequestRepository {
              )
          )
        ORDER BY ar.due_at ASC NULLS LAST, ar.created_at ASC`,
-      [callerRoles, filter.states, forHistory, callerId, filter.requestType ?? null],
+      [
+        callerRoles,
+        filter.states,
+        forHistory,
+        callerId,
+        filter.requestType ?? null,
+      ],
     );
     return rows.map(mapRow);
   }

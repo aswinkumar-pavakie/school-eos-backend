@@ -4,7 +4,10 @@
 // reading `grade` directly rather than duplicating it.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface GradeRow {
   id: string;
@@ -31,7 +34,10 @@ export class LibraryGradeLookupRepository {
   /** Scoped to the current academic year -- matches the same scoping the
    * member list's own grade/section join already uses, so this dropdown never
    * offers a section that couldn't actually match any member row. */
-  async listSections(gradeId: string | undefined, executor: Queryable = this.postgres): Promise<SectionRow[]> {
+  async listSections(
+    gradeId: string | undefined,
+    executor: Queryable = this.postgres,
+  ): Promise<SectionRow[]> {
     const params: unknown[] = [];
     let where = `WHERE status = 'ACTIVE' AND academic_year_id = (SELECT id FROM academic_year WHERE is_current LIMIT 1)`;
     if (gradeId) {

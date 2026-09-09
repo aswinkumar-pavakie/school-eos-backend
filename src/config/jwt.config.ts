@@ -12,7 +12,9 @@ export const jwtModuleFactory = {
     signOptions: {
       // '15m'-style duration string from env; jsonwebtoken's type wants one of its
       // literal StringValue variants, which a runtime env string can't be narrowed to.
-      expiresIn: configService.get<string>('jwt.accessExpiresIn') as JwtSignOptions['expiresIn'],
+      expiresIn: configService.get<string>(
+        'jwt.accessExpiresIn',
+      ) as JwtSignOptions['expiresIn'],
     },
   }),
 };

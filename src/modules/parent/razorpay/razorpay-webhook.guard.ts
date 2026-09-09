@@ -5,7 +5,12 @@
 // Razorpay Dashboard -> Settings -> Webhooks (a different secret than the API Key
 // Secret — never the same value).
 
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import type { Request } from 'express';
@@ -16,7 +21,9 @@ export class RazorpayWebhookGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     try {
-      const request = context.switchToHttp().getRequest<Request & { rawBody?: Buffer }>();
+      const request = context
+        .switchToHttp()
+        .getRequest<Request & { rawBody?: Buffer }>();
       const signature = request.headers['x-razorpay-signature'];
       const secret = this.configService.get<string>('razorpay.webhookSecret');
 
@@ -24,11 +31,17 @@ export class RazorpayWebhookGuard implements CanActivate {
         throw new UnauthorizedException();
       }
 
-      const expected = crypto.createHmac('sha256', secret).update(request.rawBody).digest('hex');
+      const expected = crypto
+        .createHmac('sha256', secret)
+        .update(request.rawBody)
+        .digest('hex');
       const expectedBuf = Buffer.from(expected, 'hex');
       const providedBuf = Buffer.from(signature, 'hex');
 
-      if (expectedBuf.length !== providedBuf.length || !crypto.timingSafeEqual(expectedBuf, providedBuf)) {
+      if (
+        expectedBuf.length !== providedBuf.length ||
+        !crypto.timingSafeEqual(expectedBuf, providedBuf)
+      ) {
         throw new UnauthorizedException();
       }
       return true;

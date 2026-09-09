@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -14,7 +23,9 @@ import { HostelAllocationsService } from './hostel-allocations.service';
 @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller('hostel-allocations')
 export class HostelAllocationsController {
-  constructor(private readonly hostelAllocationsService: HostelAllocationsService) {}
+  constructor(
+    private readonly hostelAllocationsService: HostelAllocationsService,
+  ) {}
 
   @Get()
   async list(@Query() query: HostelAllocationQueryDto) {
@@ -24,8 +35,14 @@ export class HostelAllocationsController {
   // Must stay registered before ':id' -- otherwise "unallocated-students" would
   // be swallowed by the :id param route.
   @Get('unallocated-students')
-  async listUnallocatedStudents(@Query('academicYearId') academicYearId: string) {
-    return { data: await this.hostelAllocationsService.listUnallocatedStudents(academicYearId) };
+  async listUnallocatedStudents(
+    @Query('academicYearId') academicYearId: string,
+  ) {
+    return {
+      data: await this.hostelAllocationsService.listUnallocatedStudents(
+        academicYearId,
+      ),
+    };
   }
 
   @Get(':id')
@@ -36,8 +53,13 @@ export class HostelAllocationsController {
   @Post()
   @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateHostelAllocationDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.hostelAllocationsService.create(dto, actor.personId) };
+  async create(
+    @Body() dto: CreateHostelAllocationDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.hostelAllocationsService.create(dto, actor.personId),
+    };
   }
 
   @Post(':id/vacate')
@@ -48,6 +70,8 @@ export class HostelAllocationsController {
     @Body() dto: VacateHostelAllocationDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.hostelAllocationsService.vacate(id, dto, actor.personId) };
+    return {
+      data: await this.hostelAllocationsService.vacate(id, dto, actor.personId),
+    };
   }
 }

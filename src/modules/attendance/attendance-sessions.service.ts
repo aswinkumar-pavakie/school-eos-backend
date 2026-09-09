@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { AttendanceSessionQueryDto } from './dto/attendance-session-query.dto';
@@ -32,7 +36,10 @@ export class AttendanceSessionsService {
   async get(id: string) {
     const session = await this.sessionRepo.findById(id);
     if (!session) throw new NotFoundException('Attendance session not found');
-    const records = await this.recordRepo.findBySessionId(id, session.sectionId);
+    const records = await this.recordRepo.findBySessionId(
+      id,
+      session.sectionId,
+    );
     const counts: Record<string, number> = {
       PRESENT: 0,
       ABSENT: 0,
@@ -52,8 +59,15 @@ export class AttendanceSessionsService {
   async create(dto: CreateAttendanceSessionDto, actorPersonId: string) {
     try {
       return await this.unitOfWork.run(async (client) => {
-        const session = await this.sessionRepo.create(dto.sectionId, dto.sessionDate, client);
-        const studentIds = await this.sessionRepo.findActiveEnrolledStudentIds(dto.sectionId, client);
+        const session = await this.sessionRepo.create(
+          dto.sectionId,
+          dto.sessionDate,
+          client,
+        );
+        const studentIds = await this.sessionRepo.findActiveEnrolledStudentIds(
+          dto.sectionId,
+          client,
+        );
         await this.recordRepo.createManyPresent(session.id, studentIds, client);
 
         await this.auditService.record(

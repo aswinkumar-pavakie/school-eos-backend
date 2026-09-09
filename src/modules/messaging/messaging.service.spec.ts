@@ -20,12 +20,17 @@ const FACULTY_ACTOR: AuthenticatedUser = {
   personId: 'faculty-1',
   roles: ['FACULTY'],
 };
+const PRINCIPAL_ACTOR: AuthenticatedUser = {
+  personId: 'principal-1',
+  roles: ['PRINCIPAL'],
+};
 
 function makeConversation(
   overrides: Partial<ConversationView> = {},
 ): ConversationView {
   return {
     id: 'conv-1',
+    conversationType: 'STUDENT_CONTEXT',
     studentId: 'student-1',
     studentFirstName: 'Aarav',
     studentLastName: 'Kumar',
@@ -35,6 +40,34 @@ function makeConversation(
     sectionId: 'section-1',
     sectionName: 'A',
     gradeName: '8',
+    personAId: null,
+    personBId: null,
+    status: 'ACTIVE',
+    lastMessageId: null,
+    lastMessageAt: null,
+    createdAt: new Date('2026-09-01T00:00:00Z'),
+    updatedAt: new Date('2026-09-01T00:00:00Z'),
+    ...overrides,
+  };
+}
+
+function makeStaffDirectConversation(
+  overrides: Partial<ConversationView> = {},
+): ConversationView {
+  return {
+    id: 'staff-conv-1',
+    conversationType: 'STAFF_DIRECT',
+    studentId: null,
+    studentFirstName: null,
+    studentLastName: null,
+    parentPersonId: null,
+    academicYearId: null,
+    academicYearName: null,
+    sectionId: null,
+    sectionName: null,
+    gradeName: null,
+    personAId: 'faculty-1',
+    personBId: 'principal-1',
     status: 'ACTIVE',
     lastMessageId: null,
     lastMessageAt: null,
@@ -79,6 +112,34 @@ function buildService(
       sectionId: string;
       parentPersonId: string;
     }[];
+    activeStudentContext?: {
+      studentId: string;
+      studentFirstName: string;
+      studentLastName: string;
+      academicYearId: string;
+      sectionId: string;
+      guardians: {
+        personId: string;
+        firstName: string;
+        lastName: string;
+        displayName: string | null;
+      }[];
+    } | null;
+    staffDirectConversation?: ConversationView | null;
+    staffDirectConversations?: ConversationView[];
+    principalStudentConversations?: ConversationView[];
+    principalsByConversation?: Map<
+      string,
+      {
+        personId: string;
+        firstName: string;
+        lastName: string;
+        displayName: string | null;
+      }[]
+    >;
+    activePrincipalIds?: string[];
+    targetIsActiveFaculty?: boolean;
+    activePrincipalPersonId?: string | null;
   } = {},
 ) {
   const conversation =
@@ -117,6 +178,25 @@ function buildService(
           parentPersonId: 'parent-1',
         },
       ],
+    ),
+    findActiveContextForStudent: jest.fn().mockResolvedValue(
+      opts.activeStudentContext === undefined
+        ? {
+            studentId: 'student-1',
+            studentFirstName: 'Aarav',
+            studentLastName: 'Kumar',
+            academicYearId: 'year-1',
+            sectionId: 'section-1',
+            guardians: [
+              {
+                personId: 'parent-1',
+                firstName: 'Indira',
+                lastName: 'Palaniappan',
+                displayName: null,
+              },
+            ],
+          }
+        : opts.activeStudentContext,
     ),
   } as any;
 
@@ -183,6 +263,15 @@ function buildService(
       .mockResolvedValue(conversation ? [conversation] : []),
     ensureExist: jest.fn().mockResolvedValue(undefined),
     updateLastMessage: jest.fn().mockResolvedValue(undefined),
+    findOrCreateStaffDirect: jest
+      .fn()
+      .mockResolvedValue(opts.staffDirectConversation ?? null),
+    listStaffDirectForPerson: jest
+      .fn()
+      .mockResolvedValue(opts.staffDirectConversations ?? []),
+    listStudentContextForPrincipal: jest
+      .fn()
+      .mockResolvedValue(opts.principalStudentConversations ?? []),
   } as any;
 
   const participantRepo = {
@@ -205,6 +294,9 @@ function buildService(
       }),
     markRead: jest.fn().mockResolvedValue(undefined),
     listForConversation: jest.fn().mockResolvedValue([]),
+    findByRoleForConversations: jest
+      .fn()
+      .mockResolvedValue(opts.principalsByConversation ?? new Map()),
   } as any;
 
   const messageRepo = {
@@ -267,6 +359,30 @@ function buildService(
       }),
   } as any;
 
+  const principalRepo = {
+    isActivePrincipal: jest
+      .fn()
+      .mockImplementation(async (personId: string) =>
+        (opts.activePrincipalIds ?? ['principal-1']).includes(personId),
+      ),
+    filterActivePrincipals: jest
+      .fn()
+      .mockImplementation(async (personIds: string[]) => {
+        const active = opts.activePrincipalIds ?? ['principal-1'];
+        return new Set(personIds.filter((id) => active.includes(id)));
+      }),
+    isActiveFaculty: jest
+      .fn()
+      .mockResolvedValue(opts.targetIsActiveFaculty ?? true),
+    findActivePrincipalPersonId: jest
+      .fn()
+      .mockResolvedValue(
+        opts.activePrincipalPersonId === undefined
+          ? 'principal-1'
+          : opts.activePrincipalPersonId,
+      ),
+  } as any;
+
   const translationService = {
     translate: jest.fn().mockResolvedValue({
       messageId: '101',
@@ -274,6 +390,10 @@ function buildService(
       targetLanguage: 'ta',
       translatedText: 'காலை வணக்கம்',
     }),
+  } as any;
+
+  const auditService = {
+    record: jest.fn().mockResolvedValue(undefined),
   } as any;
 
   const unitOfWork = {
@@ -293,7 +413,9 @@ function buildService(
     participantRepo,
     messageRepo,
     personRepo,
+    principalRepo,
     translationService,
+    auditService,
     unitOfWork,
   );
 
@@ -307,7 +429,9 @@ function buildService(
     participantRepo,
     messageRepo,
     personRepo,
+    principalRepo,
     translationService,
+    auditService,
     unitOfWork,
   };
 }
@@ -328,7 +452,7 @@ describe('MessagingService — conversation list', () => {
       'section-1',
     );
     expect(result).toHaveLength(1);
-    expect(result[0].student.name).toBe('Aarav Kumar');
+    expect(result[0]!.student!.name).toBe('Aarav Kumar');
   });
 
   it('22. parent with two active wards sees both, never merged', async () => {
@@ -373,7 +497,7 @@ describe('MessagingService — conversation list', () => {
     const result = await service.listConversations(PARENT_ACTOR);
 
     expect(conversationRepo.findOrCreate).toHaveBeenCalledTimes(2);
-    expect(result.map((r) => r.student.name)).toEqual([
+    expect(result.map((r) => r.student!.name)).toEqual([
       'Aarav Kumar',
       'Diya Kumar',
     ]);
@@ -864,5 +988,539 @@ describe('MessagingService — translation', () => {
     // one this would throw "not a function" rather than needing a spy assertion.
     await service.translateMessage(PARENT_ACTOR, 'conv-1', '101', 'ta');
     expect(messageRepo.findById).toHaveBeenCalledWith('101');
+  });
+});
+
+describe('MessagingService - Principal actor resolution', () => {
+  it('a Principal with an ACTIVE staff row resolves as PRINCIPAL, not PARENT', async () => {
+    const { service, conversationRepo, participantRepo } = buildService({
+      staff: {
+        id: 'staff-principal',
+        personId: 'principal-1',
+        status: 'ACTIVE',
+      },
+    });
+    conversationRepo.findById.mockResolvedValue(makeConversation());
+
+    await service.getConversation(PRINCIPAL_ACTOR, 'conv-1');
+
+    // Principal branch never calls findActiveWardEnrolment (that is the PARENT
+    // path) and never throws -- reaching syncParticipants proves the PRINCIPAL
+    // branch (blanket access) was taken, not a 404.
+    expect(participantRepo.sync).toHaveBeenCalled();
+  });
+
+  it('a Principal with no active staff row is rejected as an actor-integrity failure (403)', async () => {
+    const { service } = buildService({ staff: null });
+    await expect(
+      service.getConversation(PRINCIPAL_ACTOR, 'conv-1'),
+    ).rejects.toMatchObject({ status: 403 });
+  });
+});
+
+describe('MessagingService - Principal to Faculty (STAFF_DIRECT)', () => {
+  it('Principal can start a direct conversation with an active faculty member', async () => {
+    const staffDirect = makeStaffDirectConversation();
+    const { service, conversationRepo, principalRepo, auditService } =
+      buildService({
+        staff: {
+          id: 'staff-principal',
+          personId: 'principal-1',
+          status: 'ACTIVE',
+        },
+        staffDirectConversation: staffDirect,
+      });
+
+    const result = await service.startStaffDirectConversation(
+      PRINCIPAL_ACTOR,
+      'faculty-1',
+    );
+
+    expect(principalRepo.isActiveFaculty).toHaveBeenCalledWith('faculty-1');
+    expect(conversationRepo.findOrCreateStaffDirect).toHaveBeenCalledWith(
+      'principal-1',
+      'faculty-1',
+    );
+    expect(result.conversationType).toBe('STAFF_DIRECT');
+    expect(auditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'STAFF_DIRECT_CONVERSATION_STARTED',
+        outcome: 'SUCCESS',
+      }),
+    );
+  });
+
+  it('rejects starting a conversation with a person who is not an active faculty member, with a DENIED audit', async () => {
+    const { service, conversationRepo, auditService } = buildService({
+      staff: {
+        id: 'staff-principal',
+        personId: 'principal-1',
+        status: 'ACTIVE',
+      },
+      targetIsActiveFaculty: false,
+    });
+
+    await expect(
+      service.startStaffDirectConversation(PRINCIPAL_ACTOR, 'not-faculty-1'),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(conversationRepo.findOrCreateStaffDirect).not.toHaveBeenCalled();
+    expect(auditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'STAFF_DIRECT_CONVERSATION_DENIED',
+        outcome: 'DENIED',
+      }),
+    );
+  });
+
+  it('a non-Principal actor (Faculty) cannot start a STAFF_DIRECT conversation, even with a well-formed target', async () => {
+    const { service, conversationRepo } = buildService();
+    await expect(
+      service.startStaffDirectConversation(FACULTY_ACTOR, 'faculty-2'),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(conversationRepo.findOrCreateStaffDirect).not.toHaveBeenCalled();
+  });
+
+  it('starting the same pair twice resolves to the identical conversation (idempotent find-or-create, never a duplicate thread)', async () => {
+    const staffDirect = makeStaffDirectConversation();
+    const { service, conversationRepo } = buildService({
+      staff: {
+        id: 'staff-principal',
+        personId: 'principal-1',
+        status: 'ACTIVE',
+      },
+      staffDirectConversation: staffDirect,
+    });
+
+    const first = await service.startStaffDirectConversation(
+      PRINCIPAL_ACTOR,
+      'faculty-1',
+    );
+    const second = await service.startStaffDirectConversation(
+      PRINCIPAL_ACTOR,
+      'faculty-1',
+    );
+
+    expect(first.id).toBe(second.id);
+    expect(conversationRepo.findOrCreateStaffDirect).toHaveBeenCalledTimes(2);
+  });
+
+  it('an unrelated Faculty (not one of the two parties) gets 404 on the STAFF_DIRECT conversation - same rule as the STUDENT_CONTEXT 404s', async () => {
+    const staffDirect = makeStaffDirectConversation({
+      personAId: 'faculty-1',
+      personBId: 'principal-1',
+    });
+    const { service } = buildService({ conversation: staffDirect });
+
+    await expect(
+      service.getConversation(
+        { personId: 'faculty-99', roles: ['FACULTY'] },
+        'staff-conv-1',
+      ),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('Faculty (one of the two parties) can open, list, and reply in a Principal-started STAFF_DIRECT conversation', async () => {
+    const staffDirect = makeStaffDirectConversation({
+      personAId: 'faculty-1',
+      personBId: 'principal-1',
+    });
+    const { service, messageRepo } = buildService({
+      conversation: staffDirect,
+      activePrincipalIds: ['principal-1'],
+    });
+
+    const detail = await service.getConversation(FACULTY_ACTOR, 'staff-conv-1');
+    expect(detail.conversationType).toBe('STAFF_DIRECT');
+    expect(detail.directParticipant?.role).toBe('PRINCIPAL');
+
+    const sent = await service.sendMessage(
+      FACULTY_ACTOR,
+      'staff-conv-1',
+      'Certainly, I will review it today.',
+      'idem-key-1',
+    );
+    expect(sent.sender.role).toBe('FACULTY_DIRECT');
+    expect(messageRepo.insert).toHaveBeenCalledWith(
+      'staff-conv-1',
+      'faculty-1',
+      'Certainly, I will review it today.',
+      'idem-key-1',
+      expect.anything(),
+    );
+  });
+
+  it('a Principal own sent message in a STAFF_DIRECT thread is labeled PRINCIPAL, never FACULTY_DIRECT', async () => {
+    const staffDirect = makeStaffDirectConversation({
+      personAId: 'faculty-1',
+      personBId: 'principal-1',
+    });
+    const { service } = buildService({
+      conversation: staffDirect,
+      activePrincipalIds: ['principal-1'],
+    });
+
+    const sent = await service.sendMessage(
+      PRINCIPAL_ACTOR,
+      'staff-conv-1',
+      'Please review the examination schedule by Friday.',
+      'idem-key-2',
+    );
+    expect(sent.sender.role).toBe('PRINCIPAL');
+  });
+
+  it('duplicate Idempotency-Key on a STAFF_DIRECT send returns the original message, never a duplicate insert', async () => {
+    const staffDirect = makeStaffDirectConversation({
+      personAId: 'faculty-1',
+      personBId: 'principal-1',
+    });
+    const existing = {
+      id: '999',
+      conversationId: 'staff-conv-1',
+      senderPersonId: 'principal-1',
+      messageText: 'Please review the examination schedule by Friday.',
+      createdAt: new Date('2026-09-05T09:00:00Z'),
+    };
+    const { service, messageRepo } = buildService({
+      conversation: staffDirect,
+      activePrincipalIds: ['principal-1'],
+    });
+    messageRepo.findByIdempotencyKey.mockResolvedValue(existing);
+
+    const result = await service.sendMessage(
+      PRINCIPAL_ACTOR,
+      'staff-conv-1',
+      'Please review the examination schedule by Friday.',
+      'idem-key-2',
+    );
+
+    expect(result.id).toBe('999');
+    expect(messageRepo.insert).not.toHaveBeenCalled();
+  });
+
+  it('markRead on a STAFF_DIRECT conversation records the correct resolved role for whoever is reading', async () => {
+    const staffDirect = makeStaffDirectConversation({
+      personAId: 'faculty-1',
+      personBId: 'principal-1',
+    });
+    const { service, participantRepo } = buildService({
+      conversation: staffDirect,
+      activePrincipalIds: ['principal-1'],
+    });
+
+    await service.markRead(FACULTY_ACTOR, 'staff-conv-1');
+    expect(participantRepo.markRead).toHaveBeenCalledWith(
+      'staff-conv-1',
+      'faculty-1',
+      'FACULTY_DIRECT',
+      expect.any(Date),
+    );
+
+    await service.markRead(PRINCIPAL_ACTOR, 'staff-conv-1');
+    expect(participantRepo.markRead).toHaveBeenCalledWith(
+      'staff-conv-1',
+      'principal-1',
+      'PRINCIPAL',
+      expect.any(Date),
+    );
+  });
+
+  it('translation works identically on a STAFF_DIRECT conversation - no conversation-type branching in the translate path', async () => {
+    const staffDirect = makeStaffDirectConversation({
+      personAId: 'faculty-1',
+      personBId: 'principal-1',
+    });
+    const { service, messageRepo, translationService } = buildService({
+      conversation: staffDirect,
+    });
+    messageRepo.findById.mockResolvedValue({
+      id: '101',
+      conversationId: 'staff-conv-1',
+      senderPersonId: 'principal-1',
+      messageText: 'Please review the examination schedule by Friday.',
+      createdAt: new Date('2026-09-05T08:00:00Z'),
+    });
+
+    const result = await service.translateMessage(
+      FACULTY_ACTOR,
+      'staff-conv-1',
+      '101',
+      'ta',
+    );
+    expect(translationService.translate).toHaveBeenCalledWith(
+      '101',
+      'Please review the examination schedule by Friday.',
+      'ta',
+    );
+    expect(result.translatedText).toBeTruthy();
+  });
+});
+
+describe('MessagingService - Faculty to Principal (STAFF_DIRECT)', () => {
+  it('Faculty can start a direct conversation with the (server-resolved) active Principal', async () => {
+    const staffDirect = makeStaffDirectConversation();
+    const { service, conversationRepo, principalRepo, auditService } =
+      buildService({
+        staffDirectConversation: staffDirect,
+      });
+
+    const result = await service.startPrincipalConversation(FACULTY_ACTOR);
+
+    expect(principalRepo.findActivePrincipalPersonId).toHaveBeenCalled();
+    expect(conversationRepo.findOrCreateStaffDirect).toHaveBeenCalledWith(
+      'faculty-1',
+      'principal-1',
+    );
+    expect(result.conversationType).toBe('STAFF_DIRECT');
+    expect(auditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'STAFF_DIRECT_CONVERSATION_STARTED',
+        outcome: 'SUCCESS',
+      }),
+    );
+  });
+
+  it('a non-Faculty actor (Parent) cannot start a conversation with the Principal', async () => {
+    const { service, conversationRepo } = buildService();
+    await expect(
+      service.startPrincipalConversation(PARENT_ACTOR),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(conversationRepo.findOrCreateStaffDirect).not.toHaveBeenCalled();
+  });
+
+  it('404s when no Principal is currently assigned, rather than starting a conversation with nobody', async () => {
+    const { service, conversationRepo } = buildService({
+      activePrincipalPersonId: null,
+    });
+    await expect(
+      service.startPrincipalConversation(FACULTY_ACTOR),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(conversationRepo.findOrCreateStaffDirect).not.toHaveBeenCalled();
+  });
+
+  it('starting it twice resolves to the identical conversation (idempotent find-or-create, never a duplicate thread)', async () => {
+    const staffDirect = makeStaffDirectConversation();
+    const { service, conversationRepo } = buildService({
+      staffDirectConversation: staffDirect,
+    });
+
+    const first = await service.startPrincipalConversation(FACULTY_ACTOR);
+    const second = await service.startPrincipalConversation(FACULTY_ACTOR);
+
+    expect(first.id).toBe(second.id);
+    expect(conversationRepo.findOrCreateStaffDirect).toHaveBeenCalledTimes(2);
+  });
+
+  it('a Principal-initiated thread and this Faculty-initiated one to the same pair are the same conversation (order-independent find-or-create)', async () => {
+    const staffDirect = makeStaffDirectConversation();
+    const { service } = buildService({
+      staff: {
+        id: 'staff-principal',
+        personId: 'principal-1',
+        status: 'ACTIVE',
+      },
+      staffDirectConversation: staffDirect,
+    });
+
+    const fromFaculty = await service.startPrincipalConversation(FACULTY_ACTOR);
+    const fromPrincipal = await service.startStaffDirectConversation(
+      PRINCIPAL_ACTOR,
+      'faculty-1',
+    );
+
+    expect(fromFaculty.id).toBe(fromPrincipal.id);
+  });
+});
+
+describe('MessagingService - Principal to Student (STUDENT_CONTEXT)', () => {
+  it('starts a conversation with every currently ACTIVE guardian at once (fan-out, never silently picking one)', async () => {
+    const { service, conversationRepo, participantRepo, auditService } =
+      buildService({
+        staff: {
+          id: 'staff-principal',
+          personId: 'principal-1',
+          status: 'ACTIVE',
+        },
+        activeStudentContext: {
+          studentId: 'student-1',
+          studentFirstName: 'Naveen',
+          studentLastName: 'Rangaswamy',
+          academicYearId: 'year-1',
+          sectionId: 'section-1',
+          guardians: [
+            {
+              personId: 'mother-1',
+              firstName: 'Poornima',
+              lastName: 'R',
+              displayName: null,
+            },
+            {
+              personId: 'father-1',
+              firstName: 'Rajesh',
+              lastName: 'R',
+              displayName: null,
+            },
+          ],
+        },
+      });
+    conversationRepo.findOrCreate.mockImplementation(
+      async (studentId: string, parentPersonId: string) =>
+        makeConversation({ id: `conv-${parentPersonId}`, parentPersonId }),
+    );
+
+    const result = await service.startStudentConversations(
+      PRINCIPAL_ACTOR,
+      'student-1',
+    );
+
+    expect(conversationRepo.findOrCreate).toHaveBeenCalledTimes(2);
+    expect(conversationRepo.findOrCreate).toHaveBeenCalledWith(
+      'student-1',
+      'mother-1',
+      'year-1',
+      'section-1',
+    );
+    expect(conversationRepo.findOrCreate).toHaveBeenCalledWith(
+      'student-1',
+      'father-1',
+      'year-1',
+      'section-1',
+    );
+    expect(result).toHaveLength(2);
+    // Principal's engagement is made durable via a real PRINCIPAL participant
+    // row on EACH resulting conversation, not just the first.
+    expect(participantRepo.sync).toHaveBeenCalledWith('conv-mother-1', [
+      { personId: 'principal-1', role: 'PRINCIPAL' },
+    ]);
+    expect(participantRepo.sync).toHaveBeenCalledWith('conv-father-1', [
+      { personId: 'principal-1', role: 'PRINCIPAL' },
+    ]);
+    expect(auditService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'STUDENT_CONTEXT_CONVERSATION_STARTED',
+        outcome: 'SUCCESS',
+        afterData: { guardianCount: 2 },
+      }),
+    );
+  });
+
+  it('a student with no current active enrolment is rejected as not found', async () => {
+    const { service, conversationRepo } = buildService({
+      staff: {
+        id: 'staff-principal',
+        personId: 'principal-1',
+        status: 'ACTIVE',
+      },
+      activeStudentContext: null,
+    });
+    await expect(
+      service.startStudentConversations(PRINCIPAL_ACTOR, 'ghost-student'),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(conversationRepo.findOrCreate).not.toHaveBeenCalled();
+  });
+
+  it('a student with zero ACTIVE guardians is rejected - never silently creates a conversation with nobody on the other end', async () => {
+    const { service, conversationRepo } = buildService({
+      staff: {
+        id: 'staff-principal',
+        personId: 'principal-1',
+        status: 'ACTIVE',
+      },
+      activeStudentContext: {
+        studentId: 'student-2',
+        studentFirstName: 'Orphaned',
+        studentLastName: 'Record',
+        academicYearId: 'year-1',
+        sectionId: 'section-1',
+        guardians: [],
+      },
+    });
+    await expect(
+      service.startStudentConversations(PRINCIPAL_ACTOR, 'student-2'),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(conversationRepo.findOrCreate).not.toHaveBeenCalled();
+  });
+
+  it('a non-Principal actor (Faculty) cannot start a student-context conversation through this Principal-only flow', async () => {
+    const { service, conversationRepo } = buildService();
+    await expect(
+      service.startStudentConversations(FACULTY_ACTOR, 'student-1'),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(conversationRepo.findOrCreate).not.toHaveBeenCalled();
+  });
+
+  it("a guardian who receives a Principal-started conversation sees it exactly like any other - no special-casing on the parent's own list/detail/send path", async () => {
+    const conversation = makeConversation({
+      id: 'conv-mother-1',
+      parentPersonId: 'mother-1',
+    });
+    const { service } = buildService({ conversation });
+    const detail = await service.getConversation(
+      { personId: 'mother-1', roles: ['PARENT'] },
+      'conv-mother-1',
+    );
+    expect(detail.conversationType).toBe('STUDENT_CONTEXT');
+    expect(detail.student?.name).toBe('Aarav Kumar');
+  });
+
+  it('a Principal own message in a STUDENT_CONTEXT conversation is labeled PRINCIPAL and shows up in the participants list once engaged', async () => {
+    const conversation = makeConversation({ parentPersonId: 'mother-1' });
+    const { service, participantRepo } = buildService({
+      conversation,
+      staff: {
+        id: 'staff-principal',
+        personId: 'principal-1',
+        status: 'ACTIVE',
+      },
+      principalsByConversation: new Map([
+        [
+          'conv-1',
+          [
+            {
+              personId: 'principal-1',
+              firstName: 'Rajesh',
+              lastName: 'Thangavel',
+              displayName: null,
+            },
+          ],
+        ],
+      ]),
+    });
+
+    const sent = await service.sendMessage(
+      PRINCIPAL_ACTOR,
+      'conv-1',
+      'Please ensure the fee balance is cleared by month end.',
+      'idem-key-3',
+    );
+    expect(sent.sender.role).toBe('PRINCIPAL');
+    // sendMessage defensively re-syncs the PRINCIPAL participant row on every
+    // send, not just the first (idempotent upsert, never a duplicate row).
+    expect(participantRepo.sync).toHaveBeenCalledWith('conv-1', [
+      { personId: 'principal-1', role: 'PRINCIPAL' },
+    ]);
+
+    // From the GUARDIAN's own viewpoint (not the Principal's own -- a viewer
+    // never sees themselves in their own participants list, confirmed by the
+    // existing "excludes the viewer themselves" test above), the Principal now
+    // correctly shows up as a participant, having engaged with this thread.
+    const detail = await service.getConversation(
+      { personId: 'mother-1', roles: ['PARENT'] },
+      'conv-1',
+    );
+    expect(
+      detail.participants.some(
+        (p) => p.personId === 'principal-1' && p.role === 'PRINCIPAL',
+      ),
+    ).toBe(true);
+  });
+});
+
+describe('MessagingService - security: sender identity cannot be spoofed (STAFF_DIRECT)', () => {
+  it('sendMessage takes only free text - there is no parameter through which a caller can supply a senderPersonId', () => {
+    // Compile-time guarantee, mirrored here as a runtime check on the method's
+    // declared arity: (actor, conversationId, rawMessage, idempotencyKey) - 4
+    // params, identical arity for either conversation type, never a 5th
+    // "sender"/"from" field.
+    expect(MessagingService.prototype.sendMessage.length).toBe(4);
   });
 });

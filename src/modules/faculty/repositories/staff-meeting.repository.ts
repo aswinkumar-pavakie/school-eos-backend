@@ -7,7 +7,10 @@
 // just "the slot's own creator decides" -- a plain ownership check.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface MeetingSlotRow {
   id: string;
@@ -63,7 +66,9 @@ function mapBooking(row: any): MeetingBookingRow {
     gradeName: row.grade_name,
     sectionName: row.section_name,
     requestedBy: row.requested_by,
-    parentName: [row.parent_first_name, row.parent_last_name].filter(Boolean).join(' '),
+    parentName: [row.parent_first_name, row.parent_last_name]
+      .filter(Boolean)
+      .join(' '),
     parentPhone: row.parent_phone,
     notes: row.notes,
     state: row.state,
@@ -82,7 +87,10 @@ export class StaffMeetingRepository {
    * boundary isActiveGuardian's own caller (createBooking) already checks
    * per-slot, resolved here as a real join instead of a loop so the Parent
    * app's own "choose a slot" screen can list them all in one query. */
-  async findOpenSlotsForStudent(studentId: string, executor: Queryable = this.postgres): Promise<(MeetingSlotRow & { facultyName: string })[]> {
+  async findOpenSlotsForStudent(
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<(MeetingSlotRow & { facultyName: string })[]> {
     const { rows } = await executor.query(
       `SELECT sms.id, sms.staff_id, sms.meeting_date, sms.from_time, sms.to_time, sms.created_at,
               (p.first_name || COALESCE(' ' || p.last_name, '')) AS faculty_name
@@ -116,7 +124,10 @@ export class StaffMeetingRepository {
     }));
   }
 
-  async findSlotsForStaff(staffId: string, executor: Queryable = this.postgres): Promise<MeetingSlotRow[]> {
+  async findSlotsForStaff(
+    staffId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<MeetingSlotRow[]> {
     const { rows } = await executor.query(
       `SELECT id, staff_id, meeting_date, from_time, to_time, created_at
        FROM staff_meeting_slot WHERE staff_id = $1 ORDER BY meeting_date, from_time`,
@@ -132,18 +143,33 @@ export class StaffMeetingRepository {
     }));
   }
 
-  async findSlotById(id: string, executor: Queryable = this.postgres): Promise<MeetingSlotRow | null> {
+  async findSlotById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<MeetingSlotRow | null> {
     const { rows } = await executor.query(
       `SELECT id, staff_id, meeting_date, from_time, to_time, created_at FROM staff_meeting_slot WHERE id = $1`,
       [id],
     );
     if (!rows.length) return null;
     const r = rows[0];
-    return { id: r.id, staffId: r.staff_id, meetingDate: r.meeting_date, fromTime: r.from_time, toTime: r.to_time, createdAt: r.created_at };
+    return {
+      id: r.id,
+      staffId: r.staff_id,
+      meetingDate: r.meeting_date,
+      fromTime: r.from_time,
+      toTime: r.to_time,
+      createdAt: r.created_at,
+    };
   }
 
   async createSlot(
-    input: { staffId: string; meetingDate: string; fromTime: string; toTime: string },
+    input: {
+      staffId: string;
+      meetingDate: string;
+      fromTime: string;
+      toTime: string;
+    },
     executor: Queryable = this.postgres,
   ): Promise<string> {
     const { rows } = await executor.query(
@@ -164,33 +190,55 @@ export class StaffMeetingRepository {
       params.push(val);
       sets.push(`${col} = $${params.length}`);
     };
-    if (input.meetingDate !== undefined) push('meeting_date', input.meetingDate);
+    if (input.meetingDate !== undefined)
+      push('meeting_date', input.meetingDate);
     if (input.fromTime !== undefined) push('from_time', input.fromTime);
     if (input.toTime !== undefined) push('to_time', input.toTime);
     if (sets.length === 0) return;
     params.push(id);
-    await executor.query(`UPDATE staff_meeting_slot SET ${sets.join(', ')}, updated_at = now() WHERE id = $${params.length}`, params);
+    await executor.query(
+      `UPDATE staff_meeting_slot SET ${sets.join(', ')}, updated_at = now() WHERE id = $${params.length}`,
+      params,
+    );
   }
 
   /** Cascades to staff_meeting_booking automatically (ON DELETE CASCADE). */
-  async deleteSlot(id: string, executor: Queryable = this.postgres): Promise<void> {
+  async deleteSlot(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
     await executor.query(`DELETE FROM staff_meeting_slot WHERE id = $1`, [id]);
   }
 
-  async findBookingsForSlots(slotIds: string[], executor: Queryable = this.postgres): Promise<MeetingBookingRow[]> {
+  async findBookingsForSlots(
+    slotIds: string[],
+    executor: Queryable = this.postgres,
+  ): Promise<MeetingBookingRow[]> {
     if (slotIds.length === 0) return [];
-    const { rows } = await executor.query(`SELECT ${BOOKING_COLUMNS} ${BOOKING_FROM} WHERE b.slot_id = ANY($1) ORDER BY b.created_at DESC`, [
-      slotIds,
-    ]);
+    const { rows } = await executor.query(
+      `SELECT ${BOOKING_COLUMNS} ${BOOKING_FROM} WHERE b.slot_id = ANY($1) ORDER BY b.created_at DESC`,
+      [slotIds],
+    );
     return rows.map(mapBooking);
   }
 
-  async findBookingById(id: string, executor: Queryable = this.postgres): Promise<MeetingBookingRow | null> {
-    const { rows } = await executor.query(`SELECT ${BOOKING_COLUMNS} ${BOOKING_FROM} WHERE b.id = $1`, [id]);
+  async findBookingById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<MeetingBookingRow | null> {
+    const { rows } = await executor.query(
+      `SELECT ${BOOKING_COLUMNS} ${BOOKING_FROM} WHERE b.id = $1`,
+      [id],
+    );
     return rows.length ? mapBooking(rows[0]) : null;
   }
 
-  async setBookingDecision(id: string, state: 'APPROVED' | 'REJECTED', decidedBy: string, executor: Queryable = this.postgres): Promise<void> {
+  async setBookingDecision(
+    id: string,
+    state: 'APPROVED' | 'REJECTED',
+    decidedBy: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
     await executor.query(
       `UPDATE staff_meeting_booking SET state = $2, decided_by = $3, decided_at = now(), updated_at = now() WHERE id = $1`,
       [id, state, decidedBy],
@@ -200,16 +248,25 @@ export class StaffMeetingRepository {
   /** Minimal creation path (see file header note) -- real ACTIVE guardian
    * only, and only for a student this exact faculty actually teaches or
    * advises (the slot's own scope boundary, enforced here not just assumed). */
-  async isActiveGuardian(personId: string, studentId: string, executor: Queryable = this.postgres): Promise<boolean> {
-    const { rows } = await executor.query(`SELECT 1 FROM guardian_link WHERE person_id = $1 AND student_id = $2 AND status = 'ACTIVE'`, [
-      personId,
-      studentId,
-    ]);
+  async isActiveGuardian(
+    personId: string,
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<boolean> {
+    const { rows } = await executor.query(
+      `SELECT 1 FROM guardian_link WHERE person_id = $1 AND student_id = $2 AND status = 'ACTIVE'`,
+      [personId, studentId],
+    );
     return rows.length > 0;
   }
 
   async createBooking(
-    input: { slotId: string; studentId: string; requestedBy: string; notes: string | null },
+    input: {
+      slotId: string;
+      studentId: string;
+      requestedBy: string;
+      notes: string | null;
+    },
     executor: Queryable = this.postgres,
   ): Promise<string> {
     const { rows } = await executor.query(

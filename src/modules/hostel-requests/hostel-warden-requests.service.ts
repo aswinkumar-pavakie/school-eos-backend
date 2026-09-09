@@ -3,11 +3,18 @@
 // of (hostel.warden_staff_id), resolved fresh on every call from the
 // student's own current hostel_allocation, never trusted from the client.
 
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CallRequestRepository } from './repositories/call-request.repository';
 import { HostelScopeRepository } from './repositories/hostel-scope.repository';
-import { OutingRequestRepository, type OutingRequestType } from './repositories/outing-request.repository';
+import {
+  OutingRequestRepository,
+  type OutingRequestType,
+} from './repositories/outing-request.repository';
 
 @Injectable()
 export class HostelWardenRequestsService {
@@ -24,10 +31,16 @@ export class HostelWardenRequestsService {
     return this.scopeRepo.getWardenHostelIds(staffId);
   }
 
-  private async assertOwnsStudent(hostelIds: string[], studentId: string): Promise<void> {
-    const allocation = await this.scopeRepo.getActiveHostelForStudent(studentId);
+  private async assertOwnsStudent(
+    hostelIds: string[],
+    studentId: string,
+  ): Promise<void> {
+    const allocation =
+      await this.scopeRepo.getActiveHostelForStudent(studentId);
     if (!allocation || !hostelIds.includes(allocation.hostelId)) {
-      throw new ForbiddenException('This student is not in a hostel you warden.');
+      throw new ForbiddenException(
+        'This student is not in a hostel you warden.',
+      );
     }
   }
 
@@ -38,7 +51,11 @@ export class HostelWardenRequestsService {
     return this.outingRepo.findForWardenHostels(hostelIds, requestType);
   }
 
-  async getOuting(personId: string, requestType: OutingRequestType, id: string) {
+  async getOuting(
+    personId: string,
+    requestType: OutingRequestType,
+    id: string,
+  ) {
     const hostelIds = await this.requireWardenHostelIds(personId);
     const request = await this.outingRepo.findById(id, requestType);
     if (!request) throw new NotFoundException('Request not found.');
@@ -46,7 +63,13 @@ export class HostelWardenRequestsService {
     return request;
   }
 
-  async decideOuting(personId: string, requestType: OutingRequestType, id: string, state: 'APPROVED' | 'REJECTED', note: string | null) {
+  async decideOuting(
+    personId: string,
+    requestType: OutingRequestType,
+    id: string,
+    state: 'APPROVED' | 'REJECTED',
+    note: string | null,
+  ) {
     const request = await this.getOuting(personId, requestType, id);
     if (request.state !== 'REQUESTED') {
       throw new ForbiddenException('This request has already been decided.');
@@ -56,7 +79,10 @@ export class HostelWardenRequestsService {
     await this.audit.record({
       actorPersonId: personId,
       actorRoleCode: 'HOSTEL_WARDEN',
-      action: state === 'APPROVED' ? 'OUTING_REQUEST_APPROVED' : 'OUTING_REQUEST_REJECTED',
+      action:
+        state === 'APPROVED'
+          ? 'OUTING_REQUEST_APPROVED'
+          : 'OUTING_REQUEST_REJECTED',
       objectType: 'outing_request',
       objectId: id,
       outcome: 'SUCCESS',
@@ -77,22 +103,40 @@ export class HostelWardenRequestsService {
     const request = await this.callRepo.findById(id);
     if (!request) throw new NotFoundException('Request not found.');
     if (!hostelIds.includes(request.hostelId)) {
-      throw new ForbiddenException('This student is not in a hostel you warden.');
+      throw new ForbiddenException(
+        'This student is not in a hostel you warden.',
+      );
     }
     return request;
   }
 
-  async decideCall(personId: string, id: string, input: { status: 'APPROVED' | 'REJECTED'; approvedFrom?: string; approvedTo?: string }) {
+  async decideCall(
+    personId: string,
+    id: string,
+    input: {
+      status: 'APPROVED' | 'REJECTED';
+      approvedFrom?: string;
+      approvedTo?: string;
+    },
+  ) {
     const request = await this.getCall(personId, id);
     if (request.status !== 'PENDING') {
       throw new ForbiddenException('This request has already been decided.');
     }
-    await this.callRepo.decide(id, { status: input.status, decidedBy: personId, approvedFrom: input.approvedFrom, approvedTo: input.approvedTo });
+    await this.callRepo.decide(id, {
+      status: input.status,
+      decidedBy: personId,
+      approvedFrom: input.approvedFrom,
+      approvedTo: input.approvedTo,
+    });
     const updated = await this.callRepo.findById(id);
     await this.audit.record({
       actorPersonId: personId,
       actorRoleCode: 'HOSTEL_WARDEN',
-      action: input.status === 'APPROVED' ? 'CALL_REQUEST_APPROVED' : 'CALL_REQUEST_REJECTED',
+      action:
+        input.status === 'APPROVED'
+          ? 'CALL_REQUEST_APPROVED'
+          : 'CALL_REQUEST_REJECTED',
       objectType: 'call_request',
       objectId: id,
       outcome: 'SUCCESS',

@@ -6,11 +6,23 @@
 // approved, PurchaseRequestsService auto-creates the linked purchase_order, and
 // Finance tracks its physical fulfillment through the stage/allot endpoints below.
 
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CurrentActor } from '../../../common/auth/current-actor.decorator';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
 import { Roles } from '../../../common/auth/roles.decorator';
-import { AllotOrderDto, UpdateOrderStageDto } from './dto/update-order-stage.dto';
+import {
+  AllotOrderDto,
+  UpdateOrderStageDto,
+} from './dto/update-order-stage.dto';
 import { CreatePurchaseRequestDto } from './dto/create-purchase-request.dto';
 import {
   ListPurchaseOrdersQueryDto,
@@ -27,16 +39,29 @@ export class PurchaseRequestsController {
   @Post()
   @Roles('PRINCIPAL')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreatePurchaseRequestDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreatePurchaseRequestDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const data = await this.service.create(dto, actor);
     return { data };
   }
 
   @Get()
-  async list(@Query() query: ListPurchaseRequestsQueryDto, @CurrentActor() actor: AuthenticatedUser) {
+  async list(
+    @Query() query: ListPurchaseRequestsQueryDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const { page, pageSize, ...filter } = query;
-    const { rows, total } = await this.service.list(filter, { page, pageSize }, actor);
-    return { data: rows, meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 } };
+    const { rows, total } = await this.service.list(
+      filter,
+      { page, pageSize },
+      actor,
+    );
+    return {
+      data: rows,
+      meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 },
+    };
   }
 
   // Registered before ":id" — Nest matches routes in declaration order, and "summary"
@@ -62,8 +87,14 @@ export class PurchaseOrdersController {
   @Get()
   async list(@Query() query: ListPurchaseOrdersQueryDto) {
     const { page, pageSize, ...filter } = query;
-    const { rows, total } = await this.service.listOrders(filter, { page, pageSize });
-    return { data: rows, meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 } };
+    const { rows, total } = await this.service.listOrders(filter, {
+      page,
+      pageSize,
+    });
+    return {
+      data: rows,
+      meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 },
+    };
   }
 
   @Get('summary')

@@ -1,4 +1,11 @@
-import { IsArray, IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsArray,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateMediaTeamMemberDto {
   @IsOptional()

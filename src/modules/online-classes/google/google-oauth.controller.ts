@@ -17,7 +17,9 @@ export class GoogleOAuthController {
   @Roles('FACULTY')
   @Get('connect')
   async connect(@CurrentActor() actor: AuthenticatedUser) {
-    const authUrl = await this.googleOAuthService.buildConsentUrl(actor.personId);
+    const authUrl = await this.googleOAuthService.buildConsentUrl(
+      actor.personId,
+    );
     return { data: { authUrl } };
   }
 
@@ -31,7 +33,11 @@ export class GoogleOAuthController {
     if (!state) {
       throw new BadRequestException('Missing state parameter');
     }
-    const result = await this.googleOAuthService.handleCallback(code, state, error);
+    const result = await this.googleOAuthService.handleCallback(
+      code,
+      state,
+      error,
+    );
     return { data: result };
   }
 }

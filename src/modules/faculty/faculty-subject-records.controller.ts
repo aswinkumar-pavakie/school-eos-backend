@@ -10,7 +10,12 @@ export class FacultySubjectRecordsController {
   constructor(private readonly service: FacultySubjectRecordsService) {}
 
   @Get()
-  async get(@Query('subjectOfferingId', ParseUUIDPipe) subjectOfferingId: string, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.service.getRecords(actor.personId, subjectOfferingId) };
+  async get(
+    @Query('subjectOfferingId', ParseUUIDPipe) subjectOfferingId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.getRecords(actor.personId, subjectOfferingId),
+    };
   }
 }

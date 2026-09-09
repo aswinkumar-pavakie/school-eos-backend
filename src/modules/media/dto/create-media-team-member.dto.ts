@@ -1,4 +1,11 @@
-import { IsArray, IsEmail, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import {
+  IsArray,
+  IsEmail,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 
 export class CreateMediaTeamMemberDto {
   @IsString()

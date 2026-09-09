@@ -23,9 +23,18 @@ export const DOCUMENT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
 export const documentMulterOptions = {
   storage: memoryStorage(),
   limits: { fileSize: DOCUMENT_MAX_SIZE_BYTES },
-  fileFilter: (_req: unknown, file: Express.Multer.File, cb: (error: Error | null, accept: boolean) => void) => {
+  fileFilter: (
+    _req: unknown,
+    file: Express.Multer.File,
+    cb: (error: Error | null, accept: boolean) => void,
+  ) => {
     if (!ALLOWED_MIME_TO_EXT[file.mimetype]) {
-      cb(new BadRequestException('File must be a JPEG, PNG, WEBP image, or PDF.'), false);
+      cb(
+        new BadRequestException(
+          'File must be a JPEG, PNG, WEBP image, or PDF.',
+        ),
+        false,
+      );
       return;
     }
     cb(null, true);
@@ -33,6 +42,7 @@ export const documentMulterOptions = {
 };
 
 export function documentObjectKeyFor(file: Express.Multer.File): string {
-  const ext = ALLOWED_MIME_TO_EXT[file.mimetype] ?? extname(file.originalname) ?? '';
+  const ext =
+    ALLOWED_MIME_TO_EXT[file.mimetype] ?? extname(file.originalname) ?? '';
   return `documents/${randomUUID()}${ext}`;
 }

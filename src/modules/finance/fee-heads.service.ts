@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CreateFeeHeadDto } from './dto/create-fee-head.dto';
 import { UpdateFeeHeadDto } from './dto/update-fee-head.dto';
@@ -35,7 +39,10 @@ export class FeeHeadsService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A fee head with this code already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A fee head with this code already exists.',
+        );
       throw err;
     }
   }

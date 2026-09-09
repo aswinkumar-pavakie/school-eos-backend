@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { MemberQueryDto } from './dto/member-query.dto';
@@ -66,8 +70,12 @@ export class MembersService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('This person is already a library member.');
-      if (isForeignKeyViolation(err)) throw new NotFoundException('personId does not refer to an existing person.');
+      if (isUniqueViolation(err))
+        throw new ConflictException('This person is already a library member.');
+      if (isForeignKeyViolation(err))
+        throw new NotFoundException(
+          'personId does not refer to an existing person.',
+        );
       throw err;
     }
   }
@@ -91,8 +99,13 @@ export class MembersService {
   async suspend(id: string, dto: SuspendMemberDto, actorPersonId: string) {
     const existing = await this.memberRepo.findById(id);
     if (!existing) throw new NotFoundException('Member not found');
-    if (existing.status === 'SUSPENDED') throw new ConflictException('This member is already suspended.');
-    const updated = (await this.memberRepo.setStatus(id, 'SUSPENDED', dto.reason))!;
+    if (existing.status === 'SUSPENDED')
+      throw new ConflictException('This member is already suspended.');
+    const updated = (await this.memberRepo.setStatus(
+      id,
+      'SUSPENDED',
+      dto.reason,
+    ))!;
     await this.auditService.record({
       actorPersonId,
       action: 'LIBRARY_MEMBER_SUSPENDED',
@@ -108,7 +121,8 @@ export class MembersService {
   async reactivate(id: string, actorPersonId: string) {
     const existing = await this.memberRepo.findById(id);
     if (!existing) throw new NotFoundException('Member not found');
-    if (existing.status === 'ACTIVE') throw new ConflictException('This member is already active.');
+    if (existing.status === 'ACTIVE')
+      throw new ConflictException('This member is already active.');
     const updated = (await this.memberRepo.setStatus(id, 'ACTIVE', null))!;
     await this.auditService.record({
       actorPersonId,

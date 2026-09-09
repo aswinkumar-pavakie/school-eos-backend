@@ -8,7 +8,11 @@
 // (payslip access, once granted, stays granted for every subsequent real
 // payslip Finance later processes).
 
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { ApprovalsService } from '../approvals/approvals.service';
@@ -33,7 +37,10 @@ export class FacultyPayslipService {
   ) {}
 
   private async hasApprovedAccess(staffId: string): Promise<boolean> {
-    const requests = await this.hrRequestRepo.findByStaffAndCategory(staffId, CATEGORY);
+    const requests = await this.hrRequestRepo.findByStaffAndCategory(
+      staffId,
+      CATEGORY,
+    );
     return requests.some((r) => r.state === 'APPROVED');
   }
 
@@ -43,20 +50,38 @@ export class FacultyPayslipService {
   async getRequestStatus(personId: string) {
     const staffId = await this.scopeRepo.getStaffId(personId);
     if (!staffId) return { requests: [], hasAccess: false };
-    const requests = await this.hrRequestRepo.findByStaffAndCategory(staffId, CATEGORY);
-    const withTrail = await Promise.all(
-      requests.map(async (r) => ({ ...r, approvalTrail: await getApprovalTrail(this.stepRepo, r.approvalRequestId) })),
+    const requests = await this.hrRequestRepo.findByStaffAndCategory(
+      staffId,
+      CATEGORY,
     );
-    return { requests: withTrail, hasAccess: requests.some((r) => r.state === 'APPROVED') };
+    const withTrail = await Promise.all(
+      requests.map(async (r) => ({
+        ...r,
+        approvalTrail: await getApprovalTrail(
+          this.stepRepo,
+          r.approvalRequestId,
+        ),
+      })),
+    );
+    return {
+      requests: withTrail,
+      hasAccess: requests.some((r) => r.state === 'APPROVED'),
+    };
   }
 
   async requestAccess(personId: string, note?: string) {
     const staffId = await this.scopeRepo.getStaffId(personId);
-    if (!staffId) throw new ForbiddenException('No active staff record for this account.');
+    if (!staffId)
+      throw new ForbiddenException('No active staff record for this account.');
 
-    const existing = await this.hrRequestRepo.findByStaffAndCategory(staffId, CATEGORY);
+    const existing = await this.hrRequestRepo.findByStaffAndCategory(
+      staffId,
+      CATEGORY,
+    );
     if (existing.some((r) => r.state === 'PENDING')) {
-      throw new ForbiddenException('You already have a pending payslip access request.');
+      throw new ForbiddenException(
+        'You already have a pending payslip access request.',
+      );
     }
 
     return this.unitOfWork.run(async (client) => {
@@ -81,7 +106,11 @@ export class FacultyPayslipService {
         },
         client,
       );
-      await this.hrRequestRepo.linkApprovalRequest(request.id, approvalRequest.id, client);
+      await this.hrRequestRepo.linkApprovalRequest(
+        request.id,
+        approvalRequest.id,
+        client,
+      );
       await this.audit.record(
         {
           actorPersonId: personId,
@@ -106,7 +135,8 @@ export class FacultyPayslipService {
 
   async get(personId: string, id: string) {
     const staffId = await this.scopeRepo.getStaffId(personId);
-    if (!staffId || !(await this.hasApprovedAccess(staffId))) throw new NotFoundException('Payslip not found');
+    if (!staffId || !(await this.hasApprovedAccess(staffId)))
+      throw new NotFoundException('Payslip not found');
     const payslip = await this.payslipRepo.findOneForStaff(staffId, id);
     if (!payslip) throw new NotFoundException('Payslip not found');
     return payslip;

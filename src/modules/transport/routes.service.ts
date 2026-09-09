@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { RouteRepository } from './repositories/route.repository';
 import { RouteStopRepository } from './repositories/route-stop.repository';
@@ -41,7 +45,10 @@ export class RoutesService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A route with this name or code already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A route with this name or code already exists.',
+        );
       throw err;
     }
   }
@@ -62,7 +69,10 @@ export class RoutesService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A route with this name or code already exists.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A route with this name or code already exists.',
+        );
       throw err;
     }
   }
@@ -77,7 +87,11 @@ export class RoutesService {
     return this.studentTransportAllocationRepo.findAssignedForRoute(routeId);
   }
 
-  async createStop(routeId: string, dto: CreateRouteStopDto, actorPersonId: string) {
+  async createStop(
+    routeId: string,
+    dto: CreateRouteStopDto,
+    actorPersonId: string,
+  ) {
     await this.get(routeId);
     try {
       const created = await this.routeStopRepo.create(routeId, dto);
@@ -91,12 +105,19 @@ export class RoutesService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A stop with this sequence number already exists on this route.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A stop with this sequence number already exists on this route.',
+        );
       throw err;
     }
   }
 
-  async updateStop(stopId: string, dto: UpdateRouteStopDto, actorPersonId: string) {
+  async updateStop(
+    stopId: string,
+    dto: UpdateRouteStopDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.routeStopRepo.findById(stopId);
     if (!existing) throw new NotFoundException('Route stop not found');
     try {
@@ -113,7 +134,10 @@ export class RoutesService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A stop with this sequence number already exists on this route.');
+      if (isUniqueViolation(err))
+        throw new ConflictException(
+          'A stop with this sequence number already exists on this route.',
+        );
       throw err;
     }
   }

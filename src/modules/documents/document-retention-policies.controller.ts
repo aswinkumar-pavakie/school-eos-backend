@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -9,7 +18,9 @@ import { DocumentRetentionPoliciesService } from './document-retention-policies.
 @Roles('ADMIN')
 @Controller('document-retention-policies')
 export class DocumentRetentionPoliciesController {
-  constructor(private readonly retentionPoliciesService: DocumentRetentionPoliciesService) {}
+  constructor(
+    private readonly retentionPoliciesService: DocumentRetentionPoliciesService,
+  ) {}
 
   @Get()
   async list() {
@@ -27,7 +38,9 @@ export class DocumentRetentionPoliciesController {
     @Body() dto: CreateDocumentRetentionPolicyDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.retentionPoliciesService.create(dto, actor.personId) };
+    return {
+      data: await this.retentionPoliciesService.create(dto, actor.personId),
+    };
   }
 
   @Patch(':category')
@@ -36,6 +49,12 @@ export class DocumentRetentionPoliciesController {
     @Body() dto: UpdateDocumentRetentionPolicyDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.retentionPoliciesService.update(category, dto, actor.personId) };
+    return {
+      data: await this.retentionPoliciesService.update(
+        category,
+        dto,
+        actor.personId,
+      ),
+    };
   }
 }

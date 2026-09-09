@@ -4,7 +4,12 @@
 // the Parent/Student app's own job (explicitly out of scope here, same as
 // Leave's own creation path) -- this module only tracks and reports on it.
 
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { StorageService } from '../../infrastructure/storage/storage.service';
@@ -33,29 +38,45 @@ export class FacultyHomeworkService {
   private async assertOwnsHomework(personId: string, homeworkId: string) {
     const homework = await this.homeworkRepo.findById(homeworkId);
     if (!homework) throw new NotFoundException('Homework not found');
-    const owns = await this.scopeRepo.ownsOffering(personId, homework.subjectOfferingId);
+    const owns = await this.scopeRepo.ownsOffering(
+      personId,
+      homework.subjectOfferingId,
+    );
     if (!owns) throw new ForbiddenException('You do not teach this class.');
     return homework;
   }
 
   async list(personId: string) {
     const offerings = await this.scopeRepo.getTeachingOfferings(personId);
-    const items = await this.homeworkRepo.findForOfferings(offerings.map((o) => o.subjectOfferingId));
+    const items = await this.homeworkRepo.findForOfferings(
+      offerings.map((o) => o.subjectOfferingId),
+    );
 
     const today = todayIso();
-    const open = items.filter((h) => h.status === 'PUBLISHED' && h.dueDate >= today);
+    const open = items.filter(
+      (h) => h.status === 'PUBLISHED' && h.dueDate >= today,
+    );
     const dueToday = open.filter((h) => h.dueDate === today);
-    const ungraded = open.reduce((sum, h) => sum + (h.finishedCount - h.gradedCount), 0);
+    const ungraded = open.reduce(
+      (sum, h) => sum + (h.finishedCount - h.gradedCount),
+      0,
+    );
 
     return {
       items,
       stats: { open: open.length, dueToday: dueToday.length, ungraded },
-      classes: offerings.map((o) => ({ subjectOfferingId: o.subjectOfferingId, label: `${o.gradeName}-${o.sectionName} · ${o.subjectName}` })),
+      classes: offerings.map((o) => ({
+        subjectOfferingId: o.subjectOfferingId,
+        label: `${o.gradeName}-${o.sectionName} · ${o.subjectName}`,
+      })),
     };
   }
 
   async create(personId: string, dto: CreateHomeworkDto) {
-    const owns = await this.scopeRepo.ownsOffering(personId, dto.subjectOfferingId);
+    const owns = await this.scopeRepo.ownsOffering(
+      personId,
+      dto.subjectOfferingId,
+    );
     if (!owns) throw new ForbiddenException('You do not teach this class.');
     if (dto.dueDate < todayIso()) {
       throw new BadRequestException('Due date cannot be in the past.');
@@ -93,7 +114,9 @@ export class FacultyHomeworkService {
   async update(personId: string, id: string, dto: UpdateHomeworkDto) {
     const existing = await this.assertOwnsHomework(personId, id);
     if (dto.dueDate && dto.dueDate < existing.assignedOn) {
-      throw new BadRequestException('Due date cannot be before the assigned date.');
+      throw new BadRequestException(
+        'Due date cannot be before the assigned date.',
+      );
     }
     await this.homeworkRepo.update(id, dto);
     const updated = await this.homeworkRepo.findById(id);
@@ -129,7 +152,9 @@ export class FacultyHomeworkService {
     const roster = await this.homeworkRepo.findRoster(id);
     const filtered =
       tab === 'DONE'
-        ? roster.filter((r) => ['SUBMITTED', 'LATE', 'GRADED'].includes(r.status))
+        ? roster.filter((r) =>
+            ['SUBMITTED', 'LATE', 'GRADED'].includes(r.status),
+          )
         : tab === 'NOT_DONE'
           ? roster.filter((r) => ['PENDING', 'NOT_DONE'].includes(r.status))
           : roster;
@@ -139,12 +164,24 @@ export class FacultyHomeworkService {
   /** Lets the teacher who owns this homework open a signed URL for exactly
    * one file a student (via their parent) submitted -- verifies the
    * requested key genuinely belongs to that student's own submission first. */
-  async getSubmissionFileUrl(personId: string, homeworkId: string, studentId: string, objectKey: string): Promise<string> {
+  async getSubmissionFileUrl(
+    personId: string,
+    homeworkId: string,
+    studentId: string,
+    objectKey: string,
+  ): Promise<string> {
     await this.assertOwnsHomework(personId, homeworkId);
-    const objectKeys = await this.homeworkRepo.findSubmissionObjectKeys(homeworkId, studentId);
+    const objectKeys = await this.homeworkRepo.findSubmissionObjectKeys(
+      homeworkId,
+      studentId,
+    );
     if (!objectKeys?.includes(objectKey)) {
       throw new NotFoundException('File not found on this submission.');
     }
-    return this.storage.createSignedUrl(HOMEWORK_SUBMISSIONS_BUCKET, objectKey, SUBMISSION_FILE_URL_TTL_SECONDS);
+    return this.storage.createSignedUrl(
+      HOMEWORK_SUBMISSIONS_BUCKET,
+      objectKey,
+      SUBMISSION_FILE_URL_TTL_SECONDS,
+    );
   }
 }

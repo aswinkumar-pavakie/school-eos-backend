@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface HostelBlockRow {
   id: string;
@@ -21,7 +24,10 @@ const COLUMNS = `id, hostel_id AS "hostelId", name`;
 export class HostelBlockRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findByHostelId(hostelId: string, executor: Queryable = this.postgres): Promise<HostelBlockRow[]> {
+  async findByHostelId(
+    hostelId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<HostelBlockRow[]> {
     const { rows } = await executor.query<HostelBlockRow>(
       `SELECT ${COLUMNS} FROM hostel_block WHERE hostel_id = $1 ORDER BY name`,
       [hostelId],
@@ -29,7 +35,10 @@ export class HostelBlockRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<HostelBlockRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<HostelBlockRow | null> {
     const { rows } = await executor.query<HostelBlockRow>(
       `SELECT ${COLUMNS} FROM hostel_block WHERE id = $1`,
       [id],

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface FeeStructureLineRow {
   id: string;
@@ -44,7 +47,10 @@ export class FeeStructureLineRepository {
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<FeeStructureLineRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<FeeStructureLineRow | null> {
     const { rows } = await executor.query<FeeStructureLineRow>(
       `SELECT ${COLUMNS} FROM fee_structure_line WHERE id = $1`,
       [id],
@@ -86,13 +92,21 @@ export class FeeStructureLineRepository {
          late_fee_paise = COALESCE($4, late_fee_paise)
        WHERE id = $1
        RETURNING ${COLUMNS}`,
-      [id, input.amountPaise ?? null, input.dueDate ?? null, input.lateFeePaise ?? null],
+      [
+        id,
+        input.amountPaise ?? null,
+        input.dueDate ?? null,
+        input.lateFeePaise ?? null,
+      ],
     );
     return rows[0] ?? null;
   }
 
   async delete(id: string, executor: Queryable): Promise<boolean> {
-    const { rowCount } = await executor.query(`DELETE FROM fee_structure_line WHERE id = $1`, [id]);
+    const { rowCount } = await executor.query(
+      `DELETE FROM fee_structure_line WHERE id = $1`,
+      [id],
+    );
     return (rowCount ?? 0) > 0;
   }
 }

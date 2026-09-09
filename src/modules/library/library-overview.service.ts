@@ -28,7 +28,12 @@ export interface LibraryOverview {
   readyReservationsCount: number;
   pendingFinesAmountPaise: string;
   sentToFinanceFinesAmountPaise: string;
-  recentActivity: { id: string; action: string; detail: string | null; occurredAt: Date }[];
+  recentActivity: {
+    id: string;
+    action: string;
+    detail: string | null;
+    occurredAt: Date;
+  }[];
 }
 
 @Injectable()
@@ -39,21 +44,30 @@ export class LibraryOverviewService {
   ) {}
 
   async get(): Promise<LibraryOverview> {
-    const [booksResult, copiesResult, membersResult, reservationsResult, pendingFines, sentToFinanceFines, activityResult] =
-      await Promise.all([
-        this.postgres.query<{ count: string }>(`SELECT count(*) FROM library_book WHERE status = 'ACTIVE'`),
-        this.postgres.query<{
-          total: string;
-          available: string;
-          issued: string;
-          reserved: string;
-          overdue: string;
-          lost: string;
-          damaged: string;
-          underRepair: string;
-          retired: string;
-        }>(
-          `SELECT count(*) AS total,
+    const [
+      booksResult,
+      copiesResult,
+      membersResult,
+      reservationsResult,
+      pendingFines,
+      sentToFinanceFines,
+      activityResult,
+    ] = await Promise.all([
+      this.postgres.query<{ count: string }>(
+        `SELECT count(*) FROM library_book WHERE status = 'ACTIVE'`,
+      ),
+      this.postgres.query<{
+        total: string;
+        available: string;
+        issued: string;
+        reserved: string;
+        overdue: string;
+        lost: string;
+        damaged: string;
+        underRepair: string;
+        retired: string;
+      }>(
+        `SELECT count(*) AS total,
                   count(*) FILTER (WHERE status = 'AVAILABLE') AS available,
                   count(*) FILTER (WHERE status = 'ISSUED') AS issued,
                   count(*) FILTER (WHERE status = 'RESERVED') AS reserved,
@@ -63,31 +77,33 @@ export class LibraryOverviewService {
                   count(*) FILTER (WHERE status = 'RETIRED') AS retired,
                   (SELECT count(*) FROM library_issue WHERE status IN ('ISSUED', 'OVERDUE') AND due_date < current_date) AS overdue
            FROM library_book_copy`,
-        ),
-        this.postgres.query<{ count: string }>(`SELECT count(*) FROM library_member WHERE status = 'ACTIVE'`),
-        this.postgres.query<{ pending: string; ready: string }>(
-          `SELECT count(*) FILTER (WHERE status = 'PENDING') AS pending,
+      ),
+      this.postgres.query<{ count: string }>(
+        `SELECT count(*) FROM library_member WHERE status = 'ACTIVE'`,
+      ),
+      this.postgres.query<{ pending: string; ready: string }>(
+        `SELECT count(*) FILTER (WHERE status = 'PENDING') AS pending,
                   count(*) FILTER (WHERE status = 'READY') AS ready
            FROM library_reservation`,
-        ),
-        this.fineRepo.sumPendingAmount(),
-        this.fineRepo.sumSentToFinanceAmount(),
-        this.postgres.query<{
-          id: string;
-          action: string;
-          object_type: string;
-          occurred_at: Date;
-          after_data: unknown;
-          before_data: unknown;
-        }>(
-          `SELECT ae.id, ae.action, ae.object_type, ae.occurred_at, ae.after_data, ae.before_data
+      ),
+      this.fineRepo.sumPendingAmount(),
+      this.fineRepo.sumSentToFinanceAmount(),
+      this.postgres.query<{
+        id: string;
+        action: string;
+        object_type: string;
+        occurred_at: Date;
+        after_data: unknown;
+        before_data: unknown;
+      }>(
+        `SELECT ae.id, ae.action, ae.object_type, ae.occurred_at, ae.after_data, ae.before_data
            FROM audit_event ae
            WHERE ae.object_type = ANY($1)
            ORDER BY ae.occurred_at DESC
            LIMIT 8`,
-          [LIBRARY_OBJECT_TYPES],
-        ),
-      ]);
+        [LIBRARY_OBJECT_TYPES],
+      ),
+    ]);
 
     const copies = copiesResult.rows[0];
 
@@ -103,7 +119,10 @@ export class LibraryOverviewService {
       underRepairCopies: parseInt(copies.underRepair, 10),
       retiredCopies: parseInt(copies.retired, 10),
       activeMembers: parseInt(membersResult.rows[0].count, 10),
-      pendingReservationsCount: parseInt(reservationsResult.rows[0].pending, 10),
+      pendingReservationsCount: parseInt(
+        reservationsResult.rows[0].pending,
+        10,
+      ),
       readyReservationsCount: parseInt(reservationsResult.rows[0].ready, 10),
       pendingFinesAmountPaise: pendingFines,
       sentToFinanceFinesAmountPaise: sentToFinanceFines,
@@ -120,7 +139,10 @@ export class LibraryOverviewService {
 /** Same generic best-effort description approach as the Admin dashboard's own
  * describeActivity -- covers this module's own action shapes without hardcoding
  * every action type. */
-export function describeActivity(afterData: unknown, beforeData: unknown): string | null {
+export function describeActivity(
+  afterData: unknown,
+  beforeData: unknown,
+): string | null {
   const data = (afterData ?? beforeData) as Record<string, unknown> | null;
   if (!data || typeof data !== 'object') return null;
   if (typeof data.title === 'string') return data.title;

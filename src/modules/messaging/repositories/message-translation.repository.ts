@@ -1,7 +1,10 @@
 // Pure cache: keyed by (message_id, target_language). Never touches message.message_text.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface MessageTranslationView {
   messageId: string;
@@ -52,7 +55,13 @@ export class MessageTranslationRepository {
        ON CONFLICT (message_id, target_language)
        DO UPDATE SET translated_text = EXCLUDED.translated_text, source_language = EXCLUDED.source_language,
                      provider = EXCLUDED.provider`,
-      [view.messageId, view.targetLanguage, view.sourceLanguage, view.translatedText, view.provider],
+      [
+        view.messageId,
+        view.targetLanguage,
+        view.sourceLanguage,
+        view.translatedText,
+        view.provider,
+      ],
     );
   }
 }

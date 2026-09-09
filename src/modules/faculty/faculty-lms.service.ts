@@ -10,7 +10,12 @@
 // subject_offering/staff tables, never trusts a client-supplied staffId or
 // an unvalidated share list.
 
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { StorageService } from '../../infrastructure/storage/storage.service';
 import { CreateLmsFolderDto } from './dto/create-lms-folder.dto';
@@ -44,31 +49,61 @@ export class FacultyLmsService {
 
   async listSubjects(personId: string) {
     const offerings = await this.scopeRepo.getTeachingOfferings(personId);
-    const bySubject = new Map<string, { subjectId: string; subjectName: string; classes: { subjectOfferingId: string; gradeName: string; sectionName: string }[] }>();
+    const bySubject = new Map<
+      string,
+      {
+        subjectId: string;
+        subjectName: string;
+        classes: {
+          subjectOfferingId: string;
+          gradeName: string;
+          sectionName: string;
+        }[];
+      }
+    >();
     for (const o of offerings) {
       let entry = bySubject.get(o.subjectId);
       if (!entry) {
-        entry = { subjectId: o.subjectId, subjectName: o.subjectName, classes: [] };
+        entry = {
+          subjectId: o.subjectId,
+          subjectName: o.subjectName,
+          classes: [],
+        };
         bySubject.set(o.subjectId, entry);
       }
-      entry.classes.push({ subjectOfferingId: o.subjectOfferingId, gradeName: o.gradeName, sectionName: o.sectionName });
+      entry.classes.push({
+        subjectOfferingId: o.subjectOfferingId,
+        gradeName: o.gradeName,
+        sectionName: o.sectionName,
+      });
     }
     return [...bySubject.values()];
   }
 
-  private async assertTeachesSubject(personId: string, subjectId: string): Promise<{ staffId: string; offeringIds: string[] }> {
+  private async assertTeachesSubject(
+    personId: string,
+    subjectId: string,
+  ): Promise<{ staffId: string; offeringIds: string[] }> {
     const staffId = await this.scopeRepo.getStaffId(personId);
-    if (!staffId) throw new ForbiddenException('No active staff record for this account.');
+    if (!staffId)
+      throw new ForbiddenException('No active staff record for this account.');
     const offerings = await this.scopeRepo.getTeachingOfferings(personId);
     const matching = offerings.filter((o) => o.subjectId === subjectId);
-    if (matching.length === 0) throw new ForbiddenException('You do not teach this subject.');
+    if (matching.length === 0)
+      throw new ForbiddenException('You do not teach this subject.');
     return { staffId, offeringIds: matching.map((o) => o.subjectOfferingId) };
   }
 
-  private validateShareIds(shareIds: string[] | undefined, validOfferingIds: string[]): string[] {
+  private validateShareIds(
+    shareIds: string[] | undefined,
+    validOfferingIds: string[],
+  ): string[] {
     if (!shareIds) return [];
     const invalid = shareIds.filter((id) => !validOfferingIds.includes(id));
-    if (invalid.length > 0) throw new BadRequestException('One or more selected classes are not classes you teach this subject to.');
+    if (invalid.length > 0)
+      throw new BadRequestException(
+        'One or more selected classes are not classes you teach this subject to.',
+      );
     return shareIds;
   }
 
@@ -78,7 +113,10 @@ export class FacultyLmsService {
 
   async listFolders(personId: string, subjectId: string) {
     const { staffId } = await this.assertTeachesSubject(personId, subjectId);
-    const folders = await this.folderRepo.findForStaffSubject(staffId, subjectId);
+    const folders = await this.folderRepo.findForStaffSubject(
+      staffId,
+      subjectId,
+    );
     return Promise.all(
       folders.map(async (f) => ({
         ...f,
@@ -91,7 +129,8 @@ export class FacultyLmsService {
   private async assertOwnsFolder(personId: string, folderId: string) {
     const staffId = await this.scopeRepo.getStaffId(personId);
     const folder = await this.folderRepo.findById(folderId);
-    if (!folder || !staffId || folder.staffId !== staffId) throw new NotFoundException('Folder not found');
+    if (!folder || !staffId || folder.staffId !== staffId)
+      throw new NotFoundException('Folder not found');
     return folder;
   }
 
@@ -105,9 +144,17 @@ export class FacultyLmsService {
   }
 
   async createFolder(personId: string, dto: CreateLmsFolderDto) {
-    const { staffId, offeringIds } = await this.assertTeachesSubject(personId, dto.subjectId);
+    const { staffId, offeringIds } = await this.assertTeachesSubject(
+      personId,
+      dto.subjectId,
+    );
     const shareIds = this.validateShareIds(dto.shareOfferingIds, offeringIds);
-    const id = await this.folderRepo.create({ staffId, subjectId: dto.subjectId, title: dto.title, description: dto.description ?? null });
+    const id = await this.folderRepo.create({
+      staffId,
+      subjectId: dto.subjectId,
+      title: dto.title,
+      description: dto.description ?? null,
+    });
     if (shareIds.length > 0) await this.folderRepo.setShares(id, shareIds);
     await this.audit.record({
       actorPersonId: personId,
@@ -121,12 +168,21 @@ export class FacultyLmsService {
     return this.getFolder(personId, id);
   }
 
-  async updateFolder(personId: string, folderId: string, dto: UpdateLmsFolderDto) {
+  async updateFolder(
+    personId: string,
+    folderId: string,
+    dto: UpdateLmsFolderDto,
+  ) {
     const folder = await this.assertOwnsFolder(personId, folderId);
-    await this.folderRepo.update(folderId, { title: dto.title, description: dto.description });
+    await this.folderRepo.update(folderId, {
+      title: dto.title,
+      description: dto.description,
+    });
     if (dto.shareOfferingIds !== undefined) {
       const offerings = await this.scopeRepo.getTeachingOfferings(personId);
-      const validIds = offerings.filter((o) => o.subjectId === folder.subjectId).map((o) => o.subjectOfferingId);
+      const validIds = offerings
+        .filter((o) => o.subjectId === folder.subjectId)
+        .map((o) => o.subjectOfferingId);
       const shareIds = this.validateShareIds(dto.shareOfferingIds, validIds);
       await this.folderRepo.setShares(folderId, shareIds);
     }
@@ -159,10 +215,19 @@ export class FacultyLmsService {
     });
   }
 
-  async uploadFile(personId: string, folderId: string, file: Express.Multer.File) {
+  async uploadFile(
+    personId: string,
+    folderId: string,
+    file: Express.Multer.File,
+  ) {
     await this.assertOwnsFolder(personId, folderId);
     const objectKey = lmsFileObjectKeyFor(folderId, file);
-    await this.storage.upload(LMS_MATERIALS_BUCKET, objectKey, file.buffer, file.mimetype);
+    await this.storage.upload(
+      LMS_MATERIALS_BUCKET,
+      objectKey,
+      file.buffer,
+      file.mimetype,
+    );
     const id = await this.folderRepo.createFile({
       folderId,
       fileName: file.originalname,
@@ -186,14 +251,20 @@ export class FacultyLmsService {
   async getFileSignedUrl(personId: string, fileId: string): Promise<string> {
     const staffId = await this.scopeRepo.getStaffId(personId);
     const file = await this.folderRepo.findFileById(fileId);
-    if (!file || !staffId || file.staffId !== staffId) throw new NotFoundException('File not found');
-    return this.storage.createSignedUrl(LMS_MATERIALS_BUCKET, file.objectKey, SIGNED_URL_TTL_SECONDS);
+    if (!file || !staffId || file.staffId !== staffId)
+      throw new NotFoundException('File not found');
+    return this.storage.createSignedUrl(
+      LMS_MATERIALS_BUCKET,
+      file.objectKey,
+      SIGNED_URL_TTL_SECONDS,
+    );
   }
 
   async deleteFile(personId: string, fileId: string) {
     const staffId = await this.scopeRepo.getStaffId(personId);
     const file = await this.folderRepo.findFileById(fileId);
-    if (!file || !staffId || file.staffId !== staffId) throw new NotFoundException('File not found');
+    if (!file || !staffId || file.staffId !== staffId)
+      throw new NotFoundException('File not found');
     await this.folderRepo.deleteFile(fileId);
     await this.storage.removeBestEffort(LMS_MATERIALS_BUCKET, file.objectKey);
     await this.audit.record({
@@ -218,7 +289,10 @@ export class FacultyLmsService {
   }
 
   async createTask(personId: string, dto: CreateLmsTaskDto) {
-    const owns = await this.scopeRepo.ownsOffering(personId, dto.subjectOfferingId);
+    const owns = await this.scopeRepo.ownsOffering(
+      personId,
+      dto.subjectOfferingId,
+    );
     if (!owns) throw new ForbiddenException('You do not teach this class.');
     const id = await this.taskRepo.create({
       subjectOfferingId: dto.subjectOfferingId,
@@ -235,7 +309,10 @@ export class FacultyLmsService {
   private async assertOwnsTask(personId: string, taskId: string) {
     const task = await this.taskRepo.findById(taskId);
     if (!task) throw new NotFoundException('Task not found');
-    const owns = await this.scopeRepo.ownsOffering(personId, task.subjectOfferingId);
+    const owns = await this.scopeRepo.ownsOffering(
+      personId,
+      task.subjectOfferingId,
+    );
     if (!owns) throw new ForbiddenException('You do not teach this class.');
     return task;
   }
@@ -262,7 +339,10 @@ export class FacultyLmsService {
   }
 
   async createLessonPlan(personId: string, dto: CreateLmsLessonPlanDto) {
-    const owns = await this.scopeRepo.ownsOffering(personId, dto.subjectOfferingId);
+    const owns = await this.scopeRepo.ownsOffering(
+      personId,
+      dto.subjectOfferingId,
+    );
     if (!owns) throw new ForbiddenException('You do not teach this class.');
     const id = await this.lessonPlanRepo.create({
       subjectOfferingId: dto.subjectOfferingId,
@@ -279,12 +359,19 @@ export class FacultyLmsService {
   private async assertOwnsLessonPlan(personId: string, planId: string) {
     const plan = await this.lessonPlanRepo.findById(planId);
     if (!plan) throw new NotFoundException('Lesson plan not found');
-    const owns = await this.scopeRepo.ownsOffering(personId, plan.subjectOfferingId);
+    const owns = await this.scopeRepo.ownsOffering(
+      personId,
+      plan.subjectOfferingId,
+    );
     if (!owns) throw new ForbiddenException('You do not teach this class.');
     return plan;
   }
 
-  async updateLessonPlan(personId: string, planId: string, dto: UpdateLmsLessonPlanDto) {
+  async updateLessonPlan(
+    personId: string,
+    planId: string,
+    dto: UpdateLmsLessonPlanDto,
+  ) {
     await this.assertOwnsLessonPlan(personId, planId);
     await this.lessonPlanRepo.update(planId, dto);
     return this.lessonPlanRepo.findById(planId);

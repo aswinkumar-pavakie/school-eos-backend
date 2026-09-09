@@ -1,4 +1,12 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -17,7 +25,9 @@ import { StaffAttendanceService } from './staff-attendance.service';
 @Roles('ADMIN', 'PRINCIPAL')
 @Controller('staff-attendance')
 export class StaffAttendanceController {
-  constructor(private readonly staffAttendanceService: StaffAttendanceService) {}
+  constructor(
+    private readonly staffAttendanceService: StaffAttendanceService,
+  ) {}
 
   @Get()
   async getRoster(@Query() query: StaffAttendanceQueryDto) {
@@ -26,7 +36,12 @@ export class StaffAttendanceController {
 
   @Post('mark')
   @HttpCode(HttpStatus.OK)
-  async markBulk(@Body() dto: MarkStaffAttendanceDto, @CurrentActor() actor: AuthenticatedUser) {
-    return { data: await this.staffAttendanceService.markBulk(dto, actor.personId) };
+  async markBulk(
+    @Body() dto: MarkStaffAttendanceDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.staffAttendanceService.markBulk(dto, actor.personId),
+    };
   }
 }

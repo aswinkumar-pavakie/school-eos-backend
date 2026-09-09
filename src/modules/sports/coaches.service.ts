@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { CreateCoachDto } from './dto/create-coach.dto';
 import { UpdateCoachDto } from './dto/update-coach.dto';
@@ -39,10 +43,14 @@ export class CoachesService {
       // a non-external coach before this point, but the DB's own check constraint is
       // the final authority.
       if (isCheckViolation(err)) {
-        throw new BadRequestException('An internal (non-external) coach must have a personId.');
+        throw new BadRequestException(
+          'An internal (non-external) coach must have a personId.',
+        );
       }
       if (isForeignKeyViolation(err)) {
-        throw new BadRequestException('personId does not refer to an existing person.');
+        throw new BadRequestException(
+          'personId does not refer to an existing person.',
+        );
       }
       throw err;
     }

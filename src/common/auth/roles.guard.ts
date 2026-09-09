@@ -24,23 +24,25 @@ export class RolesGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     try {
-      const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
-        context.getHandler(),
-        context.getClass(),
-      ]);
+      const isPublic = this.reflector.getAllAndOverride<boolean>(
+        IS_PUBLIC_KEY,
+        [context.getHandler(), context.getClass()],
+      );
       if (isPublic) {
         return true;
       }
 
-      const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
-        context.getHandler(),
-        context.getClass(),
-      ]);
+      const requiredRoles = this.reflector.getAllAndOverride<string[]>(
+        ROLES_KEY,
+        [context.getHandler(), context.getClass()],
+      );
       if (!requiredRoles || requiredRoles.length === 0) {
         return true;
       }
 
-      const request = context.switchToHttp().getRequest<Request & { user?: AuthenticatedUser }>();
+      const request = context
+        .switchToHttp()
+        .getRequest<Request & { user?: AuthenticatedUser }>();
       const userRoles = request.user?.roles ?? [];
       const allowed = requiredRoles.some((role) => userRoles.includes(role));
       if (!allowed) {

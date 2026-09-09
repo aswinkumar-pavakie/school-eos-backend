@@ -2,7 +2,10 @@
 // same opaque-FK treatment as department.hod_staff_id.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface HouseRow {
   id: string;
@@ -33,21 +36,37 @@ export class HouseRepository {
   constructor(private readonly postgres: PostgresService) {}
 
   async findMany(executor: Queryable = this.postgres): Promise<HouseRow[]> {
-    const { rows } = await executor.query<HouseRow>(`SELECT ${COLUMNS} FROM house ORDER BY name`);
+    const { rows } = await executor.query<HouseRow>(
+      `SELECT ${COLUMNS} FROM house ORDER BY name`,
+    );
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<HouseRow | null> {
-    const { rows } = await executor.query<HouseRow>(`SELECT ${COLUMNS} FROM house WHERE id = $1`, [id]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<HouseRow | null> {
+    const { rows } = await executor.query<HouseRow>(
+      `SELECT ${COLUMNS} FROM house WHERE id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
-  async create(input: CreateHouseInput, executor: Queryable = this.postgres): Promise<HouseRow> {
+  async create(
+    input: CreateHouseInput,
+    executor: Queryable = this.postgres,
+  ): Promise<HouseRow> {
     const { rows } = await executor.query<HouseRow>(
       `INSERT INTO house (name, colour_hex, captain_student_id, status)
        VALUES ($1, $2, $3, COALESCE($4, 'ACTIVE'))
        RETURNING ${COLUMNS}`,
-      [input.name, input.colourHex ?? null, input.captainStudentId ?? null, input.status ?? null],
+      [
+        input.name,
+        input.colourHex ?? null,
+        input.captainStudentId ?? null,
+        input.status ?? null,
+      ],
     );
     return rows[0];
   }

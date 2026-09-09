@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { Queryable } from '../../infrastructure/postgres/postgres.service';
@@ -31,11 +36,28 @@ export class ReservationsService {
       await this.unitOfWork.run(async (client) => {
         // Re-check under lock -- another request may have already resolved
         // this one (fulfilled/cancelled) between the read above and now.
-        const current = await this.reservationRepo.findByIdForUpdate(reservation.id, client);
+        const current = await this.reservationRepo.findByIdForUpdate(
+          reservation.id,
+          client,
+        );
         if (!current || current.status !== 'READY') return;
-        const heldCopy = await this.copyRepo.findOneByBookAndStatus(reservation.bookId, 'RESERVED', client);
-        await this.reservationRepo.setStatus(reservation.id, 'EXPIRED', null, client);
-        if (heldCopy) await this.releaseOrPromoteHold(reservation.bookId, heldCopy.id, client);
+        const heldCopy = await this.copyRepo.findOneByBookAndStatus(
+          reservation.bookId,
+          'RESERVED',
+          client,
+        );
+        await this.reservationRepo.setStatus(
+          reservation.id,
+          'EXPIRED',
+          null,
+          client,
+        );
+        if (heldCopy)
+          await this.releaseOrPromoteHold(
+            reservation.bookId,
+            heldCopy.id,
+            client,
+          );
         await this.auditService.record(
           {
             action: 'LIBRARY_RESERVATION_EXPIRED',
@@ -58,8 +80,15 @@ export class ReservationsService {
    * the copy that was just returned (still ISSUED at call time, about to be
    * decided for the first time); cancel/expire below passes the copy that was
    * already RESERVED and needs reassigning now that its holder fell through. */
-  async releaseOrPromoteHold(bookId: string, copyId: string, client: Queryable): Promise<void> {
-    const next = await this.reservationRepo.findOldestPendingForBook(bookId, client);
+  async releaseOrPromoteHold(
+    bookId: string,
+    copyId: string,
+    client: Queryable,
+  ): Promise<void> {
+    const next = await this.reservationRepo.findOldestPendingForBook(
+      bookId,
+      client,
+    );
     if (next) {
       await this.copyRepo.setStatus(copyId, 'RESERVED', client);
       await this.reservationRepo.markReady(next.id, client);
@@ -86,25 +115,42 @@ export class ReservationsService {
     const member = await this.memberRepo.findById(dto.memberId);
     if (!member) throw new NotFoundException('Member not found');
     if (member.status !== 'ACTIVE') {
-      throw new BadRequestException(`This member is ${member.status.toLowerCase()} -- they can't reserve a book.`);
+      throw new BadRequestException(
+        `This member is ${member.status.toLowerCase()} -- they can't reserve a book.`,
+      );
     }
 
     const book = await this.bookRepo.findById(dto.bookId);
     if (!book) throw new NotFoundException('Book not found');
     if (book.status !== 'ACTIVE') {
-      throw new BadRequestException("This book has been withdrawn from the catalog -- it can't be reserved.");
+      throw new BadRequestException(
+        "This book has been withdrawn from the catalog -- it can't be reserved.",
+      );
     }
 
-    const availableCopies = await this.copyRepo.countAvailableForBook(dto.bookId);
+    const availableCopies = await this.copyRepo.countAvailableForBook(
+      dto.bookId,
+    );
     if (availableCopies > 0) {
-      throw new ConflictException('This book has an available copy -- issue it directly instead of reserving.');
+      throw new ConflictException(
+        'This book has an available copy -- issue it directly instead of reserving.',
+      );
     }
 
-    const existing = await this.reservationRepo.findActiveForMemberAndBook(dto.memberId, dto.bookId);
-    if (existing) throw new ConflictException('This member already has an active reservation on this book.');
+    const existing = await this.reservationRepo.findActiveForMemberAndBook(
+      dto.memberId,
+      dto.bookId,
+    );
+    if (existing)
+      throw new ConflictException(
+        'This member already has an active reservation on this book.',
+      );
 
     try {
-      const created = await this.reservationRepo.create(dto.bookId, dto.memberId);
+      const created = await this.reservationRepo.create(
+        dto.bookId,
+        dto.memberId,
+      );
       await this.auditService.record({
         actorPersonId,
         action: 'LIBRARY_RESERVATION_CREATED',
@@ -115,7 +161,10 @@ export class ReservationsService {
       });
       return created;
     } catch (err) {
-      if (isForeignKeyViolation(err)) throw new NotFoundException('bookId or memberId does not refer to an existing record.');
+      if (isForeignKeyViolation(err))
+        throw new NotFoundException(
+          'bookId or memberId does not refer to an existing record.',
+        );
       throw err;
     }
   }
@@ -125,11 +174,24 @@ export class ReservationsService {
       const existing = await this.reservationRepo.findByIdForUpdate(id, client);
       if (!existing) throw new NotFoundException('Reservation not found');
       if (existing.status !== 'PENDING' && existing.status !== 'READY') {
-        throw new ConflictException('Only a pending or ready reservation can be cancelled.');
+        throw new ConflictException(
+          'Only a pending or ready reservation can be cancelled.',
+        );
       }
       const wasReady = existing.status === 'READY';
-      const heldCopy = wasReady ? await this.copyRepo.findOneByBookAndStatus(existing.bookId, 'RESERVED', client) : null;
-      const updated = (await this.reservationRepo.setStatus(id, 'CANCELLED', null, client))!;
+      const heldCopy = wasReady
+        ? await this.copyRepo.findOneByBookAndStatus(
+            existing.bookId,
+            'RESERVED',
+            client,
+          )
+        : null;
+      const updated = (await this.reservationRepo.setStatus(
+        id,
+        'CANCELLED',
+        null,
+        client,
+      ))!;
       if (heldCopy) {
         await this.releaseOrPromoteHold(existing.bookId, heldCopy.id, client);
       }

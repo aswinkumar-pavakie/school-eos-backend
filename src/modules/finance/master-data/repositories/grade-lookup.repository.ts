@@ -2,7 +2,10 @@
 // needs it to populate a filter dropdown and to know what a fee structure is for.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../../infrastructure/postgres/postgres.service';
 
 export interface GradeRow {
   id: string;
@@ -18,6 +21,10 @@ export class GradeLookupRepository {
     const { rows } = await executor.query(
       `SELECT id, name, level_no FROM grade WHERE status = 'ACTIVE' ORDER BY level_no ASC`,
     );
-    return rows.map((r: any) => ({ id: r.id, name: r.name, levelNo: r.level_no }));
+    return rows.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      levelNo: r.level_no,
+    }));
   }
 }

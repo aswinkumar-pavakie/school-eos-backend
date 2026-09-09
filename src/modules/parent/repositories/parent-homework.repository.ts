@@ -8,7 +8,10 @@
 // and so never got a seeded row.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface ParentHomeworkRow {
   id: string;
@@ -67,7 +70,11 @@ export class ParentHomeworkRepository {
 
   /** Every real, non-draft homework across this student's own current
    * subject_offerings, with that same student's own submission (if any). */
-  async findForStudent(studentId: string, subjectOfferingIds: string[], executor: Queryable = this.postgres): Promise<ParentHomeworkRow[]> {
+  async findForStudent(
+    studentId: string,
+    subjectOfferingIds: string[],
+    executor: Queryable = this.postgres,
+  ): Promise<ParentHomeworkRow[]> {
     if (subjectOfferingIds.length === 0) return [];
     const { rows } = await executor.query(
       `${HOMEWORK_FOR_STUDENT}
@@ -78,7 +85,11 @@ export class ParentHomeworkRepository {
     return rows.map(mapRow);
   }
 
-  async findById(homeworkId: string, studentId: string, executor: Queryable = this.postgres): Promise<ParentHomeworkRow | null> {
+  async findById(
+    homeworkId: string,
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ParentHomeworkRow | null> {
     const { rows } = await executor.query(
       `${HOMEWORK_FOR_STUDENT}
        WHERE h.id = $2`,
@@ -112,7 +123,14 @@ export class ParentHomeworkRepository {
              is_late = EXCLUDED.is_late,
              status = EXCLUDED.status
        WHERE homework_submission.status NOT IN ('GRADED')`,
-      [input.homeworkId, input.studentId, input.newObjectKeys, input.note, input.isLate, input.status],
+      [
+        input.homeworkId,
+        input.studentId,
+        input.newObjectKeys,
+        input.note,
+        input.isLate,
+        input.status,
+      ],
     );
   }
 }

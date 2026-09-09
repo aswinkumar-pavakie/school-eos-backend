@@ -6,7 +6,10 @@
 // aggregate.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface FeedbackSubjectRow {
   subjectOfferingId: string;
@@ -19,7 +22,10 @@ export interface FeedbackSubjectRow {
 export class ParentFeedbackRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findCurrentTermSubjects(studentId: string, executor: Queryable = this.postgres): Promise<FeedbackSubjectRow[]> {
+  async findCurrentTermSubjects(
+    studentId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<FeedbackSubjectRow[]> {
     const { rows } = await executor.query(
       `SELECT so.id AS subject_offering_id, subj.name AS subject_name,
               (p.first_name || COALESCE(' ' || p.last_name, '')) AS teacher_name,
@@ -44,7 +50,12 @@ export class ParentFeedbackRepository {
   }
 
   async upsertRating(
-    input: { subjectOfferingId: string; studentId: string; rating: number; submittedBy: string },
+    input: {
+      subjectOfferingId: string;
+      studentId: string;
+      rating: number;
+      submittedBy: string;
+    },
     executor: Queryable = this.postgres,
   ): Promise<void> {
     await executor.query(
@@ -52,7 +63,12 @@ export class ParentFeedbackRepository {
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (subject_offering_id, student_id) DO UPDATE
          SET rating = EXCLUDED.rating, submitted_by = EXCLUDED.submitted_by`,
-      [input.subjectOfferingId, input.studentId, input.rating, input.submittedBy],
+      [
+        input.subjectOfferingId,
+        input.studentId,
+        input.rating,
+        input.submittedBy,
+      ],
     );
   }
 }

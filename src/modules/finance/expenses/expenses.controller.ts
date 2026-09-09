@@ -2,7 +2,18 @@
 // (POST /approvals/{approvalRequestId}/approve|reject — see ExpensesService.submit),
 // not a Finance-specific endpoint here.
 
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CurrentActor } from '../../../common/auth/current-actor.decorator';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
 import { Roles } from '../../../common/auth/roles.decorator';
@@ -27,13 +38,19 @@ export class ExpensesController {
   async list(@Query() query: ListExpensesQueryDto) {
     const { page, pageSize, ...filter } = query;
     const { rows, total } = await this.service.list(filter, { page, pageSize });
-    return { data: rows, meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 } };
+    return {
+      data: rows,
+      meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 },
+    };
   }
 
   @Post()
   @Roles('FINANCE', 'ADMIN')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateExpenseDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateExpenseDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const data = await this.service.create(dto, actor);
     return { data };
   }
@@ -54,14 +71,20 @@ export class ExpensesController {
   @Delete(':id')
   @Roles('FINANCE', 'ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async delete(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async delete(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     await this.service.delete(id, actor);
   }
 
   @Post(':id/submit')
   @Roles('FINANCE', 'ADMIN')
   @HttpCode(HttpStatus.OK)
-  async submit(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async submit(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const data = await this.service.submit(id, actor);
     return { data };
   }

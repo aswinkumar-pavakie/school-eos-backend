@@ -13,7 +13,9 @@ export class FacultyTimetableService {
     const offerings = await this.scopeRepo.getTeachingOfferings(personId);
     const [periods, slots] = await Promise.all([
       this.timetableRepo.findAllPeriods(),
-      this.timetableRepo.findSlotsForOfferings(offerings.map((o) => o.subjectOfferingId)),
+      this.timetableRepo.findSlotsForOfferings(
+        offerings.map((o) => o.subjectOfferingId),
+      ),
     ]);
 
     const days = [1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({

@@ -7,20 +7,34 @@ interface PgErrorLike {
 }
 
 export function isUniqueViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as PgErrorLike).code === '23505';
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as PgErrorLike).code === '23505'
+  );
 }
 
 /** Which unique/exclusion constraint fired, when `isUniqueViolation`/`isCheckViolation`
  * is true -- lets the caller give a different message for two different constraints
  * on the same table instead of one generic "duplicate" error for both. */
 export function constraintName(err: unknown): string | undefined {
-  return typeof err === 'object' && err !== null ? (err as PgErrorLike).constraint : undefined;
+  return typeof err === 'object' && err !== null
+    ? (err as PgErrorLike).constraint
+    : undefined;
 }
 
 export function isForeignKeyViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as PgErrorLike).code === '23503';
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as PgErrorLike).code === '23503'
+  );
 }
 
 export function isCheckViolation(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as PgErrorLike).code === '23514';
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as PgErrorLike).code === '23514'
+  );
 }

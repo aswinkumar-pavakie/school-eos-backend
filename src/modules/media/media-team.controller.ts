@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -23,13 +32,20 @@ export class MediaTeamController {
   @Post()
   @Roles('MEDIA_ROOM', 'ADMIN')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateMediaTeamMemberDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreateMediaTeamMemberDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.create(dto, actor.personId) };
   }
 
   @Patch(':id')
   @Roles('MEDIA_ROOM', 'ADMIN')
-  async update(@Param('id') id: string, @Body() dto: UpdateMediaTeamMemberDto, @CurrentActor() actor: AuthenticatedUser) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateMediaTeamMemberDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.service.update(id, dto, actor.personId) };
   }
 }

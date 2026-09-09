@@ -18,7 +18,10 @@ export class RazorpayService {
 
   get keyId(): string {
     const keyId = this.configService.get<string>('razorpay.keyId');
-    if (!keyId) throw new ServiceUnavailableException('Online fee payment is not configured yet — contact the school office.');
+    if (!keyId)
+      throw new ServiceUnavailableException(
+        'Online fee payment is not configured yet — contact the school office.',
+      );
     return keyId;
   }
 
@@ -26,19 +29,28 @@ export class RazorpayService {
     const keyId = this.configService.get<string>('razorpay.keyId');
     const keySecret = this.configService.get<string>('razorpay.keySecret');
     if (!keyId || !keySecret) {
-      throw new ServiceUnavailableException('Online fee payment is not configured yet — contact the school office.');
+      throw new ServiceUnavailableException(
+        'Online fee payment is not configured yet — contact the school office.',
+      );
     }
     return 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64');
   }
 
   /** amountPaise maps 1:1 onto Razorpay's `amount` for INR — Razorpay's smallest unit
    * for the rupee IS paise, so no conversion either direction. */
-  async createOrder(input: { amountPaise: string; receipt: string; notes: Record<string, string> }): Promise<RazorpayOrder> {
+  async createOrder(input: {
+    amountPaise: string;
+    receipt: string;
+    notes: Record<string, string>;
+  }): Promise<RazorpayOrder> {
     let res: Response;
     try {
       res = await fetch('https://api.razorpay.com/v1/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: this.authHeader() },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: this.authHeader(),
+        },
         body: JSON.stringify({
           amount: Number(input.amountPaise),
           currency: 'INR',
@@ -48,11 +60,16 @@ export class RazorpayService {
         }),
       });
     } catch {
-      throw new ServiceUnavailableException('Could not reach the payment gateway. Please try again.');
+      throw new ServiceUnavailableException(
+        'Could not reach the payment gateway. Please try again.',
+      );
     }
     const json: any = await res.json().catch(() => null);
     if (!res.ok || !json?.id) {
-      throw new ServiceUnavailableException(json?.error?.description ?? 'Could not start the payment. Please try again.');
+      throw new ServiceUnavailableException(
+        json?.error?.description ??
+          'Could not start the payment. Please try again.',
+      );
     }
     return { id: json.id };
   }

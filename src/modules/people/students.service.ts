@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { PersonRepository } from '../identity/repositories/person.repository';
@@ -55,7 +60,9 @@ export class StudentsService {
    * every other module in this build follows). */
   async create(dto: CreateStudentDto, actorPersonId: string) {
     if (!dto.mobile && !dto.email) {
-      throw new BadRequestException('At least one of mobile or email is required.');
+      throw new BadRequestException(
+        'At least one of mobile or email is required.',
+      );
     }
 
     try {
@@ -116,7 +123,9 @@ export class StudentsService {
       });
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('admission_no or state_student_id is already in use.');
+        throw new ConflictException(
+          'admission_no or state_student_id is already in use.',
+        );
       }
       throw err;
     }
@@ -139,7 +148,9 @@ export class StudentsService {
       return updated;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('admission_no or state_student_id is already in use.');
+        throw new ConflictException(
+          'admission_no or state_student_id is already in use.',
+        );
       }
       throw err;
     }
@@ -150,11 +161,18 @@ export class StudentsService {
   async leave(id: string, dto: StudentLeaveDto, actorPersonId: string) {
     const student = await this.get(id);
     if (student.status !== 'ACTIVE') {
-      throw new BadRequestException('This student record is already in a left/archived state.');
+      throw new BadRequestException(
+        'This student record is already in a left/archived state.',
+      );
     }
-    const dateOfLeaving = dto.dateOfLeaving ?? new Date().toISOString().slice(0, 10);
+    const dateOfLeaving =
+      dto.dateOfLeaving ?? new Date().toISOString().slice(0, 10);
     try {
-      const updated = await this.studentRepo.leave(id, dto.status, dateOfLeaving);
+      const updated = await this.studentRepo.leave(
+        id,
+        dto.status,
+        dateOfLeaving,
+      );
       if (!updated) throw new NotFoundException('Student record not found');
       await this.auditService.record({
         actorPersonId,
@@ -168,7 +186,9 @@ export class StudentsService {
       return updated;
     } catch (err) {
       if (isCheckViolation(err)) {
-        throw new BadRequestException('date_of_leaving must be on or after admission_date.');
+        throw new BadRequestException(
+          'date_of_leaving must be on or after admission_date.',
+        );
       }
       throw err;
     }

@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -27,21 +36,31 @@ export class FinesController {
   @Post(':id/send-to-finance')
   @HttpCode(HttpStatus.OK)
   @Roles('LIBRARY')
-  async sendToFinance(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async sendToFinance(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.finesService.sendToFinance(id, actor.personId) };
   }
 
   @Post(':id/refresh-status')
   @HttpCode(HttpStatus.OK)
   @Roles('LIBRARY')
-  async refreshStatus(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async refreshStatus(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.finesService.refreshStatus(id, actor.personId) };
   }
 
   @Post(':id/waive')
   @HttpCode(HttpStatus.OK)
   @Roles('LIBRARY')
-  async waive(@Param('id') id: string, @Body() dto: WaiveFineDto, @CurrentActor() actor: AuthenticatedUser) {
+  async waive(
+    @Param('id') id: string,
+    @Body() dto: WaiveFineDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.finesService.waive(id, dto, actor.personId) };
   }
 }

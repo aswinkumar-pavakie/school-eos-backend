@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface FeeOverviewCounts {
   totalFeesPaise: string;
@@ -26,7 +29,10 @@ export interface FeeDemandStateCount {
 export class FeeOverviewRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findOverviewCounts(academicYearId: string | undefined, executor: Queryable = this.postgres): Promise<FeeOverviewCounts> {
+  async findOverviewCounts(
+    academicYearId: string | undefined,
+    executor: Queryable = this.postgres,
+  ): Promise<FeeOverviewCounts> {
     const params: unknown[] = [];
     let yearJoin = '';
     let yearWhere = '';
@@ -74,7 +80,9 @@ export class FeeOverviewRepository {
   /** One row per real fee_demand.state -- for Admin Reports' collection-status
    * donut. A plain GROUP BY, same table/authority as findOverviewCounts above,
    * just a count breakdown instead of an amount summary. */
-  async findStateCounts(executor: Queryable = this.postgres): Promise<FeeDemandStateCount[]> {
+  async findStateCounts(
+    executor: Queryable = this.postgres,
+  ): Promise<FeeDemandStateCount[]> {
     const { rows } = await executor.query<{ state: string; count: string }>(
       `SELECT state, count(*) AS count FROM fee_demand GROUP BY state`,
     );

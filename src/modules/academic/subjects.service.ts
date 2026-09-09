@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { SubjectRepository } from './repositories/subject.repository';
 import { CreateSubjectDto } from './dto/create-subject.dto';
@@ -35,8 +39,10 @@ export class SubjectsService {
       });
       return created;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A subject with this code already exists.');
-      if (isForeignKeyViolation(err)) throw new ConflictException('departmentId does not exist.');
+      if (isUniqueViolation(err))
+        throw new ConflictException('A subject with this code already exists.');
+      if (isForeignKeyViolation(err))
+        throw new ConflictException('departmentId does not exist.');
       throw err;
     }
   }
@@ -57,8 +63,10 @@ export class SubjectsService {
       });
       return updated;
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('A subject with this code already exists.');
-      if (isForeignKeyViolation(err)) throw new ConflictException('departmentId does not exist.');
+      if (isUniqueViolation(err))
+        throw new ConflictException('A subject with this code already exists.');
+      if (isForeignKeyViolation(err))
+        throw new ConflictException('departmentId does not exist.');
       throw err;
     }
   }

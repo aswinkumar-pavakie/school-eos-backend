@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 import { personPhotoPublicUrlSql } from '../../../infrastructure/storage/public-photo-url.util';
 
 export interface StudentRow {
@@ -80,7 +83,8 @@ export interface UpdateStudentInput {
 // bootstrap runs, well after this module's top level would have already
 // evaluated. Calling it inside each query-building method (i.e. at request
 // time) instead keeps it correct.
-const columns = () => `s.id, s.person_id AS "personId", p.first_name AS "firstName", p.last_name AS "lastName",
+const columns =
+  () => `s.id, s.person_id AS "personId", p.first_name AS "firstName", p.last_name AS "lastName",
   s.admission_no AS "admissionNo", s.state_student_id AS "stateStudentId", s.admission_date AS "admissionDate",
   s.medium_id AS "mediumId", s.mother_tongue AS "motherTongue",
   s.language_subject_choice AS "languageSubjectChoice", s.community_category AS "communityCategory",
@@ -153,7 +157,8 @@ export class StudentRepository {
       params.push(filter.sectionName);
       conditions.push(`sec.name = $${params.length}`);
     }
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where =
+      conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const fromClause = `FROM student s JOIN person p ON p.id = s.person_id ${CURRENT_ENROLMENT_JOIN}`;
 
     const countResult = await this.postgres.query<{ count: string }>(
@@ -170,7 +175,10 @@ export class StudentRepository {
     return { rows, total: parseInt(countResult.rows[0].count, 10) };
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<StudentRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StudentRow | null> {
     const { rows } = await executor.query<StudentRow>(
       `SELECT ${columns()} FROM student s JOIN person p ON p.id = s.person_id ${CURRENT_ENROLMENT_JOIN} WHERE s.id = $1`,
       [id],
@@ -178,7 +186,10 @@ export class StudentRepository {
     return rows[0] ?? null;
   }
 
-  async findByPersonId(personId: string, executor: Queryable = this.postgres): Promise<StudentRow | null> {
+  async findByPersonId(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StudentRow | null> {
     const { rows } = await executor.query<StudentRow>(
       `SELECT ${columns()} FROM student s JOIN person p ON p.id = s.person_id ${CURRENT_ENROLMENT_JOIN} WHERE s.person_id = $1`,
       [personId],
@@ -188,7 +199,10 @@ export class StudentRepository {
 
   /** Just the person.gender behind a student -- for modules (Hostel) that need this
    * one fact for a validation rule but have no other reason to depend on Students. */
-  async findGenderById(id: string, executor: Queryable = this.postgres): Promise<string | null> {
+  async findGenderById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string | null> {
     const { rows } = await executor.query<{ gender: string | null }>(
       `SELECT p.gender FROM student s JOIN person p ON p.id = s.person_id WHERE s.id = $1`,
       [id],
@@ -196,7 +210,10 @@ export class StudentRepository {
     return rows[0]?.gender ?? null;
   }
 
-  async create(input: CreateStudentInput, executor: Queryable = this.postgres): Promise<StudentRow> {
+  async create(
+    input: CreateStudentInput,
+    executor: Queryable = this.postgres,
+  ): Promise<StudentRow> {
     const { rows } = await executor.query<{ id: string }>(
       `INSERT INTO student (person_id, admission_no, state_student_id, admission_date, medium_id,
          mother_tongue, language_subject_choice, community_category, is_first_gen_learner,

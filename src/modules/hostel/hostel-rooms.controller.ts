@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -28,7 +37,9 @@ export class HostelRoomsController {
     @Body() dto: CreateHostelBedDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.hostelRoomsService.createBed(id, dto, actor.personId) };
+    return {
+      data: await this.hostelRoomsService.createBed(id, dto, actor.personId),
+    };
   }
 
   @Patch('hostel-beds/:bedId')
@@ -38,6 +49,8 @@ export class HostelRoomsController {
     @Body() dto: UpdateHostelBedDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.hostelRoomsService.updateBed(bedId, dto, actor.personId) };
+    return {
+      data: await this.hostelRoomsService.updateBed(bedId, dto, actor.personId),
+    };
   }
 }

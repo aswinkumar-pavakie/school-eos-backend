@@ -1,7 +1,10 @@
 // shoot_assignment + its crew/gear join tables -- see database/migrations/0006_media_room.sql.
 
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface CrewMemberSummary {
   id: string;
@@ -81,7 +84,10 @@ export class ShootAssignmentRepository {
     return rows.map((r: any) => ({ ...mapRow(r), crew: r.crew, gear: r.gear }));
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<ShootAssignmentRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ShootAssignmentRow | null> {
     const { rows } = await executor.query(
       `SELECT sa.*, ${CREW_SUBQUERY}, ${GEAR_SUBQUERY} FROM shoot_assignment sa WHERE sa.id = $1`,
       [id],
@@ -107,7 +113,14 @@ export class ShootAssignmentRepository {
       `INSERT INTO shoot_assignment (event_title, venue, scheduled_at, output_type, notes, created_by)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id`,
-      [input.eventTitle, input.venue ?? null, input.scheduledAt, input.outputType, input.notes ?? null, input.createdBy],
+      [
+        input.eventTitle,
+        input.venue ?? null,
+        input.scheduledAt,
+        input.outputType,
+        input.notes ?? null,
+        input.createdBy,
+      ],
     );
     const id = rows[0].id as string;
     for (const memberId of input.crewIds) {
@@ -149,10 +162,21 @@ export class ShootAssignmentRepository {
          notes = COALESCE($7, notes),
          updated_at = now()
        WHERE id = $1`,
-      [id, input.eventTitle ?? null, input.venue ?? null, input.scheduledAt ?? null, input.outputType ?? null, input.status ?? null, input.notes ?? null],
+      [
+        id,
+        input.eventTitle ?? null,
+        input.venue ?? null,
+        input.scheduledAt ?? null,
+        input.outputType ?? null,
+        input.status ?? null,
+        input.notes ?? null,
+      ],
     );
     if (input.crewIds) {
-      await executor.query(`DELETE FROM shoot_assignment_crew WHERE shoot_assignment_id = $1`, [id]);
+      await executor.query(
+        `DELETE FROM shoot_assignment_crew WHERE shoot_assignment_id = $1`,
+        [id],
+      );
       for (const memberId of input.crewIds) {
         await executor.query(
           `INSERT INTO shoot_assignment_crew (shoot_assignment_id, media_team_member_id) VALUES ($1, $2)`,
@@ -161,7 +185,10 @@ export class ShootAssignmentRepository {
       }
     }
     if (input.gearIds) {
-      await executor.query(`DELETE FROM shoot_assignment_gear WHERE shoot_assignment_id = $1`, [id]);
+      await executor.query(
+        `DELETE FROM shoot_assignment_gear WHERE shoot_assignment_id = $1`,
+        [id],
+      );
       for (const itemId of input.gearIds) {
         await executor.query(
           `INSERT INTO shoot_assignment_gear (shoot_assignment_id, inventory_item_id) VALUES ($1, $2)`,

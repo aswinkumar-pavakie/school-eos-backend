@@ -1,4 +1,12 @@
-import { IsDateString, IsEmail, IsIn, IsOptional, IsString, Matches, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  Matches,
+  MinLength,
+} from 'class-validator';
 
 // Basic profile fields only. Omitted fields keep their existing value (COALESCE
 // semantics in the repository) -- there is no way to explicitly clear mobile/email

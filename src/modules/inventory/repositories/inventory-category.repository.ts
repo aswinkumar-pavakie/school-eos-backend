@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface InventoryCategoryRow {
   id: string;
@@ -25,14 +28,19 @@ const COLUMNS = `id, name, status, created_at AS "createdAt", updated_at AS "upd
 export class InventoryCategoryRepository {
   constructor(private readonly postgres: PostgresService) {}
 
-  async findMany(executor: Queryable = this.postgres): Promise<InventoryCategoryRow[]> {
+  async findMany(
+    executor: Queryable = this.postgres,
+  ): Promise<InventoryCategoryRow[]> {
     const { rows } = await executor.query<InventoryCategoryRow>(
       `SELECT ${COLUMNS} FROM inventory_category ORDER BY name`,
     );
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<InventoryCategoryRow | null> {
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<InventoryCategoryRow | null> {
     const { rows } = await executor.query<InventoryCategoryRow>(
       `SELECT ${COLUMNS} FROM inventory_category WHERE id = $1`,
       [id],

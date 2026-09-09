@@ -7,7 +7,12 @@
 // Constant-time comparison (timingSafeEqual) so a wrong signature can't be brute-forced
 // byte-by-byte via response-time differences.
 
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import type { Request } from 'express';
@@ -18,19 +23,29 @@ export class PaymentWebhookGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     try {
-      const request = context.switchToHttp().getRequest<Request & { rawBody?: Buffer }>();
+      const request = context
+        .switchToHttp()
+        .getRequest<Request & { rawBody?: Buffer }>();
       const signature = request.headers['x-webhook-signature'];
-      const secret = this.configService.get<string>('finance.paymentWebhookSecret');
+      const secret = this.configService.get<string>(
+        'finance.paymentWebhookSecret',
+      );
 
       if (!secret || typeof signature !== 'string' || !request.rawBody) {
         throw new UnauthorizedException();
       }
 
-      const expected = crypto.createHmac('sha256', secret).update(request.rawBody).digest('hex');
+      const expected = crypto
+        .createHmac('sha256', secret)
+        .update(request.rawBody)
+        .digest('hex');
       const expectedBuf = Buffer.from(expected, 'hex');
       const providedBuf = Buffer.from(signature, 'hex');
 
-      if (expectedBuf.length !== providedBuf.length || !crypto.timingSafeEqual(expectedBuf, providedBuf)) {
+      if (
+        expectedBuf.length !== providedBuf.length ||
+        !crypto.timingSafeEqual(expectedBuf, providedBuf)
+      ) {
         throw new UnauthorizedException();
       }
       return true;

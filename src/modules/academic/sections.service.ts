@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { SectionRepository } from './repositories/section.repository';
 import { CreateSectionDto } from './dto/create-section.dto';
@@ -42,7 +46,9 @@ export class SectionsService {
         );
       }
       if (isForeignKeyViolation(err)) {
-        throw new ConflictException('academicYearId, gradeId, mediumId, or campusId does not exist.');
+        throw new ConflictException(
+          'academicYearId, gradeId, mediumId, or campusId does not exist.',
+        );
       }
       throw err;
     }

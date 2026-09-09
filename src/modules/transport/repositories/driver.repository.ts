@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PostgresService, Queryable } from '../../../infrastructure/postgres/postgres.service';
+import {
+  PostgresService,
+  Queryable,
+} from '../../../infrastructure/postgres/postgres.service';
 
 export interface DriverRow {
   id: string;
@@ -44,18 +47,27 @@ export class DriverRepository {
   constructor(private readonly postgres: PostgresService) {}
 
   async findMany(executor: Queryable = this.postgres): Promise<DriverRow[]> {
-    const { rows } = await executor.query<DriverRow>(`SELECT ${COLUMNS} FROM driver ORDER BY full_name`);
+    const { rows } = await executor.query<DriverRow>(
+      `SELECT ${COLUMNS} FROM driver ORDER BY full_name`,
+    );
     return rows;
   }
 
-  async findById(id: string, executor: Queryable = this.postgres): Promise<DriverRow | null> {
-    const { rows } = await executor.query<DriverRow>(`SELECT ${COLUMNS} FROM driver WHERE id = $1`, [
-      id,
-    ]);
+  async findById(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<DriverRow | null> {
+    const { rows } = await executor.query<DriverRow>(
+      `SELECT ${COLUMNS} FROM driver WHERE id = $1`,
+      [id],
+    );
     return rows[0] ?? null;
   }
 
-  async create(input: CreateDriverInput, executor: Queryable = this.postgres): Promise<DriverRow> {
+  async create(
+    input: CreateDriverInput,
+    executor: Queryable = this.postgres,
+  ): Promise<DriverRow> {
     const { rows } = await executor.query<DriverRow>(
       `INSERT INTO driver
          (person_id, full_name, phone, licence_no, licence_expiry, police_verification_ref,

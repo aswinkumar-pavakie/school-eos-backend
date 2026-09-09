@@ -28,7 +28,8 @@ export function generateOtpCode(): string {
   return randomInt(0, 1_000_000).toString().padStart(6, '0');
 }
 
-const TEMP_PASSWORD_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+const TEMP_PASSWORD_ALPHABET =
+  'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
 
 /** Admin-issued temporary password: random, readable (no ambiguous 0/O/1/l/I), never logged. */
 export function generateTempPassword(length = 12): string {

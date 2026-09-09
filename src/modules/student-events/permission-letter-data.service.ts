@@ -16,12 +16,43 @@ const SIGNATURE_SIGNED_URL_TTL_SECONDS = 15 * 60;
 export interface PermissionLetterPayload {
   state: string;
   decidedAt: string | null;
-  event: { name: string; location: string; purpose: string; startsAt: string; endsAt: string };
+  event: {
+    name: string;
+    location: string;
+    purpose: string;
+    startsAt: string;
+    endsAt: string;
+  };
   monitoringTeacher: { name: string; designation: string | null };
-  student: { name: string; admissionNo: string; rollNo: number | null; gradeName: string | null; sectionName: string | null };
+  student: {
+    name: string;
+    admissionNo: string;
+    rollNo: number | null;
+    gradeName: string | null;
+    sectionName: string | null;
+  };
   classTeacherName: string | null;
-  parent: { name: string | null; addressLine1: string | null; addressLine2: string | null; city: string | null; state: string | null; pincode: string | null };
-  school: { name: string; addressLine1: string | null; addressLine2: string | null; city: string | null; district: string | null; state: string | null; pincode: string | null; board: string | null; recognitionNo: string | null; contactPhone: string | null; contactEmail: string | null } | null;
+  parent: {
+    name: string | null;
+    addressLine1: string | null;
+    addressLine2: string | null;
+    city: string | null;
+    state: string | null;
+    pincode: string | null;
+  };
+  school: {
+    name: string;
+    addressLine1: string | null;
+    addressLine2: string | null;
+    city: string | null;
+    district: string | null;
+    state: string | null;
+    pincode: string | null;
+    board: string | null;
+    recognitionNo: string | null;
+    contactPhone: string | null;
+    contactEmail: string | null;
+  } | null;
   signatureUrl: string | null;
 }
 
@@ -37,12 +68,18 @@ export class PermissionLetterDataService {
     const data = await this.participantRepo.findLetterData(participantId);
     if (!data) throw new NotFoundException('Permission request not found');
     if (data.state === 'PENDING') {
-      throw new NotFoundException('This permission letter is only available once the request has been decided.');
+      throw new NotFoundException(
+        'This permission letter is only available once the request has been decided.',
+      );
     }
 
     const school = await this.schoolProfileRepo.get();
     const signatureUrl = data.signatureObjectKey
-      ? await this.storage.createSignedUrl(EVENT_SIGNATURES_BUCKET, data.signatureObjectKey, SIGNATURE_SIGNED_URL_TTL_SECONDS)
+      ? await this.storage.createSignedUrl(
+          EVENT_SIGNATURES_BUCKET,
+          data.signatureObjectKey,
+          SIGNATURE_SIGNED_URL_TTL_SECONDS,
+        )
       : null;
 
     return {
@@ -55,7 +92,10 @@ export class PermissionLetterDataService {
         startsAt: new Date(data.eventStartsAt).toISOString(),
         endsAt: new Date(data.eventEndsAt).toISOString(),
       },
-      monitoringTeacher: { name: data.monitoringTeacherName, designation: data.monitoringTeacherDesignation },
+      monitoringTeacher: {
+        name: data.monitoringTeacherName,
+        designation: data.monitoringTeacherDesignation,
+      },
       student: {
         name: data.studentName,
         admissionNo: data.admissionNo,

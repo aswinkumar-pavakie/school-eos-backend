@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CurrentActor } from '../../../common/auth/current-actor.decorator';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user.interface';
 import { Roles } from '../../../common/auth/roles.decorator';
@@ -17,12 +26,18 @@ export class PaymentsController {
   async list(@Query() query: ListPaymentsQueryDto) {
     const { page, pageSize, ...filter } = query;
     const { rows, total } = await this.service.list(filter, { page, pageSize });
-    return { data: rows, meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 } };
+    return {
+      data: rows,
+      meta: { total, page: page ?? 1, pageSize: pageSize ?? 20 },
+    };
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreatePaymentDto, @CurrentActor() actor: AuthenticatedUser) {
+  async create(
+    @Body() dto: CreatePaymentDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const data = await this.service.create(dto, actor);
     return { data };
   }
@@ -61,7 +76,10 @@ export class PaymentsController {
 
   @Post(':id/clear-dd')
   @HttpCode(HttpStatus.OK)
-  async clearDD(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+  async clearDD(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     const data = await this.service.markDDCleared(id, actor);
     return { data };
   }

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -17,7 +25,10 @@ export class ParentFeesController {
   }
 
   @Get('students/:studentId/fee-terms')
-  async listTerms(@CurrentActor() actor: AuthenticatedUser, @Param('studentId', ParseUUIDPipe) studentId: string) {
+  async listTerms(
+    @CurrentActor() actor: AuthenticatedUser,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+  ) {
     return { data: await this.service.listTerms(actor, studentId) };
   }
 
@@ -27,7 +38,14 @@ export class ParentFeesController {
     @Param('studentId', ParseUUIDPipe) studentId: string,
     @Query() query: FeeTermQueryDto,
   ) {
-    return { data: await this.service.getFeeSummary(actor, studentId, query.academicYearId, query.instalmentNo) };
+    return {
+      data: await this.service.getFeeSummary(
+        actor,
+        studentId,
+        query.academicYearId,
+        query.instalmentNo,
+      ),
+    };
   }
 
   @Post('students/:studentId/fees/razorpay-order')
@@ -36,16 +54,24 @@ export class ParentFeesController {
     @Param('studentId', ParseUUIDPipe) studentId: string,
     @Body() dto: CreateRazorpayOrderDto,
   ) {
-    return { data: await this.service.createRazorpayOrder(actor, studentId, dto) };
+    return {
+      data: await this.service.createRazorpayOrder(actor, studentId, dto),
+    };
   }
 
   @Get('students/:studentId/payments')
-  async listPayments(@CurrentActor() actor: AuthenticatedUser, @Param('studentId', ParseUUIDPipe) studentId: string) {
+  async listPayments(
+    @CurrentActor() actor: AuthenticatedUser,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+  ) {
     return { data: await this.service.listPayments(actor, studentId) };
   }
 
   @Get('receipts/:receiptId')
-  async getReceipt(@CurrentActor() actor: AuthenticatedUser, @Param('receiptId', ParseUUIDPipe) receiptId: string) {
+  async getReceipt(
+    @CurrentActor() actor: AuthenticatedUser,
+    @Param('receiptId', ParseUUIDPipe) receiptId: string,
+  ) {
     return { data: await this.service.getReceipt(actor, receiptId) };
   }
 }

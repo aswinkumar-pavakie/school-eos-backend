@@ -16,7 +16,10 @@ export class MediaTeamService {
   }
 
   async create(dto: CreateMediaTeamMemberDto, actorPersonId: string) {
-    const created = await this.repo.create({ ...dto, createdBy: actorPersonId });
+    const created = await this.repo.create({
+      ...dto,
+      createdBy: actorPersonId,
+    });
     await this.audit.record({
       actorPersonId,
       actorRoleCode: 'MEDIA_ROOM',
@@ -29,7 +32,11 @@ export class MediaTeamService {
     return created;
   }
 
-  async update(id: string, dto: UpdateMediaTeamMemberDto, actorPersonId: string) {
+  async update(
+    id: string,
+    dto: UpdateMediaTeamMemberDto,
+    actorPersonId: string,
+  ) {
     const existing = await this.repo.findById(id);
     if (!existing) throw new NotFoundException('Media team member not found');
     const updated = await this.repo.update(id, dto);

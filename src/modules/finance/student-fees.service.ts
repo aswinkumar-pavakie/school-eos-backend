@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { StudentFeesRepository } from './repositories/student-fees.repository';
 
-export type StudentFeeOverallStatus = 'NO_ASSIGNMENT' | 'PAID' | 'PARTIAL' | 'PENDING' | 'OVERDUE';
+export type StudentFeeOverallStatus =
+  'NO_ASSIGNMENT' | 'PAID' | 'PARTIAL' | 'PENDING' | 'OVERDUE';
 
 @Injectable()
 export class StudentFeesService {
@@ -25,7 +26,9 @@ export class StudentFeesService {
       };
     }
 
-    const demands = await this.studentFeesRepo.findDemandsByAssignment(assignment.id);
+    const demands = await this.studentFeesRepo.findDemandsByAssignment(
+      assignment.id,
+    );
 
     let totalDue = 0n;
     let totalPaid = 0n;
@@ -44,7 +47,12 @@ export class StudentFeesService {
         totalOverdue += balance;
         hasOverdue = true;
       }
-      if (d.state === 'PENDING' || d.state === 'PARTIAL' || d.state === 'OVERDUE') hasUnpaid = true;
+      if (
+        d.state === 'PENDING' ||
+        d.state === 'PARTIAL' ||
+        d.state === 'OVERDUE'
+      )
+        hasUnpaid = true;
     }
 
     const overallStatus: StudentFeeOverallStatus = hasOverdue

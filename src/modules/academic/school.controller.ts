@@ -25,7 +25,10 @@ export class SchoolController {
 
   @Roles('ADMIN')
   @Patch()
-  async update(@Body() dto: UpdateSchoolDto, @CurrentActor() actor: AuthenticatedUser) {
+  async update(
+    @Body() dto: UpdateSchoolDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
     return { data: await this.schoolService.update(dto, actor.personId) };
   }
 }

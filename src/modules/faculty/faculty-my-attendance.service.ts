@@ -43,18 +43,40 @@ export class FacultyMyAttendanceService {
   async getSummary(personId: string, month?: string) {
     const staffId = await this.scopeRepo.getStaffId(personId);
     if (!staffId) {
-      return { today: null, summary: { ratePercent: null, presentCount: 0, absentCount: 0, onDutyCount: 0, workingDays: 0 }, days: [] };
+      return {
+        today: null,
+        summary: {
+          ratePercent: null,
+          presentCount: 0,
+          absentCount: 0,
+          onDutyCount: 0,
+          workingDays: 0,
+        },
+        days: [],
+      };
     }
 
     const now = new Date();
-    const [year, mon] = (month ?? `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`).split('-').map(Number);
+    const [year, mon] = (
+      month ??
+      `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
+    )
+      .split('-')
+      .map(Number);
     const monthStart = `${year}-${String(mon).padStart(2, '0')}-01`;
     const monthEndDate = new Date(Date.UTC(year, mon, 0));
     const monthEnd = toDateStr(monthEndDate);
 
-    const events = await this.staffAttendanceRepo.findEventsInRange(staffId, monthStart, monthEnd);
+    const events = await this.staffAttendanceRepo.findEventsInRange(
+      staffId,
+      monthStart,
+      monthEnd,
+    );
 
-    const byDate = new Map<string, { eventType: string; occurredAt: Date; receivedAt: Date }[]>();
+    const byDate = new Map<
+      string,
+      { eventType: string; occurredAt: Date; receivedAt: Date }[]
+    >();
     for (const ev of events) {
       const date = toDateStr(new Date(ev.occurredAt));
       const list = byDate.get(date) ?? [];
@@ -65,7 +87,9 @@ export class FacultyMyAttendanceService {
     const days: DayEntry[] = [];
     for (const [date, dayEvents] of byDate) {
       // Already ordered oldest-first by the repository query.
-      const statusEvents = dayEvents.filter((e) => ['CHECK_IN', 'ABSENT', 'ON_DUTY'].includes(e.eventType));
+      const statusEvents = dayEvents.filter((e) =>
+        ['CHECK_IN', 'ABSENT', 'ON_DUTY'].includes(e.eventType),
+      );
       const last = statusEvents[statusEvents.length - 1];
       if (!last) continue;
 
@@ -86,7 +110,9 @@ export class FacultyMyAttendanceService {
         if (checkIn) punchIn = toTimeStr(new Date(checkIn.occurredAt));
         if (checkOut) punchOut = toTimeStr(new Date(checkOut.occurredAt));
         if (checkIn && checkOut) {
-          const ms = new Date(checkOut.occurredAt).getTime() - new Date(checkIn.occurredAt).getTime();
+          const ms =
+            new Date(checkOut.occurredAt).getTime() -
+            new Date(checkIn.occurredAt).getTime();
           hoursWorked = Math.round((ms / 3600000) * 10) / 10;
         }
       }
@@ -99,14 +125,27 @@ export class FacultyMyAttendanceService {
     const absentCount = days.filter((d) => d.status === 'ABSENT').length;
     const onDutyCount = days.filter((d) => d.status === 'ON_DUTY').length;
     const workingDays = days.length;
-    const ratePercent = workingDays > 0 ? Math.round((presentCount / workingDays) * 100) : null;
+    const ratePercent =
+      workingDays > 0 ? Math.round((presentCount / workingDays) * 100) : null;
 
     const todayStr = toDateStr(now);
-    const today = days.find((d) => d.date === todayStr) ?? { date: todayStr, status: null, punchIn: null, punchOut: null, hoursWorked: null };
+    const today = days.find((d) => d.date === todayStr) ?? {
+      date: todayStr,
+      status: null,
+      punchIn: null,
+      punchOut: null,
+      hoursWorked: null,
+    };
 
     return {
       today,
-      summary: { ratePercent, presentCount, absentCount, onDutyCount, workingDays },
+      summary: {
+        ratePercent,
+        presentCount,
+        absentCount,
+        onDutyCount,
+        workingDays,
+      },
       days,
     };
   }

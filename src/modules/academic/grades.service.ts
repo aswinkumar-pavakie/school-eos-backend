@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { GradeRepository } from './repositories/grade.repository';
 import { CreateGradeDto } from './dto/create-grade.dto';
@@ -36,7 +40,9 @@ export class GradesService {
       return created;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A grade with this name or level_no already exists.');
+        throw new ConflictException(
+          'A grade with this name or level_no already exists.',
+        );
       }
       throw err;
     }
@@ -59,7 +65,9 @@ export class GradesService {
       return updated;
     } catch (err) {
       if (isUniqueViolation(err)) {
-        throw new ConflictException('A grade with this name or level_no already exists.');
+        throw new ConflictException(
+          'A grade with this name or level_no already exists.',
+        );
       }
       throw err;
     }
