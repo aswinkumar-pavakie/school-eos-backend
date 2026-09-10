@@ -73,10 +73,16 @@ import { WardenContextService } from './warden-context.service';
   // WardenContextService: so HostelWardenPendingModule's Study Attendance / Call
   // Request / Complaints services can resolve "who is this Warden" the same way,
   // without a second copy of that resolution logic.
+  // WardenAssignmentRepository / OutboxService: so HostelWardenPendingModule's
+  // Call Request feature (not on the generic approvals engine, so it must raise
+  // its own real notifications) can resolve "who wardens this hostel" and write
+  // to the same notification outbox every other feature already writes to.
   exports: [
     OutingRequestRepository,
     StudentHostelRepository,
     WardenContextService,
+    WardenAssignmentRepository,
+    OutboxService,
   ],
 })
 export class HostelWardenModule {}

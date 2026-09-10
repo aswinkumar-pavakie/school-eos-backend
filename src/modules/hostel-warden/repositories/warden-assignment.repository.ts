@@ -38,6 +38,22 @@ export class WardenAssignmentRepository {
     return rows.map((row) => row.scope_id);
   }
 
+  /** The reverse of findActiveHostelIdsForPerson: every real person who
+   * currently wardens this exact hostel -- used to notify them the moment a
+   * new Call Request comes in (a hostel legitimately having no assigned
+   * warden yet returns an empty array, not an error). */
+  async findPersonIdsForHostel(
+    hostelId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<string[]> {
+    const { rows } = await executor.query<{ person_id: string }>(
+      `SELECT person_id FROM v_active_role_assignment
+       WHERE role_code = 'HOSTEL_WARDEN' AND scope_type = 'HOSTEL' AND scope_id = $1`,
+      [hostelId],
+    );
+    return rows.map((row) => row.person_id);
+  }
+
   /** True iff this person currently holds an ACTIVE HOSTEL_WARDEN assignment for this exact hostel. */
   async personWardensHostel(
     personId: string,

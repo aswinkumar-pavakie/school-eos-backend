@@ -1,10 +1,31 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { NotificationQueryDto } from './dto/notification-query.dto';
 import { NotificationRepository } from './repositories/notification.repository';
+import { isPlausibleExpoPushToken } from './expo-push.util';
+import { DevicePlatform, PersonDeviceTokenRepository } from './repositories/person-device-token.repository';
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly notificationRepo: NotificationRepository) {}
+  constructor(
+    private readonly notificationRepo: NotificationRepository,
+    private readonly deviceTokenRepo: PersonDeviceTokenRepository,
+  ) {}
+
+  /** Called once per real login (and again any time Expo hands the app a
+   * fresh token, e.g. after a reinstall) -- this is the "for every login"
+   * hook: the mobile app registers its own real Expo push token right after
+   * a successful sign-in, so PushDeliveryScheduler has something real to
+   * send to the next time this person is notified of anything. */
+  async registerDeviceToken(personId: string, expoPushToken: string, platform: DevicePlatform): Promise<void> {
+    if (!isPlausibleExpoPushToken(expoPushToken)) {
+      throw new ForbiddenException('Not a real Expo push token.');
+    }
+    await this.deviceTokenRepo.upsert(personId, expoPushToken, platform);
+  }
+
+  async unregisterDeviceToken(personId: string, expoPushToken: string): Promise<void> {
+    await this.deviceTokenRepo.removeForPerson(personId, expoPushToken);
+  }
 
   async list(personId: string, query: NotificationQueryDto) {
     const page = query.page ?? 1;

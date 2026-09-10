@@ -34,4 +34,23 @@ export class ApproverAssignmentRepository {
     );
     return rows.length > 0;
   }
+
+  /** The reverse of personHoldsRole: every real person who currently holds this
+   * role, in this scope (or, when scope is null, everyone holding the role at
+   * all -- same "no scope required" reading personHoldsRole itself uses) --
+   * used once, right when a request is first created, to notify every real
+   * approver who can act on it that something is now waiting on them. */
+  async findPersonIdsForRoleAndScope(
+    roleCode: string,
+    scope: ApproverScope | null,
+    executor: Queryable = this.postgres,
+  ): Promise<string[]> {
+    const { rows } = await executor.query(
+      `SELECT DISTINCT person_id FROM v_active_role_assignment
+       WHERE role_code = $1
+         AND ($2::text IS NULL OR (scope_type = $2 AND scope_id::text = $3))`,
+      [roleCode, scope?.scopeType ?? null, scope?.scopeId ?? null],
+    );
+    return rows.map((r: any) => r.person_id);
+  }
 }

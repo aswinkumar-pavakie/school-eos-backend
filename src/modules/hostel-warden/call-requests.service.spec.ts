@@ -50,6 +50,9 @@ function buildService(opts: { request?: any } = {}) {
   const auditService = {
     record: jest.fn().mockResolvedValue(undefined),
   } as any;
+  const outbox = {
+    enqueue: jest.fn().mockResolvedValue(undefined),
+  } as any;
   const unitOfWork = {
     run: jest.fn((work: (client: unknown) => Promise<unknown>) => work({})),
   } as any;
@@ -58,9 +61,16 @@ function buildService(opts: { request?: any } = {}) {
     wardenContext,
     callRequestRepo,
     auditService,
+    outbox,
     unitOfWork,
   );
-  return { service, callRequestRepo, auditService, getStored: () => stored };
+  return {
+    service,
+    callRequestRepo,
+    auditService,
+    outbox,
+    getStored: () => stored,
+  };
 }
 
 describe('CallRequestsService (pending feature)', () => {

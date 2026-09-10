@@ -108,6 +108,33 @@ export class ApprovalsService {
       executor,
     );
 
+    // Notify every real person who can act on step 1 right now -- otherwise an
+    // approver never learns a request exists until they happen to open their
+    // own inbox. Requester-side notifications (approved/rejected/sent back)
+    // already existed; this is the missing "something needs your action" half,
+    // and because it lives here, every feature that calls createRequest() gets
+    // it for free (Hostel outing/call requests, Concessions, Refunds, Staff/
+    // Student Leave, Purchase Requests, and anything built on this engine later).
+    const approverIds = await this.approverAssignmentRepo.findPersonIdsForRoleAndScope(
+      firstStep.approverRoleCode,
+      approverScopeFromPayload(request.payload),
+      executor,
+    );
+    for (const approverId of approverIds) {
+      if (approverId === request.requestedBy) continue;
+      await this.outbox.enqueue(
+        {
+          personId: approverId,
+          notificationType: 'APPROVAL_REQUESTED',
+          title: 'A new request needs your approval',
+          body: `${request.requestType.replace(/_/g, ' ')} is awaiting your decision`,
+          relatedObjectType: 'approval_request',
+          relatedObjectId: request.id,
+        },
+        executor,
+      );
+    }
+
     return request;
   }
 

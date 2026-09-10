@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { HOSTEL_WARDEN_ERRORS } from '../../common/errors/error-codes';
+import { OutboxService } from '../../common/outbox/outbox.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { ApproveCallRequestDto } from './dto/approve-call-request.dto';
 import {
@@ -23,6 +24,7 @@ export class CallRequestsService {
     private readonly wardenContext: WardenContextService,
     private readonly callRequestRepo: HostelCallRequestRepository,
     private readonly auditService: AuditService,
+    private readonly outbox: OutboxService,
     private readonly unitOfWork: UnitOfWork,
   ) {}
 
@@ -88,6 +90,27 @@ export class CallRequestsService {
           objectId: id,
           outcome: status === 'APPROVED' ? 'SUCCESS' : 'DENIED',
           beforeData: locked,
+        },
+        client,
+      );
+
+      // Same reasoning as create(): this feature is deliberately not on the
+      // generic approvals engine, so the requester-side notification has to
+      // be raised here directly, not inherited for free.
+      await this.outbox.enqueue(
+        {
+          personId: locked.parentPersonId,
+          notificationType: `HOSTEL_CALL_REQUEST_${status}`,
+          title:
+            status === 'APPROVED'
+              ? 'Your call request was approved'
+              : 'Your call request was rejected',
+          body:
+            status === 'APPROVED'
+              ? `Approved for ${window!.approvedFrom.toISOString()} to ${window!.approvedTo.toISOString()}`
+              : 'The hostel warden rejected this call request',
+          relatedObjectType: 'hostel_call_request',
+          relatedObjectId: id,
         },
         client,
       );
