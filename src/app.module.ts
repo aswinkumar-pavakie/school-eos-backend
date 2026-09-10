@@ -54,6 +54,7 @@ import { PrincipalModule } from './modules/principal/principal.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { RequestsApprovalsModule } from './modules/requests-approvals/requests-approvals.module';
 import { SportsModule } from './modules/sports/sports.module';
+import { AiBotModule } from './modules/ai-bot/ai-bot.module';
 import { StaffAttendanceModule } from './modules/staff-attendance/staff-attendance.module';
 import { StudentEventsModule } from './modules/student-events/student-events.module';
 import { TimetableModule } from './modules/timetable/timetable.module';
@@ -87,6 +88,7 @@ import { TransportOpsModule } from './modules/transport-ops/transport-ops.module
     HostelWardenModule,
     HostelWardenPendingModule,
     SportsModule,
+    AiBotModule,
     DevicesModule,
     DocumentsModule,
     DashboardModule,

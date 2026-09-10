@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { EmptyQueryValuePipe } from './common/validation/empty-query-value.pipe';
 import { HttpExceptionFilter } from './common/errors/http-exception.filter';
 import { createValidationPipe } from './common/validation/validation.pipe';
+import { setupReadOnlySwagger } from './swagger';
 
 async function bootstrap(): Promise<void> {
   // rawBody: true attaches the unparsed request buffer as req.rawBody on every
@@ -21,6 +22,8 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new HttpExceptionFilter());
   // Mobile and web are separate origins calling this API directly.
   app.enableCors();
+
+  setupReadOnlySwagger(app);
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
