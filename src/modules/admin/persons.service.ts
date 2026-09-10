@@ -111,6 +111,7 @@ export class PersonsService {
         await this.userCredentialRepo.createInitial(
           person.id,
           passwordHash,
+          password,
           client,
         );
 
@@ -330,6 +331,7 @@ export class PersonsService {
         personId,
         passwordHash,
         hasSelfServiceResetUi,
+        password,
         client,
       );
       await this.sessionRepo.deleteAllForPerson(personId, client);

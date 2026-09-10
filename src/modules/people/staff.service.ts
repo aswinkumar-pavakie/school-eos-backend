@@ -86,6 +86,10 @@ export class StaffService {
       ...staff,
       loginIdentifiers,
       resetAllowanceUsed: credential?.resetAllowanceUsed ?? false,
+      // Same field parents.service.ts's own get() exposes -- set only while
+      // this is still the password Admin created/last reset for this faculty
+      // member, cleared once they self-service their own change.
+      adminVisiblePassword: credential?.adminVisiblePassword ?? null,
     };
   }
 
