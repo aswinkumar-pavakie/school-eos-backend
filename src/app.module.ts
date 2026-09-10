@@ -38,6 +38,7 @@ import { LibraryModule } from './modules/library/library.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { MediaModule } from './modules/media/media.module';
 import { MessagingModule } from './modules/messaging/messaging.module';
+import { MessagingIntegrationModule } from './modules/messaging-integration/messaging-integration.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { OnlineClassesModule } from './modules/online-classes/online-classes.module';
 import { ParentModule } from './modules/parent/parent.module';
@@ -106,6 +107,7 @@ import { TransportOpsModule } from './modules/transport-ops/transport-ops.module
     PrincipalModule,
     OnlineClassesModule,
     MessagingModule,
+    MessagingIntegrationModule,
     PermissionsModule,
     MediaModule,
     StudentEventsModule,

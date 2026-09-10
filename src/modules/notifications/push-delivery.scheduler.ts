@@ -59,6 +59,13 @@ export class PushDeliveryScheduler {
     this.isRunning = true;
     try {
       await this.runOnce();
+    } catch (err) {
+      // Confirmed live (in school-eos-messaging's own outbox worker, same
+      // pattern): if findNeedingPushDelivery() itself throws (DB
+      // unreachable, etc.), that previously propagated out of this method
+      // uncaught, crashing the entire process every 15 seconds instead of
+      // just skipping this tick and trying again next time.
+      this.logger.error(`Push-delivery tick failed: ${err instanceof Error ? err.message : err}`);
     } finally {
       this.isRunning = false;
     }
