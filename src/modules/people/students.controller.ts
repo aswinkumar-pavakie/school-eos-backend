@@ -65,6 +65,15 @@ export class StudentsController {
     return { data: result.data, meta: result.meta };
   }
 
+  // Registered before ':id' -- otherwise Nest would match "next-admission-no"
+  // itself as the :id param (same ordering trap documented in the Sports
+  // module).
+  @Get('next-admission-no')
+  @Roles('ADMIN')
+  async nextAdmissionNo() {
+    return { data: await this.studentsService.getNextAdmissionNo() };
+  }
+
   @Get(':id')
   @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
   async get(@Param('id') id: string) {

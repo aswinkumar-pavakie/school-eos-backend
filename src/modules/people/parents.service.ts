@@ -168,6 +168,10 @@ export class ParentsService {
       // allowance to begin with) -- true once they've used their one free
       // self-reset, meaning any *further* "forgot password" needs an admin reset.
       resetAllowanceUsed: credential?.resetAllowanceUsed ?? false,
+      // Set only while this is still the password Admin created/last reset --
+      // cleared the moment the parent self-services their own change (see
+      // UserCredentialRepository.completeSelfServiceReset's own comment).
+      adminVisiblePassword: credential?.adminVisiblePassword ?? null,
     };
   }
 }

@@ -210,6 +210,29 @@ export class StudentRepository {
     return rows[0]?.gender ?? null;
   }
 
+  /** Highest existing admission_no sequence number for a given 4-digit year
+   * prefix, matching the real in-use format `SMS<year><4-digit seq>` (e.g.
+   * SMS20250705) -- confirmed against live data, not assumed. Text ordering
+   * on a fixed-width zero-padded suffix sorts identically to numeric order,
+   * so DESC LIMIT 1 is safe here. Returns null if no admission for that year
+   * matches the pattern yet (a fresh year, or legacy/manual admission_no
+   * values that don't follow this scheme), so the caller starts back at 1
+   * rather than guessing. */
+  async findMaxAdmissionSeqForYear(
+    year: string,
+    executor: Queryable = this.postgres,
+  ): Promise<number | null> {
+    const { rows } = await executor.query<{ admission_no: string }>(
+      `SELECT admission_no FROM student
+       WHERE admission_no ~ ('^SMS' || $1 || '[0-9]{4}$')
+       ORDER BY admission_no DESC
+       LIMIT 1`,
+      [year],
+    );
+    if (rows.length === 0) return null;
+    return parseInt(rows[0].admission_no.slice(-4), 10);
+  }
+
   async create(
     input: CreateStudentInput,
     executor: Queryable = this.postgres,
