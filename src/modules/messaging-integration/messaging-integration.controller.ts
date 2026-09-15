@@ -11,9 +11,10 @@
 // returns something unexpected (its own documented decision), never falls
 // back to a permissive default.
 
-import { Controller, Get, Param, ParseUUIDPipe, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { Public } from '../../common/auth/public.decorator';
 import { PersonDeviceTokenRepository } from '../notifications/repositories/person-device-token.repository';
+import { GetUsersBatchBodyDto } from './dto/get-users-batch.body.dto';
 import {
   DEFAULT_LIST_LIMIT,
   ListMessagingUsersQueryDto,
@@ -54,6 +55,16 @@ export class MessagingIntegrationController {
     // internal caller, not the anti-enumeration boundary (LLD §53) that
     // applies to Messaging's own client-facing directory/search endpoints.
     return { data: projection };
+  }
+
+  // Batched counterpart to the single-id lookup above — Messaging's own
+  // directory/discovery resolves a caller's whole scoped-contact set (which
+  // can legitimately be in the hundreds, e.g. a Class Advisor's full section
+  // roster) and was doing so as N parallel single-id calls, which exhausted
+  // this service's DB connection pool and crashed under exactly that load.
+  @Post('users/batch')
+  async userProjectionsBatch(@Body() body: GetUsersBatchBodyDto) {
+    return { data: await this.userRepo.getProjectionsBatch(body.personIds) };
   }
 
   @Get('users')
