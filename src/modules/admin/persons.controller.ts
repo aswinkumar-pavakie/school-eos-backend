@@ -20,6 +20,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
+import { CreateAcademicCoordinatorLoginDto } from './dto/create-academic-coordinator-login.dto';
 import { CreatePersonDto } from './dto/create-person.dto';
 import { GeneralPasswordResetDto } from './dto/general-password-reset.dto';
 import { PersonQueryDto } from './dto/person-query.dto';
@@ -123,6 +124,22 @@ export class PersonsController {
   ) {
     await this.personsService.removePhoto(id, actor.personId);
     return { data: { removed: true } };
+  }
+
+  @Post(':id/academic-coordinator-login')
+  @HttpCode(HttpStatus.CREATED)
+  async createAcademicCoordinatorLogin(
+    @Param('id') id: string,
+    @Body() dto: CreateAcademicCoordinatorLoginDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.personsService.createAcademicCoordinatorLogin(
+        id,
+        dto,
+        actor.personId,
+      ),
+    };
   }
 
   @Post(':id/force-sign-out')

@@ -14,6 +14,7 @@ function buildService(
     floors?: any[];
     rooms?: any[];
     guardians?: any[];
+    feeSummary?: any;
   } = {},
 ) {
   const wardenContext = {
@@ -41,7 +42,9 @@ function buildService(
   const hostelRoomRepo = {
     findByFloorId: jest
       .fn()
-      .mockResolvedValue(opts.rooms ?? [{ id: 'room-1', roomNo: '101' }]),
+      .mockResolvedValue(
+        opts.rooms ?? [{ id: 'room-1', roomNo: '101', bedCapacity: 3 }],
+      ),
   } as any;
   const studentGuardianRepo = {
     findActiveGuardians: jest.fn().mockResolvedValue(
@@ -58,6 +61,20 @@ function buildService(
       ],
     ),
   } as any;
+  const studentFeesService = {
+    getSummaryForStudent: jest.fn().mockResolvedValue(
+      opts.feeSummary ?? {
+        assignment: { id: 'assignment-1' },
+        demands: [],
+        payments: [],
+        totalDuePaise: '0',
+        totalPaidPaise: '0',
+        totalPendingPaise: '0',
+        totalOverduePaise: '0',
+        overallStatus: 'PAID',
+      },
+    ),
+  } as any;
 
   const service = new RoomBedViewService(
     wardenContext,
@@ -66,6 +83,7 @@ function buildService(
     hostelFloorRepo,
     hostelRoomRepo,
     studentGuardianRepo,
+    studentFeesService,
   );
   return {
     service,
@@ -74,6 +92,7 @@ function buildService(
     hostelFloorRepo,
     hostelRoomRepo,
     studentGuardianRepo,
+    studentFeesService,
   };
 }
 
@@ -132,25 +151,44 @@ describe('RoomBedViewService', () => {
       {
         id: 'block-1',
         name: 'A',
-        rooms: [{ id: 'room-1', roomNo: '101', floorNo: 1 }],
+        rooms: [{ id: 'room-1', roomNo: '101', floorNo: 1, bedCapacity: 3 }],
       },
     ]);
+  });
+
+  it("returns a student's fee summary when they are in the caller's hostel", async () => {
+    const { service, studentFeesService } = buildService();
+    const fees = await service.getStudentFees('student-1', 'warden-1');
+    expect(studentFeesService.getSummaryForStudent).toHaveBeenCalledWith(
+      'student-1',
+    );
+    expect(fees.overallStatus).toBe('PAID');
+  });
+
+  it("a cross-hostel student's fees are never revealed (404, fees query never runs)", async () => {
+    const { service, studentFeesService } = buildService({ allocations: [] });
+    await expect(
+      service.getStudentFees('student-1', 'warden-1'),
+    ).rejects.toThrow(NotFoundException);
+    expect(studentFeesService.getSummaryForStudent).not.toHaveBeenCalled();
   });
 });
 
 // 59-63. Warden cannot create/allocate/transfer/delete room or bed data -- structurally
 // guaranteed, not just tested at runtime: RoomBedViewService only calls findMany/
-// findByHostelId/findByBlockId/findByFloorId (all plain SELECTs) across its four
-// injected repositories -- it never references create/update/vacate/setStatus
-// anywhere in its source (see room-bed-view.service.ts), and RoomBedViewController
-// (room-bed-view.controller.ts) declares only @Get routes -- no @Post/@Patch/@Delete
-// route exists for any hostel structure resource anywhere in the hostel-warden module.
+// findByHostelId/findByBlockId/findByFloorId/getSummaryForStudent (all plain reads)
+// across its injected repositories/services -- it never references create/update/
+// vacate/setStatus anywhere in its source (see room-bed-view.service.ts), and
+// RoomBedViewController (room-bed-view.controller.ts) declares only @Get routes --
+// no @Post/@Patch/@Delete route exists for any hostel structure resource anywhere in
+// the hostel-warden module.
 describe('RoomBedViewService — no write surface', () => {
   it('exposes only read methods', () => {
     const methodNames = Object.getOwnPropertyNames(
       RoomBedViewService.prototype,
     ).filter((n) => n !== 'constructor');
     expect(methodNames.sort()).toEqual([
+      'getStudentFees',
       'getStudentGuardians',
       'getStudentRoom',
       'listAllocations',

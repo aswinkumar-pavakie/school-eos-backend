@@ -14,5 +14,10 @@ import { ExamRepository } from './repositories/exam.repository';
 @Module({
   controllers: [ExamsController],
   providers: [ExamsService, ExamRepository],
+  // Faculty module reuses ExamRepository directly for its own narrower,
+  // section/offering-scoped read over exam_subject (see
+  // faculty-exam-schedule.service.ts) rather than a second copy of this
+  // query.
+  exports: [ExamRepository],
 })
 export class ExaminationsModule {}

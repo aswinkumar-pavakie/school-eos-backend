@@ -48,8 +48,27 @@ export class FacultyClassResultsService {
     return this.marksRepo.findExamsForSection(sectionId);
   }
 
+  /** Same real exam list, for an Academic Coordinator's own scoped section
+   * instead of a class advisor's -- the coordinator controller does its own
+   * scope check (section within the caller's real grades) before calling
+   * this, so no advisor check is repeated here. */
+  async listExamsInScope(sectionId: string) {
+    return this.marksRepo.findExamsForSection(sectionId);
+  }
+
   async getResults(personId: string, sectionId: string, examId: string) {
     await this.assertAdvisor(personId, sectionId);
+    return this.computeResults(sectionId, examId);
+  }
+
+  /** Same real computation as getResults, for an Academic Coordinator's own
+   * scoped section -- see listExamsInScope's own comment on why no advisor
+   * check happens here. */
+  async getResultsInScope(sectionId: string, examId: string) {
+    return this.computeResults(sectionId, examId);
+  }
+
+  private async computeResults(sectionId: string, examId: string) {
     const rows = await this.marksRepo.findResultsForExamAndSection(
       sectionId,
       examId,

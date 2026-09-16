@@ -39,6 +39,7 @@ import { LibraryModule } from './modules/library/library.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { MediaModule } from './modules/media/media.module';
 import { MessagingModule } from './modules/messaging/messaging.module';
+import { MessagingIntegrationModule } from './modules/messaging-integration/messaging-integration.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { OnlineClassesModule } from './modules/online-classes/online-classes.module';
 import { ParentModule } from './modules/parent/parent.module';
@@ -55,6 +56,7 @@ import { PrincipalModule } from './modules/principal/principal.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { RequestsApprovalsModule } from './modules/requests-approvals/requests-approvals.module';
 import { SportsModule } from './modules/sports/sports.module';
+import { AiBotModule } from './modules/ai-bot/ai-bot.module';
 import { StaffAttendanceModule } from './modules/staff-attendance/staff-attendance.module';
 import { StudentDevelopmentModule } from './modules/student-development/student-development.module';
 import { StudentEventsModule } from './modules/student-events/student-events.module';
@@ -89,6 +91,7 @@ import { TransportOpsModule } from './modules/transport-ops/transport-ops.module
     HostelWardenModule,
     HostelWardenPendingModule,
     SportsModule,
+    AiBotModule,
     DevicesModule,
     DocumentsModule,
     DashboardModule,
@@ -106,6 +109,7 @@ import { TransportOpsModule } from './modules/transport-ops/transport-ops.module
     PrincipalModule,
     OnlineClassesModule,
     MessagingModule,
+    MessagingIntegrationModule,
     PermissionsModule,
     MediaModule,
     StudentEventsModule,

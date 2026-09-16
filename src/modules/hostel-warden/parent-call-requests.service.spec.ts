@@ -20,12 +20,18 @@ function buildService(opts: { link?: any; hostelId?: string | null } = {}) {
     create: jest.fn().mockResolvedValue({ id: 'call-1', status: 'PENDING' }),
     findManyForParent: jest.fn().mockResolvedValue([]),
   } as any;
+  const wardenAssignmentRepo = {
+    findPersonIdsForHostel: jest.fn().mockResolvedValue(['warden-1']),
+  } as any;
+  const outbox = { enqueue: jest.fn().mockResolvedValue(undefined) } as any;
   const audit = { record: jest.fn().mockResolvedValue(undefined) } as any;
 
   const service = new ParentCallRequestsService(
     guardianLinkRepo,
     studentHostelRepo,
     callRequestRepo,
+    wardenAssignmentRepo,
+    outbox,
     audit,
   );
   return {
@@ -33,6 +39,8 @@ function buildService(opts: { link?: any; hostelId?: string | null } = {}) {
     guardianLinkRepo,
     studentHostelRepo,
     callRequestRepo,
+    wardenAssignmentRepo,
+    outbox,
     audit,
   };
 }

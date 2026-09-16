@@ -15,6 +15,7 @@ import { AuthenticatedUser } from '../../common/auth/authenticated-user.interfac
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
 import { CreateHomeworkDto } from './dto/create-homework.dto';
+import { GradeHomeworkSubmissionDto } from './dto/grade-homework-submission.dto';
 import { UpdateHomeworkDto } from './dto/update-homework.dto';
 import { FacultyHomeworkService } from './faculty-homework.service';
 
@@ -62,6 +63,18 @@ export class FacultyHomeworkController {
     @CurrentActor() actor: AuthenticatedUser,
   ) {
     return { data: await this.service.getRoster(actor.personId, id, tab) };
+  }
+
+  @Patch(':id/roster/:studentId')
+  async gradeSubmission(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Body() dto: GradeHomeworkSubmissionDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.gradeSubmission(actor.personId, id, studentId, dto),
+    };
   }
 
   @Get(':id/roster/:studentId/file-url')

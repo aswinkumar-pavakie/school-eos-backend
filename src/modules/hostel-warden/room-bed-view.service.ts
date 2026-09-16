@@ -8,6 +8,7 @@ import { HostelAllocationRepository } from '../hostel/repositories/hostel-alloca
 import { HostelBlockRepository } from '../hostel/repositories/hostel-block.repository';
 import { HostelFloorRepository } from '../hostel/repositories/hostel-floor.repository';
 import { HostelRoomRepository } from '../hostel/repositories/hostel-room.repository';
+import { StudentFeesService } from '../finance/student-fees.service';
 import { StudentGuardianRepository } from './repositories/student-guardian.repository';
 import { WardenContextService } from './warden-context.service';
 
@@ -15,6 +16,7 @@ export interface HostelStructureRoom {
   id: string;
   roomNo: string;
   floorNo: number;
+  bedCapacity: number;
 }
 
 export interface HostelStructureBlock {
@@ -32,6 +34,7 @@ export class RoomBedViewService {
     private readonly hostelFloorRepo: HostelFloorRepository,
     private readonly hostelRoomRepo: HostelRoomRepository,
     private readonly studentGuardianRepo: StudentGuardianRepository,
+    private readonly studentFeesService: StudentFeesService,
   ) {}
 
   /** Blocks + rooms (flattened across floors) for the Warden's own hostel(s) --
@@ -55,6 +58,7 @@ export class RoomBedViewService {
               id: room.id,
               roomNo: room.roomNo,
               floorNo: floor.floorNo,
+              bedCapacity: room.bedCapacity,
             });
           }
         }
@@ -91,5 +95,15 @@ export class RoomBedViewService {
   async getStudentGuardians(studentId: string, personId: string) {
     await this.getStudentRoom(studentId, personId);
     return this.studentGuardianRepo.findActiveGuardians(studentId);
+  }
+
+  /** Fee status for the Student Profile screen -- same reuse pattern as
+   * FacultyStudentDetailService (see faculty-student-detail.service.ts):
+   * StudentFeesService is Finance's real read model, never a second copy of
+   * that computation. Same scope check as getStudentGuardians, so fee data
+   * for a student outside this Warden's own hostel(s) is never revealed. */
+  async getStudentFees(studentId: string, personId: string) {
+    await this.getStudentRoom(studentId, personId);
+    return this.studentFeesService.getSummaryForStudent(studentId);
   }
 }

@@ -157,6 +157,12 @@ export class StudentRepository {
       status?: string;
       search?: string;
       gradeId?: string;
+      /** Multi-grade filter -- Academic Coordinator's own real scope can span
+       * several grades within one stage (see
+       * faculty-academic-coordinator.service.ts's own listStudents), unlike
+       * every existing caller's single gradeId. Ignored if sectionId or
+       * gradeId is also given (those are more specific). */
+      gradeIds?: string[];
       sectionId?: string;
       sectionName?: string;
       ids?: string[];
@@ -192,6 +198,9 @@ export class StudentRepository {
     } else if (filter.gradeId) {
       params.push(filter.gradeId);
       conditions.push(`g.id = $${params.length}`);
+    } else if (filter.gradeIds && filter.gradeIds.length > 0) {
+      params.push(filter.gradeIds);
+      conditions.push(`g.id = ANY($${params.length}::uuid[])`);
     } else if (filter.sectionName) {
       params.push(filter.sectionName);
       conditions.push(`sec.name = $${params.length}`);
