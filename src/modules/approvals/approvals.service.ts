@@ -70,6 +70,10 @@ export class ApprovalsService {
   async createRequest(
     input: Omit<CreateApprovalRequestInput, 'initialState'> & {
       isRetrospective?: boolean;
+      // Routing-time only, never persisted -- lets a request_type's policy
+      // route differently depending on who raised it (see
+      // ApprovalPolicyRepository's own comment on requesterHasRole).
+      requesterRoleCodes?: string[];
     },
     executor: Queryable,
   ): Promise<ApprovalRequestRow> {
@@ -77,6 +81,7 @@ export class ApprovalsService {
       input.requestType,
       input.amountPaise ?? null,
       executor,
+      input.requesterRoleCodes,
     );
     if (steps.length === 0) {
       throw new ConflictException(APPROVALS_ERRORS.NO_POLICY_FOR_REQUEST_TYPE);

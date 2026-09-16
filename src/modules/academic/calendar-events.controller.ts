@@ -45,7 +45,13 @@ export class CalendarEventsController {
     return { data: await this.calendarEventsService.get(id) };
   }
 
+  // PRINCIPAL added for real create access (design-reframe addition, per the
+  // SIS mockup's own "+ Add event" flow and explicit user confirmation this
+  // supersedes the module's earlier "view-only, Admin creates" decision) --
+  // update/delete stay ADMIN-only via the class default; Principal can add
+  // new events but not edit/remove ones Admin (or another Principal) created.
   @Post()
+  @Roles('ADMIN', 'PRINCIPAL')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateCalendarEventDto,

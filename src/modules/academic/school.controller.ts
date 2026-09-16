@@ -13,7 +13,11 @@ import { SchoolService } from './school.service';
 // VICE_PRINCIPAL added (Vice Principal mobile Profile, Phase 25) -- same
 // read-only institutional-identity info, shown as the Profile screen's
 // School Information section.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+// TRANSPORT_MANAGER added (Transport Module reframe) -- same read-only
+// identity info, shown in the sidebar header (school name/logo tile) matching
+// "Transport Module.dc.html"'s own literal markup. PATCH stays ADMIN-only via
+// the override below, unchanged.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
 @Controller('school')
 export class SchoolController {
   constructor(private readonly schoolService: SchoolService) {}

@@ -52,11 +52,13 @@ function buildService(
     record: jest.fn().mockResolvedValue(undefined),
   } as any;
 
+  const hostelRepo = { findMany: jest.fn() } as any;
   const service = new VisitorLogService(
     wardenContext,
     visitorRepo,
     studentHostelRepo,
     auditService,
+    hostelRepo,
   );
   return {
     service,

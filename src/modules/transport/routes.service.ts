@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
+import { UnitOfWork } from '../../common/transactions/unit-of-work';
+import { ApprovalsService } from '../approvals/approvals.service';
 import { RouteRepository } from './repositories/route.repository';
 import { RouteStopRepository } from './repositories/route-stop.repository';
 import { StudentTransportAllocationRepository } from './repositories/student-transport-allocation.repository';
@@ -11,6 +13,8 @@ import { CreateRouteDto } from './dto/create-route.dto';
 import { UpdateRouteDto } from './dto/update-route.dto';
 import { CreateRouteStopDto } from './dto/create-route-stop.dto';
 import { UpdateRouteStopDto } from './dto/update-route-stop.dto';
+import { RequestRouteDeactivateDto } from './dto/request-route-deactivate.dto';
+import { RequestRouteStopDeleteDto } from './dto/request-route-stop-delete.dto';
 import { isForeignKeyViolation, isUniqueViolation } from './pg-error.util';
 
 @Injectable()
@@ -20,6 +24,8 @@ export class RoutesService {
     private readonly routeStopRepo: RouteStopRepository,
     private readonly studentTransportAllocationRepo: StudentTransportAllocationRepository,
     private readonly auditService: AuditService,
+    private readonly unitOfWork: UnitOfWork,
+    private readonly approvalsService: ApprovalsService,
   ) {}
 
   list() {
@@ -161,5 +167,96 @@ export class RoutesService {
       }
       throw err;
     }
+  }
+
+  /** No real hard-delete for a route anywhere in this app -- see
+   * VehiclesService.requestDeactivate's own comment on this codebase's
+   * "deactivate, not delete" convention. Transport Manager's own request to
+   * deactivate (status -> INACTIVE), routed through the generic approvals
+   * engine to a real ADMIN decision. */
+  async requestDeactivate(
+    id: string,
+    dto: RequestRouteDeactivateDto,
+    actorPersonId: string,
+  ) {
+    const route = await this.get(id);
+    return this.unitOfWork.run(async (client) => {
+      const { rows: pending } = await client.query(
+        `SELECT id FROM approval_request WHERE subject_object_type = 'route' AND subject_object_id = $1 AND state IN ('PENDING', 'RETROSPECTIVE_PENDING') LIMIT 1`,
+        [id],
+      );
+      if (pending[0]) {
+        throw new ConflictException(
+          'A deactivation request for this route is already pending Admin review.',
+        );
+      }
+      const request = await this.approvalsService.createRequest(
+        {
+          requestType: 'ROUTE_DEACTIVATE',
+          subjectObjectType: 'route',
+          subjectObjectId: id,
+          requestedBy: actorPersonId,
+          payload: { name: route.name, code: route.code, reason: dto.reason },
+        },
+        client,
+      );
+      await this.auditService.record(
+        {
+          actorPersonId,
+          action: 'ROUTE_DEACTIVATE_REQUESTED',
+          objectType: 'route',
+          objectId: id,
+          outcome: 'SUCCESS',
+          afterData: { approvalRequestId: request.id, reason: dto.reason },
+        },
+        client,
+      );
+      return request;
+    });
+  }
+
+  /** The real hard DELETE (deleteStop above) stays ADMIN-only -- this is
+   * Transport Manager's own request to delete a stop, routed through the
+   * generic approvals engine to a real ADMIN decision. */
+  async requestDeleteStop(
+    stopId: string,
+    dto: RequestRouteStopDeleteDto,
+    actorPersonId: string,
+  ) {
+    const stop = await this.routeStopRepo.findById(stopId);
+    if (!stop) throw new NotFoundException('Route stop not found');
+    return this.unitOfWork.run(async (client) => {
+      const { rows: pending } = await client.query(
+        `SELECT id FROM approval_request WHERE subject_object_type = 'route_stop' AND subject_object_id = $1 AND state IN ('PENDING', 'RETROSPECTIVE_PENDING') LIMIT 1`,
+        [stopId],
+      );
+      if (pending[0]) {
+        throw new ConflictException(
+          'A deletion request for this stop is already pending Admin review.',
+        );
+      }
+      const request = await this.approvalsService.createRequest(
+        {
+          requestType: 'ROUTE_STOP_DELETE',
+          subjectObjectType: 'route_stop',
+          subjectObjectId: stopId,
+          requestedBy: actorPersonId,
+          payload: { stopName: stop.stopName, routeId: stop.routeId, reason: dto.reason },
+        },
+        client,
+      );
+      await this.auditService.record(
+        {
+          actorPersonId,
+          action: 'ROUTE_STOP_DELETE_REQUESTED',
+          objectType: 'route_stop',
+          objectId: stopId,
+          outcome: 'SUCCESS',
+          afterData: { approvalRequestId: request.id, reason: dto.reason },
+        },
+        client,
+      );
+      return request;
+    });
   }
 }

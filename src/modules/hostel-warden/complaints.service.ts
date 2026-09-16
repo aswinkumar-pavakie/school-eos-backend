@@ -14,6 +14,7 @@ import {
   HostelComplaintRow,
 } from './repositories/hostel-complaint.repository';
 import { WardenContextService } from './warden-context.service';
+import { HostelRepository } from '../hostel/repositories/hostel.repository';
 
 // Request type this complaint's approval_request is created with -- routed to
 // PRINCIPAL via the approval_policy seed in query.md. PRINCIPAL is a single-
@@ -42,11 +43,19 @@ export class ComplaintsService {
     private readonly auditService: AuditService,
     private readonly approvalsService: ApprovalsService,
     private readonly unitOfWork: UnitOfWork,
+    private readonly hostelRepo: HostelRepository,
   ) {}
 
   async list(personId: string) {
     const ctx = await this.wardenContext.requireActiveWarden(personId);
     return this.complaintRepo.findManyForHostels(ctx.hostelIds);
+  }
+
+  /** School-wide, not warden-scoped -- backs the Principal web console's real
+   * Hostel "open complaints" oversight (design-reframe addition). */
+  async listSchoolWide() {
+    const hostels = await this.hostelRepo.findMany();
+    return this.complaintRepo.findManyForHostels(hostels.map((h) => h.id));
   }
 
   private async getScoped(

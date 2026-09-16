@@ -23,13 +23,19 @@ export class AttendantsController {
   // Method-level @Roles OVERRIDES the class-level one (RolesGuard uses
   // getAllAndOverride, not a merge) -- these reads are reachable by
   // TRANSPORT_MANAGER too; create/update stay ADMIN-only exactly as before.
-  @Roles('ADMIN', 'TRANSPORT_MANAGER')
+  // PRINCIPAL added for the design-reframe's real Transport route-detail page
+  // (isCrew section needs the attendant's name/phone), same read-only-oversight
+  // pattern as vehicles/drivers/routes in this same module. VICE_PRINCIPAL
+  // added too -- vehicles/drivers/routes in this module already grant VP the
+  // same real access; this controller was the one inconsistent holdout,
+  // caught in a wiring audit.
+  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get()
   async list() {
     return { data: await this.attendantsService.list() };
   }
 
-  @Roles('ADMIN', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get(':id')
   async get(@Param('id') id: string) {
     return { data: await this.attendantsService.get(id) };

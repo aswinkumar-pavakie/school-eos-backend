@@ -46,6 +46,22 @@ export class OutingRequestsSharedService {
     );
   }
 
+  /** School-wide, not warden-scoped -- backs the Principal/Vice Principal/Admin web
+   * console's real Hostel "Out of the hostel now" oversight (design-reframe
+   * addition). See OutingRequestRepository.findActiveOversight's own comment for
+   * how "still out" vs "overdue" is inferred from the real data. */
+  async listActiveOversight(): Promise<OutingRequestRow[]> {
+    return this.outingRequestRepo.findActiveOversight();
+  }
+
+  /** School-wide, not warden-scoped -- backs the Principal/Vice Principal/Admin web
+   * console's real Hostel "Gate log" card (design-reframe addition). See
+   * OutingRequestRepository.findRecentDecisions's own comment for why this is the
+   * closest honest real substitute for a check-in/exit event feed. */
+  async listRecentDecisions(limit: number): Promise<OutingRequestRow[]> {
+    return this.outingRequestRepo.findRecentDecisions(limit);
+  }
+
   private async getScoped(
     id: string,
     hostelIds: string[],

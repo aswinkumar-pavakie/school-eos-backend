@@ -37,6 +37,11 @@ export interface ExamScheduleRow {
   hasPractical: boolean;
   practicalMax: string | null;
   internalMax: string | null;
+  /** Real count of `mark` rows already entered for this paper -- lets a
+   * read-only oversight view (Principal/VP's Exam timetable) show genuine
+   * marks-entry coverage per section without a separate endpoint. 0 means
+   * marks entry hasn't started for this paper yet. */
+  marksEnteredCount: number;
 }
 
 export interface CreateExamInput {
@@ -98,7 +103,8 @@ const SCHEDULE_COLUMNS = `es.id, es.exam_id AS "examId", es.subject_offering_id 
   p.first_name AS "teacherFirstName", p.last_name AS "teacherLastName",
   es.exam_date AS "examDate", es.start_time AS "startTime", es.duration_minutes AS "durationMinutes",
   es.room, es.max_marks AS "maxMarks", es.pass_marks AS "passMarks",
-  es.has_practical AS "hasPractical", es.practical_max AS "practicalMax", es.internal_max AS "internalMax"`;
+  es.has_practical AS "hasPractical", es.practical_max AS "practicalMax", es.internal_max AS "internalMax",
+  (SELECT count(*)::int FROM mark m WHERE m.exam_subject_id = es.id) AS "marksEnteredCount"`;
 
 const SCHEDULE_FROM = `exam_subject es
   JOIN subject_offering so ON so.id = es.subject_offering_id

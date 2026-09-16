@@ -29,6 +29,34 @@ export interface StaffRow {
   city: string | null;
   state: string | null;
   pincode: string | null;
+  // Real person-table columns (already selected elsewhere, e.g.
+  // person.repository.ts's own ROW_COLUMNS) -- just never previously joined
+  // onto the staff profile response. Added so the Faculty profile detail
+  // view (Principal/Vice Principal/Admin) can show real contact/gender data
+  // instead of fabricating it -- no schema change, no write path touched.
+  email: string | null;
+  mobile: string | null;
+  gender: string | null;
+  // Added for the Admit Faculty page (Admin) -- see query.md's own
+  // "Admit Faculty page" section for the DDL. departmentId/campusId are
+  // real FKs onto the pre-existing department/campus tables, not new lookup
+  // tables of their own.
+  departmentId: string | null;
+  campusId: string | null;
+  bloodGroup: string | null;
+  employmentType: string | null;
+  staffRoom: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+  highestQualification: string | null;
+  specialization: string | null;
+  university: string | null;
+  yearOfGraduation: number | null;
+  tetNetCleared: boolean | null;
+  areasOfExpertise: string | null;
+  certifications: string | null;
+  workshopsTraining: string | null;
+  achievementsAwards: string | null;
 }
 
 export interface CreateStaffInput {
@@ -41,6 +69,22 @@ export interface CreateStaffInput {
   isTeaching?: boolean;
   dateOfJoining: string;
   experienceYears?: number | null;
+  departmentId?: string | null;
+  campusId?: string | null;
+  bloodGroup?: string | null;
+  employmentType?: string | null;
+  staffRoom?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  highestQualification?: string | null;
+  specialization?: string | null;
+  university?: string | null;
+  yearOfGraduation?: number | null;
+  tetNetCleared?: boolean | null;
+  areasOfExpertise?: string | null;
+  certifications?: string | null;
+  workshopsTraining?: string | null;
+  achievementsAwards?: string | null;
 }
 
 export interface UpdateStaffInput {
@@ -51,6 +95,22 @@ export interface UpdateStaffInput {
   stateTeacherId?: string | null;
   isTeaching?: boolean;
   experienceYears?: number | null;
+  departmentId?: string | null;
+  campusId?: string | null;
+  bloodGroup?: string | null;
+  employmentType?: string | null;
+  staffRoom?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  highestQualification?: string | null;
+  specialization?: string | null;
+  university?: string | null;
+  yearOfGraduation?: number | null;
+  tetNetCleared?: boolean | null;
+  areasOfExpertise?: string | null;
+  certifications?: string | null;
+  workshopsTraining?: string | null;
+  achievementsAwards?: string | null;
 }
 
 // A function, not a top-level constant -- see student.repository.ts's columns()
@@ -63,7 +123,15 @@ const columns =
   s.experience_years AS "experienceYears",
   s.status, s.created_at AS "createdAt", s.updated_at AS "updatedAt",
   ${personPhotoPublicUrlSql('p.photo_object_key')} AS "photoUrl",
-  p.address_line1 AS "addressLine1", p.address_line2 AS "addressLine2", p.city, p.state, p.pincode`;
+  p.address_line1 AS "addressLine1", p.address_line2 AS "addressLine2", p.city, p.state, p.pincode,
+  p.email, p.mobile, p.gender,
+  s.department_id AS "departmentId", s.campus_id AS "campusId", s.blood_group AS "bloodGroup",
+  s.employment_type AS "employmentType", s.staff_room AS "staffRoom",
+  s.emergency_contact_name AS "emergencyContactName", s.emergency_contact_phone AS "emergencyContactPhone",
+  s.highest_qualification AS "highestQualification", s.specialization, s.university,
+  s.year_of_graduation AS "yearOfGraduation", s.tet_net_cleared AS "tetNetCleared",
+  s.areas_of_expertise AS "areasOfExpertise", s.certifications, s.workshops_training AS "workshopsTraining",
+  s.achievements_awards AS "achievementsAwards"`;
 
 @Injectable()
 export class StaffRepository {
@@ -196,8 +264,13 @@ export class StaffRepository {
   ): Promise<StaffRow> {
     const { rows } = await executor.query<{ id: string }>(
       `INSERT INTO staff (person_id, employee_no, designation, teacher_category, post_type,
-         state_teacher_id, is_teaching, date_of_joining, experience_years)
-       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, true), $8, $9)
+         state_teacher_id, is_teaching, date_of_joining, experience_years, department_id,
+         campus_id, blood_group, employment_type, staff_room, emergency_contact_name,
+         emergency_contact_phone, highest_qualification, specialization, university,
+         year_of_graduation, tet_net_cleared, areas_of_expertise, certifications,
+         workshops_training, achievements_awards)
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, true), $8, $9, $10, $11, $12, $13, $14,
+         $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
        RETURNING id`,
       [
         input.personId,
@@ -209,6 +282,22 @@ export class StaffRepository {
         input.isTeaching ?? null,
         input.dateOfJoining,
         input.experienceYears ?? null,
+        input.departmentId ?? null,
+        input.campusId ?? null,
+        input.bloodGroup ?? null,
+        input.employmentType ?? null,
+        input.staffRoom ?? null,
+        input.emergencyContactName ?? null,
+        input.emergencyContactPhone ?? null,
+        input.highestQualification ?? null,
+        input.specialization ?? null,
+        input.university ?? null,
+        input.yearOfGraduation ?? null,
+        input.tetNetCleared ?? null,
+        input.areasOfExpertise ?? null,
+        input.certifications ?? null,
+        input.workshopsTraining ?? null,
+        input.achievementsAwards ?? null,
       ],
     );
     return (await this.findById(rows[0].id, executor))!;
@@ -228,6 +317,22 @@ export class StaffRepository {
          state_teacher_id = COALESCE($6, state_teacher_id),
          is_teaching = COALESCE($7, is_teaching),
          experience_years = COALESCE($8, experience_years),
+         department_id = COALESCE($9, department_id),
+         campus_id = COALESCE($10, campus_id),
+         blood_group = COALESCE($11, blood_group),
+         employment_type = COALESCE($12, employment_type),
+         staff_room = COALESCE($13, staff_room),
+         emergency_contact_name = COALESCE($14, emergency_contact_name),
+         emergency_contact_phone = COALESCE($15, emergency_contact_phone),
+         highest_qualification = COALESCE($16, highest_qualification),
+         specialization = COALESCE($17, specialization),
+         university = COALESCE($18, university),
+         year_of_graduation = COALESCE($19, year_of_graduation),
+         tet_net_cleared = COALESCE($20, tet_net_cleared),
+         areas_of_expertise = COALESCE($21, areas_of_expertise),
+         certifications = COALESCE($22, certifications),
+         workshops_training = COALESCE($23, workshops_training),
+         achievements_awards = COALESCE($24, achievements_awards),
          updated_at = now()
        WHERE id = $1
        RETURNING id`,
@@ -240,10 +345,42 @@ export class StaffRepository {
         input.stateTeacherId ?? null,
         input.isTeaching ?? null,
         input.experienceYears ?? null,
+        input.departmentId ?? null,
+        input.campusId ?? null,
+        input.bloodGroup ?? null,
+        input.employmentType ?? null,
+        input.staffRoom ?? null,
+        input.emergencyContactName ?? null,
+        input.emergencyContactPhone ?? null,
+        input.highestQualification ?? null,
+        input.specialization ?? null,
+        input.university ?? null,
+        input.yearOfGraduation ?? null,
+        input.tetNetCleared ?? null,
+        input.areasOfExpertise ?? null,
+        input.certifications ?? null,
+        input.workshopsTraining ?? null,
+        input.achievementsAwards ?? null,
       ],
     );
     if (rows.length === 0) return null;
     return this.findById(id, executor);
+  }
+
+  /** Same pattern as student.repository.ts's findMaxAdmissionSeqForYear --
+   * backs GET /staff/next-employee-id. Not year-scoped like admission
+   * numbers (real data uses a flat EMP#### sequence, not EMP<year>####). */
+  async findMaxEmployeeSeq(
+    executor: Queryable = this.postgres,
+  ): Promise<number | null> {
+    const { rows } = await executor.query<{ employee_no: string }>(
+      `SELECT employee_no FROM staff
+       WHERE employee_no ~ '^EMP[0-9]{4}$'
+       ORDER BY employee_no DESC
+       LIMIT 1`,
+    );
+    if (rows.length === 0) return null;
+    return parseInt(rows[0].employee_no.slice(-4), 10);
   }
 
   /** Atomic: status and date_of_exit must change together, per the DB's own

@@ -52,12 +52,14 @@ function buildService(opts: { complaint?: any } = {}) {
     run: jest.fn((work: (client: unknown) => Promise<unknown>) => work({})),
   } as any;
 
+  const hostelRepo = { findMany: jest.fn() } as any;
   const service = new ComplaintsService(
     wardenContext,
     complaintRepo,
     auditService,
     approvalsService,
     unitOfWork,
+    hostelRepo,
   );
   return {
     service,

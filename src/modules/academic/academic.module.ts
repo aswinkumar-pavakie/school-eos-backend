@@ -4,6 +4,8 @@
 // existed live in the DB before this module -- pure application code, no schema changes.
 
 import { Module } from '@nestjs/common';
+import { AcademicTermsController } from './academic-terms.controller';
+import { AcademicTermsService } from './academic-terms.service';
 import { AcademicYearsController } from './academic-years.controller';
 import { AcademicYearsService } from './academic-years.service';
 import { CalendarEventsController } from './calendar-events.controller';
@@ -48,6 +50,7 @@ import { SubjectsService } from './subjects.service';
   controllers: [
     SchoolController,
     AcademicYearsController,
+    AcademicTermsController,
     CampusesController,
     MediumsController,
     GradeScalesController,
@@ -62,6 +65,7 @@ import { SubjectsService } from './subjects.service';
   providers: [
     SchoolService,
     AcademicYearsService,
+    AcademicTermsService,
     CampusesService,
     MediumsService,
     GradeScalesService,

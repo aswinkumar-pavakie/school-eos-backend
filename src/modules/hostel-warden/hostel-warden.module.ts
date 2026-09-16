@@ -22,6 +22,7 @@ import { GatePassRequestsController } from './gate-pass-requests.controller';
 import { HostelWardenApprovalHandlers } from './hostel-warden-approval-handlers.service';
 import { NightAttendanceController } from './night-attendance.controller';
 import { NightAttendanceService } from './night-attendance.service';
+import { OutingOversightController } from './outing-oversight.controller';
 import { OutingRequestsSharedService } from './outing-requests-shared.service';
 import { ClassAbsenceAlertRepository } from './repositories/class-absence-alert.repository';
 import { GatePassRepository } from './repositories/gate-pass.repository';
@@ -46,6 +47,7 @@ import { WardenContextService } from './warden-context.service';
     EmergencyExitRequestsController,
     ClassAbsenceAlertsController,
     RoomBedViewController,
+    OutingOversightController,
   ],
   providers: [
     WardenContextService,

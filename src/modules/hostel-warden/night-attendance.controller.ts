@@ -19,6 +19,16 @@ export class NightAttendanceController {
     return { data: await this.service.getRoster(actor.personId, query.date) };
   }
 
+  // School-wide, not warden-scoped -- backs the Principal/Vice Principal web console's real
+  // Hostel roll-call oversight (design-reframe addition). A distinct route,
+  // not a personId branch on getRoster() above, since a Principal is never an
+  // "active warden" and requireActiveWarden() would legitimately deny them.
+  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Get('oversight')
+  async getRosterSchoolWide(@Query() query: NightAttendanceQueryDto) {
+    return { data: await this.service.getRosterSchoolWide(query.date) };
+  }
+
   @Post()
   async mark(
     @Body() dto: MarkNightAttendanceDto,

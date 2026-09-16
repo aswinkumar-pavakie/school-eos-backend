@@ -97,6 +97,8 @@ export class PersonsService {
             city: dto.city ?? null,
             state: dto.state ?? null,
             pincode: dto.pincode ?? null,
+            district: dto.district ?? null,
+            aadhaarLast4: dto.aadhaarLast4 ?? null,
             createdBy: actorPersonId,
           },
           client,

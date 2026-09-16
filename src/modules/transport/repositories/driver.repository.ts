@@ -14,6 +14,11 @@ export interface DriverRow {
   policeVerificationRef: string | null;
   verificationExpiry: string | null;
   status: string;
+  /** Real columns (query.md), added specifically so the mockup's own
+   * "Experience"/"Blood group" crew-card fields have real data behind them
+   * instead of being fabricated -- NULL ("not recorded") until actually set. */
+  experienceYears: number | null;
+  bloodGroup: string | null;
 }
 
 export interface CreateDriverInput {
@@ -25,6 +30,8 @@ export interface CreateDriverInput {
   policeVerificationRef?: string | null;
   verificationExpiry?: string | null;
   status?: string;
+  experienceYears?: number | null;
+  bloodGroup?: string | null;
 }
 
 export interface UpdateDriverInput {
@@ -36,11 +43,14 @@ export interface UpdateDriverInput {
   policeVerificationRef?: string | null;
   verificationExpiry?: string | null;
   status?: string;
+  experienceYears?: number | null;
+  bloodGroup?: string | null;
 }
 
 const COLUMNS = `id, person_id AS "personId", full_name AS "fullName", phone, licence_no AS "licenceNo",
   licence_expiry AS "licenceExpiry", police_verification_ref AS "policeVerificationRef",
-  verification_expiry AS "verificationExpiry", status`;
+  verification_expiry AS "verificationExpiry", status, experience_years AS "experienceYears",
+  blood_group AS "bloodGroup"`;
 
 @Injectable()
 export class DriverRepository {
@@ -71,8 +81,8 @@ export class DriverRepository {
     const { rows } = await executor.query<DriverRow>(
       `INSERT INTO driver
          (person_id, full_name, phone, licence_no, licence_expiry, police_verification_ref,
-          verification_expiry, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, 'ACTIVE'))
+          verification_expiry, status, experience_years, blood_group)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, 'ACTIVE'), $9, $10)
        RETURNING ${COLUMNS}`,
       [
         input.personId ?? null,
@@ -83,6 +93,8 @@ export class DriverRepository {
         input.policeVerificationRef ?? null,
         input.verificationExpiry ?? null,
         input.status ?? null,
+        input.experienceYears ?? null,
+        input.bloodGroup ?? null,
       ],
     );
     return rows[0];
@@ -102,7 +114,9 @@ export class DriverRepository {
          licence_expiry = COALESCE($6, licence_expiry),
          police_verification_ref = COALESCE($7, police_verification_ref),
          verification_expiry = COALESCE($8, verification_expiry),
-         status = COALESCE($9, status)
+         status = COALESCE($9, status),
+         experience_years = COALESCE($10, experience_years),
+         blood_group = COALESCE($11, blood_group)
        WHERE id = $1
        RETURNING ${COLUMNS}`,
       [
@@ -115,6 +129,8 @@ export class DriverRepository {
         input.policeVerificationRef ?? null,
         input.verificationExpiry ?? null,
         input.status ?? null,
+        input.experienceYears ?? null,
+        input.bloodGroup ?? null,
       ],
     );
     return rows[0] ?? null;

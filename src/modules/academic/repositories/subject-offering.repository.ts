@@ -42,6 +42,18 @@ export class SubjectOfferingRepository {
     return rows;
   }
 
+  /** Every subject_offering for the current academic year, school-wide -- backs
+   * the Principal web console's "Subjects & mapping" page (design-reframe
+   * addition), which needs the whole school's mapping, not one section's. */
+  async findAllCurrentYear(executor: Queryable = this.postgres): Promise<SubjectOfferingRow[]> {
+    const { rows } = await executor.query<SubjectOfferingRow>(
+      `SELECT ${COLUMNS} FROM ${FROM}
+       WHERE so.academic_year_id = (SELECT id FROM academic_year WHERE is_current LIMIT 1)
+       ORDER BY sub.name, g.name, sec.name`,
+    );
+    return rows;
+  }
+
   /** Every subject_offering a given staff member currently teaches, across every
    * section -- "which subjects is this faculty handling" needs the reverse
    * direction from findBySection. */

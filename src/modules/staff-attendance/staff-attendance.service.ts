@@ -42,18 +42,50 @@ export class StaffAttendanceService {
     const effectiveMonth = month ?? new Date().toISOString().slice(0, 7);
     const [days, monthlySummary, allTimeCounts] = await Promise.all([
       this.staffAttendanceRepo.findEventsForStaff(staffId, effectiveMonth),
-      this.staffAttendanceRepo.getAttendanceSummaryForStaffInMonth(staffId, effectiveMonth),
+      this.staffAttendanceRepo.getAttendanceSummaryForStaffInMonth(
+        staffId,
+        effectiveMonth,
+      ),
       this.staffAttendanceRepo.getAttendanceSummaryForStaff(staffId),
     ]);
-    const withPercentage = (c: { presentCount: number; totalCount: number }) => ({
+    const withPercentage = (c: {
+      presentCount: number;
+      totalCount: number;
+    }) => ({
       ...c,
-      percentage: c.totalCount > 0 ? Math.round((c.presentCount / c.totalCount) * 100) : null,
+      percentage:
+        c.totalCount > 0
+          ? Math.round((c.presentCount / c.totalCount) * 100)
+          : null,
     });
     return {
       month: effectiveMonth,
       monthlySummary: withPercentage(monthlySummary),
       allTimeSummary: withPercentage(allTimeCounts),
       days,
+    };
+  }
+
+  /** Real stat-row summary for a given date (design-reframe addition) --
+   * marked/present/absent/on-leave today plus the school-wide month average,
+   * all real aggregates, no fabricated "corrections open" concept (staff
+   * attendance has no correction/dispute table -- that exists only for
+   * student class-attendance sessions, a different module). */
+  async getDailySummary(date: string) {
+    const month = date.slice(0, 7);
+    const [today, monthSummary] = await Promise.all([
+      this.staffAttendanceRepo.getDailySummary(date),
+      this.staffAttendanceRepo.getMonthSummary(month),
+    ]);
+    return {
+      total: today.total,
+      present: today.present,
+      absent: today.absent,
+      onLeave: today.onLeave,
+      monthAveragePercent:
+        monthSummary.total > 0
+          ? Math.round((monthSummary.present / monthSummary.total) * 100)
+          : null,
     };
   }
 

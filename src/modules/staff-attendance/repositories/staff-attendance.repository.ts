@@ -140,14 +140,21 @@ export class StaffAttendanceRepository {
     staffId: string,
     month: string | undefined,
     executor: Queryable = this.postgres,
-  ): Promise<{ date: string; status: string; occurredAt: Date; reason: string | null }[]> {
+  ): Promise<
+    { date: string; status: string; occurredAt: Date; reason: string | null }[]
+  > {
     const params: unknown[] = [staffId];
     let monthFilter = '';
     if (month) {
       params.push(`${month}-01`);
       monthFilter = `AND date_trunc('month', e.occurred_at) = date_trunc('month', $${params.length}::date)`;
     }
-    const { rows } = await executor.query<{ date: string; status: string; occurred_at: Date; reason: string | null }>(
+    const { rows } = await executor.query<{
+      date: string;
+      status: string;
+      occurred_at: Date;
+      reason: string | null;
+    }>(
       `SELECT DISTINCT ON (e.occurred_at::date)
               e.occurred_at::date AS date, e.event_type AS status, e.occurred_at, e.reason
        FROM staff_attendance_event e
@@ -155,7 +162,12 @@ export class StaffAttendanceRepository {
        ORDER BY e.occurred_at::date DESC, e.received_at DESC`,
       params,
     );
-    return rows.map((r) => ({ date: r.date, status: r.status, occurredAt: r.occurred_at, reason: r.reason }));
+    return rows.map((r) => ({
+      date: r.date,
+      status: r.status,
+      occurredAt: r.occurred_at,
+      reason: r.reason,
+    }));
   }
 
   /** Same dedup rule, aggregated -- used for the monthly summary in My
@@ -165,7 +177,10 @@ export class StaffAttendanceRepository {
     month: string,
     executor: Queryable = this.postgres,
   ): Promise<{ presentCount: number; totalCount: number }> {
-    const { rows } = await executor.query<{ present_count: string; total_count: string }>(
+    const { rows } = await executor.query<{
+      present_count: string;
+      total_count: string;
+    }>(
       `WITH daily AS (
          SELECT DISTINCT ON (e.occurred_at::date) e.occurred_at::date AS day, e.event_type
          FROM staff_attendance_event e
@@ -205,6 +220,83 @@ export class StaffAttendanceRepository {
       [staffId, dateFrom, dateTo],
     );
     return rows;
+  }
+
+  /** Real counts backing the Principal/Admin attendance dashboard's stat row
+   * (design-reframe addition) -- one query, same "latest CHECK_IN/ABSENT/
+   * ON_DUTY event that day wins" rule as findDailyRoster, just aggregated
+   * instead of per-row. ON_DUTY is real (staff_attendance_event.event_type
+   * already supports it, auto-written by an approved OD request -- see
+   * MarkEventInput's own comment) but findDailyRoster's per-row query
+   * deliberately excludes it from the roster table itself; this summary is
+   * the one place it's surfaced, as a real "on leave" count. */
+  async getDailySummary(
+    date: string,
+    executor: Queryable = this.postgres,
+  ): Promise<{
+    total: number;
+    present: number;
+    absent: number;
+    onLeave: number;
+  }> {
+    const { rows } = await executor.query<{
+      total: string;
+      present: string;
+      absent: string;
+      on_leave: string;
+    }>(
+      `SELECT
+         count(*) AS total,
+         count(*) FILTER (WHERE latest.event_type = 'CHECK_IN') AS present,
+         count(*) FILTER (WHERE latest.event_type = 'ABSENT') AS absent,
+         count(*) FILTER (WHERE latest.event_type = 'ON_DUTY') AS on_leave
+       FROM staff s
+       LEFT JOIN LATERAL (
+         SELECT event_type
+         FROM staff_attendance_event e
+         WHERE e.staff_id = s.id
+           AND e.occurred_at::date = $1::date
+           AND e.event_type IN ('CHECK_IN', 'ABSENT', 'ON_DUTY')
+         ORDER BY e.received_at DESC
+         LIMIT 1
+       ) latest ON true
+       WHERE s.status = 'ACTIVE'`,
+      [date],
+    );
+    return {
+      total: parseInt(rows[0].total, 10),
+      present: parseInt(rows[0].present, 10),
+      absent: parseInt(rows[0].absent, 10),
+      onLeave: parseInt(rows[0].on_leave, 10),
+    };
+  }
+
+  /** School-wide month average -- same per-day "latest event wins" dedup as
+   * getAttendanceSummaryForStaffInMonth, aggregated across every active staff
+   * member instead of one. Backs the "MONTH AVERAGE" stat (design-reframe
+   * addition). */
+  async getMonthSummary(
+    month: string,
+    executor: Queryable = this.postgres,
+  ): Promise<{ present: number; total: number }> {
+    const { rows } = await executor.query<{ present: string; total: string }>(
+      `WITH daily AS (
+         SELECT DISTINCT ON (e.staff_id, e.occurred_at::date)
+                e.staff_id, e.occurred_at::date AS day, e.event_type
+         FROM staff_attendance_event e
+         JOIN staff s ON s.id = e.staff_id AND s.status = 'ACTIVE'
+         WHERE e.event_type IN ('CHECK_IN', 'ABSENT')
+           AND date_trunc('month', e.occurred_at) = date_trunc('month', $1::date)
+         ORDER BY e.staff_id, e.occurred_at::date, e.received_at DESC
+       )
+       SELECT count(*) FILTER (WHERE event_type = 'CHECK_IN') AS present, count(*) AS total
+       FROM daily`,
+      [`${month}-01`],
+    );
+    return {
+      present: parseInt(rows[0].present, 10),
+      total: parseInt(rows[0].total, 10),
+    };
   }
 
   async markMany(

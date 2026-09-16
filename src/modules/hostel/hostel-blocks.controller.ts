@@ -29,6 +29,13 @@ export class HostelBlocksController {
     return { data: await this.hostelBlocksService.listFloors(id) };
   }
 
+  // Static path registered before the dynamic ':id/floors' route's own path
+  // segment shape so it's never ambiguous -- distinct literal path, no collision.
+  @Get('hostel-blocks-oversight')
+  async oversight() {
+    return { data: await this.hostelBlocksService.oversight() };
+  }
+
   @Post('hostel-blocks/:id/floors')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)

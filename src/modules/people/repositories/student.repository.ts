@@ -10,6 +10,8 @@ export interface StudentRow {
   personId: string;
   firstName: string;
   lastName: string | null;
+  dateOfBirth: string | null;
+  gender: string | null;
   admissionNo: string;
   stateStudentId: string | null;
   admissionDate: string;
@@ -40,6 +42,16 @@ export interface StudentRow {
   city: string | null;
   state: string | null;
   pincode: string | null;
+  district: string | null;
+  aadhaarLast4: string | null;
+  religion: string | null;
+  nationality: string | null;
+  admissionQuota: string | null;
+  previousSchool: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+  guardianFirstName: string | null;
+  guardianLastName: string | null;
 }
 
 export interface CreateStudentInput {
@@ -59,6 +71,12 @@ export interface CreateStudentInput {
   usesSchoolTransport?: boolean;
   commuteMode?: string | null;
   bankAccountRef?: string | null;
+  religion?: string | null;
+  nationality?: string | null;
+  admissionQuota?: string | null;
+  previousSchool?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
 }
 
 export interface UpdateStudentInput {
@@ -76,6 +94,12 @@ export interface UpdateStudentInput {
   usesSchoolTransport?: boolean;
   commuteMode?: string | null;
   bankAccountRef?: string | null;
+  religion?: string | null;
+  nationality?: string | null;
+  admissionQuota?: string | null;
+  previousSchool?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
 }
 
 // A function, not a top-level constant -- personPhotoPublicUrlSql() reads
@@ -85,6 +109,7 @@ export interface UpdateStudentInput {
 // time) instead keeps it correct.
 const columns =
   () => `s.id, s.person_id AS "personId", p.first_name AS "firstName", p.last_name AS "lastName",
+  p.date_of_birth AS "dateOfBirth", p.gender,
   s.admission_no AS "admissionNo", s.state_student_id AS "stateStudentId", s.admission_date AS "admissionDate",
   s.medium_id AS "mediumId", s.mother_tongue AS "motherTongue",
   s.language_subject_choice AS "languageSubjectChoice", s.community_category AS "communityCategory",
@@ -96,18 +121,32 @@ const columns =
   g.id AS "gradeId", g.name AS "gradeName", sec.id AS "sectionId", sec.name AS "sectionName",
   se.roll_no AS "rollNo",
   ${personPhotoPublicUrlSql('p.photo_object_key')} AS "photoUrl",
-  p.address_line1 AS "addressLine1", p.address_line2 AS "addressLine2", p.city, p.state, p.pincode`;
+  p.address_line1 AS "addressLine1", p.address_line2 AS "addressLine2", p.city, p.state, p.pincode,
+  p.district, p.aadhaar_last4 AS "aadhaarLast4",
+  s.religion, s.nationality, s.admission_quota AS "admissionQuota", s.previous_school AS "previousSchool",
+  s.emergency_contact_name AS "emergencyContactName", s.emergency_contact_phone AS "emergencyContactPhone",
+  gp.first_name AS "guardianFirstName", gp.last_name AS "guardianLastName"`;
 
 // LEFT JOIN to the student's current-year, ACTIVE enrolment only -- a student can
 // have historical enrolment rows from past years, but the list/detail views only
 // ever want the live one. No current enrolment (a brand-new admission with no
 // class assigned yet) is a valid state, not an error -- every column above stays
-// null in that case.
+// null in that case. The guardian lateral picks the primary contact (falling
+// back to the earliest-added active guardian if none is flagged primary) --
+// added for the Principal students list's real GUARDIAN column, same shape
+// guardian-link.repository.ts's own findByStudentId ordering already uses.
 const CURRENT_ENROLMENT_JOIN = `
   LEFT JOIN student_enrolment se ON se.student_id = s.id AND se.status = 'ACTIVE'
     AND se.academic_year_id = (SELECT id FROM academic_year WHERE is_current LIMIT 1)
   LEFT JOIN section sec ON sec.id = se.section_id
-  LEFT JOIN grade g ON g.id = sec.grade_id`;
+  LEFT JOIN grade g ON g.id = sec.grade_id
+  LEFT JOIN LATERAL (
+    SELECT gl.person_id FROM guardian_link gl
+    WHERE gl.student_id = s.id AND gl.status = 'ACTIVE'
+    ORDER BY gl.is_primary_contact DESC, gl.created_at
+    LIMIT 1
+  ) primary_guardian ON true
+  LEFT JOIN person gp ON gp.id = primary_guardian.person_id`;
 
 @Injectable()
 export class StudentRepository {
@@ -241,9 +280,10 @@ export class StudentRepository {
       `INSERT INTO student (person_id, admission_no, state_student_id, admission_date, medium_id,
          mother_tongue, language_subject_choice, community_category, is_first_gen_learner,
          is_differently_abled, support_needs, blood_group, is_hosteller, uses_school_transport,
-         bank_account_ref, commute_mode)
+         bank_account_ref, commute_mode, religion, nationality, admission_quota, previous_school,
+         emergency_contact_name, emergency_contact_phone)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, false), COALESCE($10, false), $11, $12,
-         COALESCE($13, false), COALESCE($14, false), $15, $16)
+         COALESCE($13, false), COALESCE($14, false), $15, $16, $17, $18, $19, $20, $21, $22)
        RETURNING id`,
       [
         input.personId,
@@ -262,6 +302,12 @@ export class StudentRepository {
         input.usesSchoolTransport ?? null,
         input.bankAccountRef ?? null,
         input.commuteMode ?? null,
+        input.religion ?? null,
+        input.nationality ?? null,
+        input.admissionQuota ?? null,
+        input.previousSchool ?? null,
+        input.emergencyContactName ?? null,
+        input.emergencyContactPhone ?? null,
       ],
     );
     return (await this.findById(rows[0].id, executor))!;
@@ -288,6 +334,12 @@ export class StudentRepository {
          uses_school_transport = COALESCE($13, uses_school_transport),
          bank_account_ref = COALESCE($14, bank_account_ref),
          commute_mode = COALESCE($15, commute_mode),
+         religion = COALESCE($16, religion),
+         nationality = COALESCE($17, nationality),
+         admission_quota = COALESCE($18, admission_quota),
+         previous_school = COALESCE($19, previous_school),
+         emergency_contact_name = COALESCE($20, emergency_contact_name),
+         emergency_contact_phone = COALESCE($21, emergency_contact_phone),
          updated_at = now()
        WHERE id = $1
        RETURNING id`,
@@ -307,6 +359,12 @@ export class StudentRepository {
         input.usesSchoolTransport ?? null,
         input.bankAccountRef ?? null,
         input.commuteMode ?? null,
+        input.religion ?? null,
+        input.nationality ?? null,
+        input.admissionQuota ?? null,
+        input.previousSchool ?? null,
+        input.emergencyContactName ?? null,
+        input.emergencyContactPhone ?? null,
       ],
     );
     if (rows.length === 0) return null;

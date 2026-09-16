@@ -28,6 +28,13 @@ export class HostelBlocksService {
     return this.hostelFloorRepo.findByBlockId(blockId);
   }
 
+  /** School-wide block/room/bed capacity and occupancy, plus each block's hostel-level
+   * warden -- backs Principal/Vice Principal/Admin's real Hostel "Blocks & wardens"
+   * oversight card (design-reframe addition). Pure aggregate read, no write path. */
+  async oversight() {
+    return this.hostelBlockRepo.findOversight();
+  }
+
   async createFloor(
     blockId: string,
     dto: CreateHostelFloorDto,
