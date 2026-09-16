@@ -13,6 +13,7 @@ import { RoleAssignmentsController } from './role-assignments.controller';
 import { RoleAssignmentsService } from './role-assignments.service';
 import { RolesController } from './roles.controller';
 import { RoleRepository } from './repositories/role.repository';
+import { AcademicCoordinatorLoginRepository } from './repositories/academic-coordinator-login.repository';
 
 // All Admin-facing backend features live here: person listing/creation, role
 // grant/revoke, roles catalog, login-activity/audit read, and the admin-authorized
@@ -29,7 +30,12 @@ import { RoleRepository } from './repositories/role.repository';
     AuditLogController,
     AdminIdentityController,
   ],
-  providers: [PersonsService, RoleAssignmentsService, RoleRepository],
+  providers: [
+    PersonsService,
+    RoleAssignmentsService,
+    RoleRepository,
+    AcademicCoordinatorLoginRepository,
+  ],
   // PersonsService (activate/deactivate) and RoleAssignmentsService (grant/
   // revoke) back the "Administrative user/access request" effect in
   // RequestsApprovalsModule -- same cross-module pattern as everywhere else

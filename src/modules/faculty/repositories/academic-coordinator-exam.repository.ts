@@ -18,6 +18,8 @@ export interface CoordinatorExamRow {
   term: string | null;
   state: string;
   gradeNames: string[];
+  marksEntryOpensAt: string | null;
+  marksEntryClosesAt: string | null;
 }
 
 export interface CoordinatorExamSubjectRow {
@@ -60,12 +62,13 @@ export class AcademicCoordinatorExamRepository {
   ): Promise<CoordinatorExamRow[]> {
     if (gradeIds.length === 0) return [];
     const { rows } = await executor.query(
-      `SELECT e.id AS exam_id, e.name, e.exam_type, e.term, e.state, array_agg(DISTINCT g.name) AS grade_names
+      `SELECT e.id AS exam_id, e.name, e.exam_type, e.term, e.state, array_agg(DISTINCT g.name) AS grade_names,
+              e.marks_entry_opens_at, e.marks_entry_closes_at
        FROM exam e
        JOIN exam_grade eg ON eg.exam_id = e.id
        JOIN grade g ON g.id = eg.grade_id
        WHERE eg.grade_id = ANY($1) AND e.academic_year_id = (SELECT id FROM academic_year WHERE is_current LIMIT 1)
-       GROUP BY e.id, e.name, e.exam_type, e.term, e.state
+       GROUP BY e.id, e.name, e.exam_type, e.term, e.state, e.marks_entry_opens_at, e.marks_entry_closes_at
        ORDER BY e.created_at DESC`,
       [gradeIds],
     );
@@ -76,7 +79,29 @@ export class AcademicCoordinatorExamRepository {
       term: r.term,
       state: r.state,
       gradeNames: r.grade_names,
+      marksEntryOpensAt: r.marks_entry_opens_at,
+      marksEntryClosesAt: r.marks_entry_closes_at,
     }));
+  }
+
+  /** Real, already-existing exam.marks_entry_opens_at/closes_at columns --
+   * the same ones the Admin-only examinations module (exams.controller.ts)
+   * also reads/writes on this identical table. This is now a real,
+   * enforced gate: faculty-marks.service.ts's own save() rejects any new
+   * mark entry once `now` falls outside this window (see its own comment),
+   * even while the parent exam is still sitting in MARKS_ENTRY state -- so
+   * setting/changing this window here takes effect immediately for every
+   * subject teacher entering marks against this exam. */
+  async setMarksEntryWindow(
+    examId: string,
+    opensAt: string | null,
+    closesAt: string | null,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE exam SET marks_entry_opens_at = $2, marks_entry_closes_at = $3, updated_at = now() WHERE id = $1`,
+      [examId, opensAt, closesAt],
+    );
   }
 
   async findExamGradeIds(

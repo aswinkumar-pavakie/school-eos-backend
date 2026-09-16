@@ -15,6 +15,7 @@ import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { StorageService } from '../../infrastructure/storage/storage.service';
 import { HOMEWORK_SUBMISSIONS_BUCKET } from '../parent/homework-storage.util';
 import { CreateHomeworkDto } from './dto/create-homework.dto';
+import { GradeHomeworkSubmissionDto } from './dto/grade-homework-submission.dto';
 import { UpdateHomeworkDto } from './dto/update-homework.dto';
 import { FacultyScopeRepository } from './repositories/faculty-scope.repository';
 import { HomeworkRepository } from './repositories/homework.repository';
@@ -159,6 +160,37 @@ export class FacultyHomeworkService {
           ? roster.filter((r) => ['PENDING', 'NOT_DONE'].includes(r.status))
           : roster;
     return { homework, roster: filtered };
+  }
+
+  /** The teacher directly marking one student's submission complete/not
+   * complete (optionally with marks/feedback) -- for homework collected or
+   * checked in person, not through the Parent/Student app. */
+  async gradeSubmission(
+    personId: string,
+    homeworkId: string,
+    studentId: string,
+    dto: GradeHomeworkSubmissionDto,
+  ) {
+    await this.assertOwnsHomework(personId, homeworkId);
+    const updated = await this.homeworkRepo.gradeSubmission(
+      homeworkId,
+      studentId,
+      { status: dto.status, marksAwarded: dto.marksAwarded, feedback: dto.feedback },
+      personId,
+    );
+    if (!updated) {
+      throw new NotFoundException('This student is not on this homework\'s roster.');
+    }
+    await this.audit.record({
+      actorPersonId: personId,
+      actorRoleCode: 'FACULTY',
+      action: 'HOMEWORK_SUBMISSION_GRADED',
+      objectType: 'homework_submission',
+      objectId: `${homeworkId}:${studentId}`,
+      outcome: 'SUCCESS',
+      afterData: { homeworkId, studentId, ...dto },
+    });
+    return this.getRoster(personId, homeworkId);
   }
 
   /** Lets the teacher who owns this homework open a signed URL for exactly

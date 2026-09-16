@@ -7,6 +7,9 @@
 import { Module } from '@nestjs/common';
 import { FinanceModule } from '../finance/finance.module';
 import { AuditController } from './audit.controller';
+import { EbooksController } from './ebooks.controller';
+import { EbooksService } from './ebooks.service';
+import { LibraryEbookRepository } from './repositories/library-ebook.repository';
 import { LibraryAuditService } from './library-audit.service';
 import {
   BookCopiesListController,
@@ -64,6 +67,7 @@ import { LibraryReservationRepository } from './repositories/library-reservation
     LostDamagedController,
     ReportsController,
     AuditController,
+    EbooksController,
   ],
   providers: [
     BooksService,
@@ -90,6 +94,8 @@ import { LibraryReservationRepository } from './repositories/library-reservation
     LibraryConfigRepository,
     LibraryLostDamagedReportRepository,
     LibraryAuditLogRepository,
+    EbooksService,
+    LibraryEbookRepository,
   ],
   // BooksService/CategoriesService/CirculationService/LibraryMemberRepository
   // additionally back Faculty's own read-only catalog-search + "my issues"

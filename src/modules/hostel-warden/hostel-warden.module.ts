@@ -13,6 +13,7 @@ import { Module } from '@nestjs/common';
 import { AttendanceModule } from '../attendance/attendance.module';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { OutboxService } from '../../common/outbox/outbox.service';
+import { AdminFinanceModule } from '../finance/admin-finance.module';
 import { HostelModule } from '../hostel/hostel.module';
 import { PeopleModule } from '../people/people.module';
 import { ClassAbsenceAlertsController } from './class-absence-alerts.controller';
@@ -38,7 +39,7 @@ import { VisitorLogService } from './visitor-log.service';
 import { WardenContextService } from './warden-context.service';
 
 @Module({
-  imports: [PeopleModule, HostelModule, AttendanceModule, ApprovalsModule],
+  imports: [PeopleModule, HostelModule, AttendanceModule, ApprovalsModule, AdminFinanceModule],
   controllers: [
     NightAttendanceController,
     VisitorLogController,

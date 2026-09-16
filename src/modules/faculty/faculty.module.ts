@@ -18,6 +18,15 @@ import { FacultyClassResultsController } from './faculty-class-results.controlle
 import { FacultyClassResultsService } from './faculty-class-results.service';
 import { FacultyClassTeacherController } from './faculty-class-teacher.controller';
 import { FacultyClassTeacherService } from './faculty-class-teacher.service';
+import { FacultyExamScheduleController } from './faculty-exam-schedule.controller';
+import { FacultyExamScheduleService } from './faculty-exam-schedule.service';
+import { FacultyFeesController } from './faculty-fees.controller';
+import { FacultyFeesService } from './faculty-fees.service';
+import { FacultyFeesRepository } from './repositories/faculty-fees.repository';
+import { FacultyReportCardService } from './faculty-report-card.service';
+import { FacultyReportCardRepository } from './repositories/faculty-report-card.repository';
+import { FacultyStudentDetailController } from './faculty-student-detail.controller';
+import { FacultyStudentDetailService } from './faculty-student-detail.service';
 import { FacultyHomeworkController } from './faculty-homework.controller';
 import { FacultyHomeworkService } from './faculty-homework.service';
 import { FacultyHrRequestsController } from './faculty-hr-requests.controller';
@@ -53,6 +62,8 @@ import { FacultyScopeRepository } from './repositories/faculty-scope.repository'
 import { AcademicCoordinatorRepository } from './repositories/academic-coordinator.repository';
 import { AcademicCoordinatorExamRepository } from './repositories/academic-coordinator-exam.repository';
 import { AcademicCoordinatorTimetableRepository } from './repositories/academic-coordinator-timetable.repository';
+import { ExamVerificationRepository } from './repositories/exam-verification.repository';
+import { AcademicCoordinatorSyllabusRepository } from './repositories/academic-coordinator-syllabus.repository';
 import { CalendarRepository } from './repositories/calendar.repository';
 import { HomeworkRepository } from './repositories/homework.repository';
 import { LmsFolderRepository } from './repositories/lms-folder.repository';
@@ -70,6 +81,12 @@ import { StudentLeaveRequestRepository } from './repositories/student-leave-requ
 import { TimetableRepository } from './repositories/timetable.repository';
 import { StaffAttendanceModule } from '../staff-attendance/staff-attendance.module';
 import { LibraryModule } from '../library/library.module';
+import { ExaminationsModule } from '../examinations/examinations.module';
+import { PeopleModule } from '../people/people.module';
+import { AdminFinanceModule } from '../finance/admin-finance.module';
+import { TimetableModule } from '../timetable/timetable.module';
+import { SubstitutionRepository } from './repositories/substitution.repository';
+import { MarkCorrectionRepository } from './repositories/mark-correction.repository';
 
 @Module({
   // ApprovalsModule: real approval routing for student_leave_request (and
@@ -88,6 +105,10 @@ import { LibraryModule } from '../library/library.module';
     AnnouncementsModule,
     StaffAttendanceModule,
     LibraryModule,
+    ExaminationsModule,
+    PeopleModule,
+    AdminFinanceModule,
+    TimetableModule,
   ],
   controllers: [
     FacultyScopeController,
@@ -100,6 +121,8 @@ import { LibraryModule } from '../library/library.module';
     FacultyClassResultsController,
     FacultyHomeworkController,
     FacultyClassTeacherController,
+    FacultyExamScheduleController,
+    FacultyFeesController,
     FacultyMyAttendanceController,
     FacultyStaffLeaveController,
     FacultyHrRequestsController,
@@ -114,6 +137,7 @@ import { LibraryModule } from '../library/library.module';
     ParentMeetingBookingController,
     ParentMeetingSlotsController,
     FacultyAcademicCoordinatorController,
+    FacultyStudentDetailController,
   ],
   providers: [
     AuditService,
@@ -130,6 +154,11 @@ import { LibraryModule } from '../library/library.module';
     FacultyHomeworkService,
     StudentDutyRepository,
     FacultyClassTeacherService,
+    FacultyExamScheduleService,
+    FacultyFeesRepository,
+    FacultyFeesService,
+    FacultyReportCardRepository,
+    FacultyReportCardService,
     FacultyMyAttendanceService,
     StaffLeaveRequestRepository,
     FacultyStaffLeaveService,
@@ -153,7 +182,12 @@ import { LibraryModule } from '../library/library.module';
     AcademicCoordinatorRepository,
     AcademicCoordinatorTimetableRepository,
     AcademicCoordinatorExamRepository,
+    ExamVerificationRepository,
+    AcademicCoordinatorSyllabusRepository,
+    SubstitutionRepository,
+    MarkCorrectionRepository,
     FacultyAcademicCoordinatorService,
+    FacultyStudentDetailService,
   ],
 })
 export class FacultyModule {}

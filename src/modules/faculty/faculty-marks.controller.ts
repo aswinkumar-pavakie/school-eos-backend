@@ -10,6 +10,7 @@ import { AuthenticatedUser } from '../../common/auth/authenticated-user.interfac
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
 import { SaveMarksDto } from './dto/save-marks.dto';
+import { CorrectMarkDto } from './dto/correct-mark.dto';
 import { FacultyMarksService } from './faculty-marks.service';
 
 @Roles('FACULTY')
@@ -53,5 +54,21 @@ export class FacultyMarksController {
     @CurrentActor() actor: AuthenticatedUser,
   ) {
     return { data: await this.service.publish(actor.personId, id) };
+  }
+
+  // ===== Correction requests (real "sent back" loop from Marks verification) =====
+
+  @Get('sent-back')
+  async listSentBackSubmissions(@CurrentActor() actor: AuthenticatedUser) {
+    return { data: await this.service.listSentBackSubmissions(actor.personId) };
+  }
+
+  @Post('exam-subjects/:id/correct')
+  async correctMark(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CorrectMarkDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return { data: await this.service.correctMark(actor.personId, id, dto) };
   }
 }

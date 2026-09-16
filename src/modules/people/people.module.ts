@@ -64,6 +64,8 @@ import { StudentsService } from './students.service';
   // effect in RequestsApprovalsModule (same cross-module pattern as the rest
   // of this codebase). StaffRepository/StaffService additionally back the Events
   // module's "monitoring teacher" picker (a real staff search, not free text).
-  exports: [StudentRepository, StudentsService, StaffRepository, StaffService],
+  // GuardianLinksService additionally backs Faculty's own section-scoped
+  // student-detail read (FacultyStudentDetailService) -- same reuse pattern.
+  exports: [StudentRepository, StudentsService, StaffRepository, StaffService, GuardianLinksService],
 })
 export class PeopleModule {}

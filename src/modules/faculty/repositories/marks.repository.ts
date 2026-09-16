@@ -13,6 +13,19 @@
 // sit at mark.state='VERIFIED' under an already-PUBLISHED exam, and never
 // reach mark.state='PUBLISHED' itself. The real gate on "is this result
 // settled" is the parent exam's own state, not each individual mark row's.
+//
+// Every read of marks_obtained below derives the *effective* value --
+// COALESCE(latest mark_correction.new_marks, mark.marks_obtained) -- the
+// exact same pattern attendance_record already uses for its own
+// corrections. This is required, not optional: guard_published_mark (a real
+// DB trigger on `mark`) unconditionally rejects any direct UPDATE to
+// marks_obtained once mark.state='PUBLISHED', so a coordinator's "send
+// back" -> teacher's re-mark loop (faculty-marks.service.ts's own
+// correctMark) can only ever write a new mark_correction row, never the
+// base row -- every consumer of a mark's value (Performance, Reports,
+// Marks verification, Subject Records, report cards) must read through
+// this same derivation or it would silently show the stale, pre-correction
+// number.
 
 import { Injectable } from '@nestjs/common';
 import {
@@ -29,6 +42,8 @@ export interface ExamSubjectRow {
   examState: string;
   maxMarks: number;
   passMarks: number | null;
+  marksEntryOpensAt: string | null;
+  marksEntryClosesAt: string | null;
 }
 
 export interface ExamSummaryRow {
@@ -63,6 +78,8 @@ function mapExamSubject(row: any): ExamSubjectRow {
     // string that happens to behave numerically in some operators but not others.
     maxMarks: Number(row.max_marks),
     passMarks: row.pass_marks === null ? null : Number(row.pass_marks),
+    marksEntryOpensAt: row.marks_entry_opens_at ?? null,
+    marksEntryClosesAt: row.marks_entry_closes_at ?? null,
   };
 }
 
@@ -78,7 +95,8 @@ export class MarksRepository {
   ): Promise<ExamSubjectRow[]> {
     const { rows } = await executor.query(
       `SELECT es.id AS exam_subject_id, es.exam_id, es.max_marks, es.pass_marks,
-              e.name AS exam_name, e.exam_type, e.term, e.state AS exam_state
+              e.name AS exam_name, e.exam_type, e.term, e.state AS exam_state,
+              e.marks_entry_opens_at, e.marks_entry_closes_at
        FROM exam_subject es
        JOIN exam e ON e.id = es.exam_id
        WHERE es.subject_offering_id = $1
@@ -100,7 +118,8 @@ export class MarksRepository {
   > {
     const { rows } = await executor.query(
       `SELECT es.id AS exam_subject_id, es.exam_id, es.subject_offering_id, so.section_id, es.max_marks, es.pass_marks,
-              e.name AS exam_name, e.exam_type, e.term, e.state AS exam_state
+              e.name AS exam_name, e.exam_type, e.term, e.state AS exam_state,
+              e.marks_entry_opens_at, e.marks_entry_closes_at
        FROM exam_subject es
        JOIN exam e ON e.id = es.exam_id
        JOIN subject_offering so ON so.id = es.subject_offering_id
@@ -124,11 +143,15 @@ export class MarksRepository {
   ): Promise<MarkRow[]> {
     const { rows } = await executor.query(
       `SELECT s.id AS student_id, p.first_name, p.last_name, se.roll_no,
-              m.id AS mark_id, m.marks_obtained, m.is_absent, m.is_exempted, m.state
+              m.id AS mark_id, COALESCE(mc.new_marks, m.marks_obtained) AS marks_obtained,
+              m.is_absent, m.is_exempted, m.state
        FROM student_enrolment se
        JOIN student s ON s.id = se.student_id
        JOIN person p ON p.id = s.person_id
        LEFT JOIN mark m ON m.exam_subject_id = $2 AND m.student_id = s.id
+       LEFT JOIN LATERAL (
+         SELECT new_marks FROM mark_correction WHERE mark_id = m.id ORDER BY corrected_at DESC LIMIT 1
+       ) mc ON true
        WHERE se.section_id = $1 AND se.status = 'ACTIVE'
        ORDER BY se.roll_no NULLS LAST, p.first_name`,
       [sectionId, examSubjectId],
@@ -154,7 +177,7 @@ export class MarksRepository {
     executor: Queryable = this.postgres,
   ) {
     const { rows } = await executor.query(
-      `SELECT m.marks_obtained, m.is_absent, es.max_marks, es.id AS exam_subject_id,
+      `SELECT COALESCE(mc.new_marks, m.marks_obtained) AS marks_obtained, m.is_absent, es.max_marks, es.id AS exam_subject_id,
               e.id AS exam_id, e.name AS exam_name, e.exam_type,
               subj.id AS subject_id, subj.name AS subject_name
        FROM mark m
@@ -162,6 +185,9 @@ export class MarksRepository {
        JOIN exam e ON e.id = es.exam_id
        JOIN subject_offering so ON so.id = es.subject_offering_id
        JOIN subject subj ON subj.id = so.subject_id
+       LEFT JOIN LATERAL (
+         SELECT new_marks FROM mark_correction WHERE mark_id = m.id ORDER BY corrected_at DESC LIMIT 1
+       ) mc ON true
        WHERE m.student_id = $1 AND m.state IN ('VERIFIED', 'PUBLISHED')
        ORDER BY subj.name, es.exam_date`,
       [studentId],
@@ -181,13 +207,16 @@ export class MarksRepository {
     const { rows } = await executor.query(
       `SELECT s.id AS student_id, p.first_name, p.last_name, se.roll_no,
               e.id AS exam_id, e.name AS exam_name, es.max_marks,
-              m.marks_obtained, m.is_absent
+              COALESCE(mc.new_marks, m.marks_obtained) AS marks_obtained, m.is_absent
        FROM student_enrolment se
        JOIN student s ON s.id = se.student_id
        JOIN person p ON p.id = s.person_id
        CROSS JOIN exam_subject es
        JOIN exam e ON e.id = es.exam_id AND e.state = 'PUBLISHED'
        LEFT JOIN mark m ON m.exam_subject_id = es.id AND m.student_id = s.id AND m.state IN ('VERIFIED', 'PUBLISHED')
+       LEFT JOIN LATERAL (
+         SELECT new_marks FROM mark_correction WHERE mark_id = m.id ORDER BY corrected_at DESC LIMIT 1
+       ) mc ON true
        WHERE se.section_id = $1 AND se.status = 'ACTIVE' AND es.subject_offering_id = $2
        ORDER BY se.roll_no NULLS LAST, p.first_name, es.exam_date`,
       [sectionId, subjectOfferingId],
@@ -247,7 +276,7 @@ export class MarksRepository {
       `SELECT s.id AS student_id, p.first_name, p.last_name, se.roll_no,
               subj.id AS subject_id, subj.name AS subject_name,
               es.max_marks, es.pass_marks,
-              m.marks_obtained, m.is_absent, m.is_exempted
+              COALESCE(mc.new_marks, m.marks_obtained) AS marks_obtained, m.is_absent, m.is_exempted
        FROM student_enrolment se
        JOIN student s ON s.id = se.student_id
        JOIN person p ON p.id = s.person_id
@@ -255,6 +284,9 @@ export class MarksRepository {
        JOIN exam_subject es ON es.subject_offering_id = so.id AND es.exam_id = $2
        JOIN subject subj ON subj.id = so.subject_id
        LEFT JOIN mark m ON m.exam_subject_id = es.id AND m.student_id = s.id AND m.state IN ('VERIFIED', 'PUBLISHED')
+       LEFT JOIN LATERAL (
+         SELECT new_marks FROM mark_correction WHERE mark_id = m.id ORDER BY corrected_at DESC LIMIT 1
+       ) mc ON true
        WHERE se.section_id = $1 AND se.status = 'ACTIVE'
        ORDER BY se.roll_no NULLS LAST, p.first_name, subj.name`,
       [sectionId, examId],
@@ -313,5 +345,44 @@ export class MarksRepository {
       [examSubjectId],
     );
     return rowCount ?? 0;
+  }
+
+  /** Every exam_subject in this one section+exam that this teacher owns --
+   * the real "which of my subjects does this sent-back submission cover"
+   * check faculty-marks.service.ts's own listSentBackSubmissions/correctMark
+   * need before ever showing (or accepting a correction for) a coordinator's
+   * SENT_BACK decision. Empty means this teacher has nothing to do with
+   * that particular submission. */
+  async findOwnedExamSubjectsForSectionExam(
+    sectionId: string,
+    examId: string,
+    teacherStaffId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<ExamSubjectRow[]> {
+    const { rows } = await executor.query(
+      `SELECT es.id AS exam_subject_id, es.exam_id, es.max_marks, es.pass_marks,
+              e.name AS exam_name, e.exam_type, e.term, e.state AS exam_state,
+              e.marks_entry_opens_at, e.marks_entry_closes_at
+       FROM exam_subject es
+       JOIN exam e ON e.id = es.exam_id
+       JOIN subject_offering so ON so.id = es.subject_offering_id
+       WHERE es.exam_id = $2 AND so.section_id = $1 AND so.teacher_staff_id = $3`,
+      [sectionId, examId, teacherStaffId],
+    );
+    return rows.map(mapExamSubject);
+  }
+
+  async findSectionLabel(
+    sectionId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<{ gradeName: string; sectionName: string } | null> {
+    const { rows } = await executor.query(
+      `SELECT g.name AS grade_name, sec.name AS section_name
+       FROM section sec JOIN grade g ON g.id = sec.grade_id
+       WHERE sec.id = $1`,
+      [sectionId],
+    );
+    if (!rows.length) return null;
+    return { gradeName: rows[0].grade_name, sectionName: rows[0].section_name };
   }
 }

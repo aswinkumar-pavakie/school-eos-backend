@@ -44,4 +44,14 @@ export class RoomBedViewController {
       data: await this.service.getStudentGuardians(studentId, actor.personId),
     };
   }
+
+  @Get('students/:studentId/fees')
+  async getStudentFees(
+    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.getStudentFees(studentId, actor.personId),
+    };
+  }
 }
