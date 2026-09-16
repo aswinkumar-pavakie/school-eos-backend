@@ -214,6 +214,7 @@ export class PersonsService {
         await this.userCredentialRepo.createInitial(
           coordinatorPerson.id,
           passwordHash,
+          dto.password,
           client,
         );
         await this.academicCoordinatorLoginRepo.create(
