@@ -22,7 +22,9 @@ import { CreatePersonDto } from './dto/create-person.dto';
 import { GeneralPasswordResetDto } from './dto/general-password-reset.dto';
 import { PersonQueryDto } from './dto/person-query.dto';
 import { UpdatePersonDto } from './dto/update-person.dto';
+import { CreateAcademicCoordinatorLoginDto } from './dto/create-academic-coordinator-login.dto';
 import { PHOTOS_BUCKET, photoObjectKeyFor } from './photo-storage.util';
+import { AcademicCoordinatorLoginRepository } from './repositories/academic-coordinator-login.repository';
 import { RoleRepository } from './repositories/role.repository';
 import { assertValidRoleScope, isUniqueViolation } from './scope-validation';
 
@@ -38,6 +40,7 @@ export class PersonsService {
     private readonly unitOfWork: UnitOfWork,
     private readonly auditService: AuditService,
     private readonly storageService: StorageService,
+    private readonly academicCoordinatorLoginRepo: AcademicCoordinatorLoginRepository,
   ) {}
 
   async list(query: PersonQueryDto) {
@@ -97,6 +100,8 @@ export class PersonsService {
             city: dto.city ?? null,
             state: dto.state ?? null,
             pincode: dto.pincode ?? null,
+            district: dto.district ?? null,
+            aadhaarLast4: dto.aadhaarLast4 ?? null,
             createdBy: actorPersonId,
           },
           client,
@@ -144,6 +149,99 @@ export class PersonsService {
       });
 
       return { ...result, temporaryPassword: password };
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new ConflictException(
+          'An account with this email or mobile number already exists.',
+        );
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Creates a genuinely separate, coordinator-only login for a real faculty
+   * member -- same "brand-new person + login_identifier + user_credential"
+   * shape this project already uses for Community logins (see
+   * 0014_community_logins_named_per_community.sql), plus a link row purely
+   * for Admin traceability ("which faculty has this coordinator email").
+   * The Academic Coordinator role_assignment itself is granted afterward
+   * (via the existing /role-assignments endpoint) against the RETURNED
+   * coordinatorPersonId, never against facultyPersonId -- the two accounts
+   * share no session, no role, no password.
+   */
+  async createAcademicCoordinatorLogin(
+    facultyPersonId: string,
+    dto: CreateAcademicCoordinatorLoginDto,
+    actorPersonId: string,
+  ) {
+    const faculty = await this.personRepo.findById(facultyPersonId);
+    if (!faculty) throw new NotFoundException('Faculty member not found');
+
+    const existing =
+      await this.academicCoordinatorLoginRepo.findByFacultyPersonId(
+        facultyPersonId,
+      );
+    if (existing) {
+      throw new ConflictException(
+        'This faculty member already has a coordinator login. Grant further coverage as an additional role assignment against the existing coordinator login instead of creating a new one.',
+      );
+    }
+
+    const passwordHash = await argon2.hash(dto.password, ARGON2_OPTIONS);
+
+    try {
+      const coordinatorPerson = await this.unitOfWork.run(async (client) => {
+        const coordinatorPerson = await this.personRepo.create(
+          {
+            firstName: faculty.firstName,
+            lastName: faculty.lastName
+              ? `${faculty.lastName} (Academic Coordinator)`
+              : '(Academic Coordinator)',
+            mobile: dto.identifierType === 'MOBILE' ? dto.identifierValue : null,
+            email: dto.identifierType === 'EMAIL' ? dto.identifierValue : null,
+            createdBy: actorPersonId,
+          },
+          client,
+        );
+
+        await this.loginIdentifierRepo.create(
+          coordinatorPerson.id,
+          dto.identifierType,
+          dto.identifierValue,
+          client,
+        );
+        await this.userCredentialRepo.createInitial(
+          coordinatorPerson.id,
+          passwordHash,
+          dto.password,
+          client,
+        );
+        await this.academicCoordinatorLoginRepo.create(
+          {
+            coordinatorPersonId: coordinatorPerson.id,
+            facultyPersonId,
+            createdBy: actorPersonId,
+          },
+          client,
+        );
+
+        await this.auditService.record(
+          {
+            actorPersonId,
+            action: 'ACADEMIC_COORDINATOR_LOGIN_CREATED',
+            objectType: 'person',
+            objectId: coordinatorPerson.id,
+            outcome: 'SUCCESS',
+            afterData: { coordinatorPerson, facultyPersonId },
+          },
+          client,
+        );
+
+        return coordinatorPerson;
+      });
+
+      return { coordinatorPersonId: coordinatorPerson.id };
     } catch (err) {
       if (isUniqueViolation(err)) {
         throw new ConflictException(

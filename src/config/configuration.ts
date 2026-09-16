@@ -47,6 +47,13 @@ export interface AppConfig {
     // faking a translated result (see messaging/translation/README notes).
     apiKey: string;
   };
+  messagingIntegration: {
+    // Shared secret the separate school-eos-messaging service sends as
+    // X-Internal-Service-Key on every call to /internal/v1/messaging/* — see
+    // messaging-integration/README.md. Empty means "not configured", which
+    // InternalServiceGuard treats as "deny everything", never "allow anything".
+    internalKey: string;
+  };
 }
 
 export default (): AppConfig => ({
@@ -95,5 +102,8 @@ export default (): AppConfig => ({
   },
   translation: {
     apiKey: process.env.GOOGLE_TRANSLATE_API_KEY ?? '',
+  },
+  messagingIntegration: {
+    internalKey: process.env.MESSAGING_INTERNAL_KEY ?? '',
   },
 });

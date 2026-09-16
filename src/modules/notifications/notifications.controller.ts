@@ -1,7 +1,8 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { NotificationQueryDto } from './dto/notification-query.dto';
+import { RegisterDeviceTokenDto } from './dto/register-device-token.dto';
 import { NotificationsService } from './notifications.service';
 
 // "My notifications" -- deliberately carries NO @Roles() decorator, same
@@ -27,5 +28,19 @@ export class NotificationsController {
   @HttpCode(HttpStatus.OK)
   async markRead(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.notificationsService.markRead(id, actor.personId) };
+  }
+
+  @Post('device-token')
+  @HttpCode(HttpStatus.OK)
+  async registerDeviceToken(@Body() dto: RegisterDeviceTokenDto, @CurrentActor() actor: AuthenticatedUser) {
+    await this.notificationsService.registerDeviceToken(actor.personId, dto.expoPushToken, dto.platform);
+    return { data: { registered: true } };
+  }
+
+  @Delete('device-token/:token')
+  @HttpCode(HttpStatus.OK)
+  async unregisterDeviceToken(@Param('token') token: string, @CurrentActor() actor: AuthenticatedUser) {
+    await this.notificationsService.unregisterDeviceToken(actor.personId, decodeURIComponent(token));
+    return { data: { unregistered: true } };
   }
 }

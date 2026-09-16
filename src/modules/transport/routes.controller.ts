@@ -17,6 +17,8 @@ import { CreateRouteDto } from './dto/create-route.dto';
 import { UpdateRouteDto } from './dto/update-route.dto';
 import { CreateRouteStopDto } from './dto/create-route-stop.dto';
 import { UpdateRouteStopDto } from './dto/update-route-stop.dto';
+import { RequestRouteDeactivateDto } from './dto/request-route-deactivate.dto';
+import { RequestRouteStopDeleteDto } from './dto/request-route-stop-delete.dto';
 
 // Class-level role broadened to PRINCIPAL for read-only oversight (Phase 11),
 // and to VICE_PRINCIPAL (Phase 13 mobile Transport module -- same oversight
@@ -47,8 +49,12 @@ export class RoutesController {
     return { data: await this.routesService.get(id) };
   }
 
+  // TRANSPORT_MANAGER added -- explicit product decision alongside the
+  // update grant below. Deactivate/delete stay gated behind the real
+  // Admin-approval workflow (requestDeactivate/requestDeleteStop below),
+  // never a direct write.
   @Post('routes')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateRouteDto,
@@ -57,8 +63,31 @@ export class RoutesController {
     return { data: await this.routesService.create(dto, actor.personId) };
   }
 
+  // Route has no real hard-delete anywhere in this app (see vehicles
+  // controller's own comment on "deactivate, not delete") -- this is
+  // Transport Manager's own request to deactivate one (status -> INACTIVE),
+  // routed through the generic approvals engine to a real ADMIN decision.
+  @Post('routes/:id/request-deactivate')
+  @Roles('TRANSPORT_MANAGER')
+  @HttpCode(HttpStatus.CREATED)
+  async requestDeactivate(
+    @Param('id') id: string,
+    @Body() dto: RequestRouteDeactivateDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.routesService.requestDeactivate(id, dto, actor.personId),
+    };
+  }
+
+  // TRANSPORT_MANAGER added here deliberately (explicit product decision,
+  // not the class-level oversight grant above) -- Transport Manager can now
+  // edit a route's own details (name/code/direction/distance/status), same
+  // "Transport owns operational upkeep" principle as vehicle spec/documents/
+  // maintenance/fuel-log. Create and delete stay Admin-only -- delete is
+  // destructive/irreversible, so it keeps the stricter bar.
   @Patch('routes/:id')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateRouteDto,
@@ -79,8 +108,10 @@ export class RoutesController {
     return { data: await this.routesService.listAssignedStudents(id) };
   }
 
+  // TRANSPORT_MANAGER added -- same explicit product decision as routes
+  // create/update above.
   @Post('routes/:id/stops')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @HttpCode(HttpStatus.CREATED)
   async createStop(
     @Param('id') id: string,
@@ -93,7 +124,7 @@ export class RoutesController {
   }
 
   @Patch('route-stops/:stopId')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   async updateStop(
     @Param('stopId') stopId: string,
     @Body() dto: UpdateRouteStopDto,
@@ -104,6 +135,10 @@ export class RoutesController {
     };
   }
 
+  // The real hard DELETE stays ADMIN-only exactly as before -- a route stop
+  // is the one entity in this feature that genuinely has hard-delete today.
+  // Transport Manager's own path is the request below, routed through the
+  // approvals engine.
   @Delete('route-stops/:stopId')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
@@ -113,5 +148,18 @@ export class RoutesController {
   ) {
     await this.routesService.deleteStop(stopId, actor.personId);
     return { data: { deleted: true } };
+  }
+
+  @Post('route-stops/:stopId/request-delete')
+  @Roles('TRANSPORT_MANAGER')
+  @HttpCode(HttpStatus.CREATED)
+  async requestDeleteStop(
+    @Param('stopId') stopId: string,
+    @Body() dto: RequestRouteStopDeleteDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.routesService.requestDeleteStop(stopId, dto, actor.personId),
+    };
   }
 }

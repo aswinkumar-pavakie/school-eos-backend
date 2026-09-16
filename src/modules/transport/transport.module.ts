@@ -5,6 +5,7 @@
 // (device-credential identities, not Admin's own panel) and are out of scope here.
 
 import { Module } from '@nestjs/common';
+import { ApprovalsModule } from '../approvals/approvals.module';
 import { AttendantsController } from './attendants.controller';
 import { AttendantsService } from './attendants.service';
 import { DriversController } from './drivers.controller';
@@ -15,12 +16,14 @@ import { GpsDevicesController } from './gps-devices.controller';
 import { GpsDevicesService } from './gps-devices.service';
 import { AttendantRepository } from './repositories/attendant.repository';
 import { DriverRepository } from './repositories/driver.repository';
+import { DriverDocumentRepository } from './repositories/driver-document.repository';
 import { GpsDeviceMappingRepository } from './repositories/gps-device-mapping.repository';
 import { GpsDeviceRepository } from './repositories/gps-device.repository';
 import { RouteRepository } from './repositories/route.repository';
 import { RouteStopRepository } from './repositories/route-stop.repository';
 import { VehicleDocumentRepository } from './repositories/vehicle-document.repository';
 import { VehicleMaintenanceRepository } from './repositories/vehicle-maintenance.repository';
+import { VehicleFuelLogRepository } from './repositories/vehicle-fuel-log.repository';
 import { VehicleRouteAssignmentRepository } from './repositories/vehicle-route-assignment.repository';
 import { VehicleRepository } from './repositories/vehicle.repository';
 import { RoutesController } from './routes.controller';
@@ -32,8 +35,11 @@ import { VehicleRouteAssignmentsController } from './vehicle-route-assignments.c
 import { VehicleRouteAssignmentsService } from './vehicle-route-assignments.service';
 import { VehiclesController } from './vehicles.controller';
 import { VehiclesService } from './vehicles.service';
+import { TransportFeeSummaryController } from './transport-fee-summary.controller';
+import { TransportApprovalHandlers } from './transport-approval-handlers.service';
 
 @Module({
+  imports: [ApprovalsModule],
   controllers: [
     VehiclesController,
     RoutesController,
@@ -43,6 +49,7 @@ import { VehiclesService } from './vehicles.service';
     GpsDevicesController,
     GpsDeviceMappingsController,
     StudentTransportAllocationsController,
+    TransportFeeSummaryController,
   ],
   providers: [
     VehiclesService,
@@ -56,14 +63,17 @@ import { VehiclesService } from './vehicles.service';
     VehicleRepository,
     VehicleDocumentRepository,
     VehicleMaintenanceRepository,
+    VehicleFuelLogRepository,
     RouteRepository,
     RouteStopRepository,
     DriverRepository,
+    DriverDocumentRepository,
     AttendantRepository,
     VehicleRouteAssignmentRepository,
     GpsDeviceRepository,
     GpsDeviceMappingRepository,
     StudentTransportAllocationRepository,
+    TransportApprovalHandlers,
   ],
   // VehiclesService/RoutesService/DriversService/VehicleRouteAssignmentsService:
   // so transport-ops (Bus Tracking / Boarding Monitor) can resolve vehicle/route/

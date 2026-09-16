@@ -5,6 +5,7 @@ import { CreateHostelVisitorDto } from './dto/create-hostel-visitor.dto';
 import { HostelVisitorRepository } from './repositories/hostel-visitor.repository';
 import { StudentHostelRepository } from './repositories/student-hostel.repository';
 import { WardenContextService } from './warden-context.service';
+import { HostelRepository } from '../hostel/repositories/hostel.repository';
 
 @Injectable()
 export class VisitorLogService {
@@ -13,11 +14,19 @@ export class VisitorLogService {
     private readonly visitorRepo: HostelVisitorRepository,
     private readonly studentHostelRepo: StudentHostelRepository,
     private readonly auditService: AuditService,
+    private readonly hostelRepo: HostelRepository,
   ) {}
 
   async list(personId: string, openOnly: boolean) {
     const ctx = await this.wardenContext.requireActiveWarden(personId);
     return this.visitorRepo.findMany(ctx.hostelIds, { openOnly });
+  }
+
+  /** School-wide gate log, not warden-scoped -- backs the Principal web
+   * console's real Hostel "gate log" oversight (design-reframe addition). */
+  async listSchoolWide(openOnly: boolean) {
+    const hostels = await this.hostelRepo.findMany();
+    return this.visitorRepo.findMany(hostels.map((h) => h.id), { openOnly });
   }
 
   private async getScoped(id: string, hostelIds: string[]) {

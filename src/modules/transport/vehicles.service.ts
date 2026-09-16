@@ -5,15 +5,21 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
+import { UnitOfWork } from '../../common/transactions/unit-of-work';
+import { ApprovalsService } from '../approvals/approvals.service';
 import { VehicleRepository } from './repositories/vehicle.repository';
 import { VehicleDocumentRepository } from './repositories/vehicle-document.repository';
 import { VehicleMaintenanceRepository } from './repositories/vehicle-maintenance.repository';
+import { VehicleFuelLogRepository } from './repositories/vehicle-fuel-log.repository';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { CreateVehicleDocumentDto } from './dto/create-vehicle-document.dto';
 import { UpdateVehicleDocumentDto } from './dto/update-vehicle-document.dto';
 import { CreateVehicleMaintenanceDto } from './dto/create-vehicle-maintenance.dto';
 import { UpdateVehicleMaintenanceDto } from './dto/update-vehicle-maintenance.dto';
+import { CreateFuelLogDto } from './dto/create-fuel-log.dto';
+import { UpdateVehicleSpecDto } from './dto/update-vehicle-spec.dto';
+import { RequestVehicleDeactivateDto } from './dto/request-vehicle-deactivate.dto';
 import { isCheckViolation, isUniqueViolation } from './pg-error.util';
 
 @Injectable()
@@ -22,7 +28,10 @@ export class VehiclesService {
     private readonly vehicleRepo: VehicleRepository,
     private readonly vehicleDocumentRepo: VehicleDocumentRepository,
     private readonly vehicleMaintenanceRepo: VehicleMaintenanceRepository,
+    private readonly vehicleFuelLogRepo: VehicleFuelLogRepository,
     private readonly auditService: AuditService,
+    private readonly unitOfWork: UnitOfWork,
+    private readonly approvalsService: ApprovalsService,
   ) {}
 
   list() {
@@ -201,5 +210,132 @@ export class VehiclesService {
       afterData: updated,
     });
     return updated;
+  }
+
+  serviceDueMap() {
+    return this.vehicleRepo.findServiceDueMap();
+  }
+
+  complianceSummary() {
+    return this.vehicleRepo.findComplianceSummary();
+  }
+
+  async getSpec(vehicleId: string) {
+    await this.get(vehicleId);
+    return this.vehicleRepo.findSpec(vehicleId);
+  }
+
+  async getGpsStatus(vehicleId: string) {
+    await this.get(vehicleId);
+    return this.vehicleRepo.findGpsStatus(vehicleId);
+  }
+
+  async updateSpec(vehicleId: string, dto: UpdateVehicleSpecDto, actorPersonId: string) {
+    await this.get(vehicleId);
+    await this.vehicleRepo.updateSpec(vehicleId, dto);
+    await this.auditService.record({
+      actorPersonId,
+      action: 'VEHICLE_SPEC_UPDATED',
+      objectType: 'vehicle',
+      objectId: vehicleId,
+      outcome: 'SUCCESS',
+      afterData: dto,
+    });
+    return this.vehicleRepo.findSpec(vehicleId);
+  }
+
+  async listFuelLog(vehicleId: string) {
+    await this.get(vehicleId);
+    return this.vehicleFuelLogRepo.findByVehicleId(vehicleId);
+  }
+
+  fuelSummary(filter: { from: string; to: string }) {
+    return this.vehicleFuelLogRepo.sumByDateRange(filter);
+  }
+
+  /** Recording a fill-up also updates the vehicle's own current_odometer_km
+   * when a reading is given -- the same real "latest known odometer" the
+   * Overview dashboard's own service-due check reads, kept in one
+   * transaction so the two never disagree. Degrades to a no-op on the
+   * odometer side if query.md's ALTER TABLE hasn't been run yet (see
+   * VehicleRepository.findServiceDueMap's own 42703 handling) -- the fuel log
+   * row itself still needs the table to exist, so a genuine INSERT failure
+   * there surfaces as a real error, not silently swallowed. */
+  async createFuelLog(vehicleId: string, dto: CreateFuelLogDto, actorPersonId: string) {
+    await this.get(vehicleId);
+    return this.unitOfWork.run(async (client) => {
+      const created = await this.vehicleFuelLogRepo.create(
+        { ...dto, vehicleId, recordedBy: actorPersonId },
+        client,
+      );
+      if (dto.odometerKm !== undefined) {
+        try {
+          await client.query(`UPDATE vehicle SET current_odometer_km = $2 WHERE id = $1`, [vehicleId, dto.odometerKm]);
+        } catch (err) {
+          if ((err as { code?: string }).code !== '42703') throw err;
+        }
+      }
+      await this.auditService.record(
+        {
+          actorPersonId,
+          action: 'VEHICLE_FUEL_LOG_CREATED',
+          objectType: 'vehicle_fuel_log',
+          objectId: created.id,
+          outcome: 'SUCCESS',
+          afterData: { ...dto, vehicleId },
+        },
+        client,
+      );
+      return created;
+    });
+  }
+
+  /** No real hard-delete exists for a vehicle anywhere in this app (this
+   * codebase's own "deactivate, not delete" convention -- trip/maintenance/
+   * fee history stays intact either way) -- this is Transport Manager's own
+   * request to deactivate one (operational_status -> RETIRED, a real value
+   * on the vehicle_operational_status_check constraint), routed through the
+   * generic approvals engine to a real ADMIN decision. The actual state
+   * change only happens in transport-approval-handlers.service.ts's own
+   * 'vehicle' onApproved -- never here. */
+  async requestDeactivate(
+    id: string,
+    dto: RequestVehicleDeactivateDto,
+    actorPersonId: string,
+  ) {
+    const vehicle = await this.get(id);
+    return this.unitOfWork.run(async (client) => {
+      const { rows: pending } = await client.query(
+        `SELECT id FROM approval_request WHERE subject_object_type = 'vehicle' AND subject_object_id = $1 AND state IN ('PENDING', 'RETROSPECTIVE_PENDING') LIMIT 1`,
+        [id],
+      );
+      if (pending[0]) {
+        throw new ConflictException(
+          'A deactivation request for this vehicle is already pending Admin review.',
+        );
+      }
+      const request = await this.approvalsService.createRequest(
+        {
+          requestType: 'VEHICLE_DEACTIVATE',
+          subjectObjectType: 'vehicle',
+          subjectObjectId: id,
+          requestedBy: actorPersonId,
+          payload: { registrationNo: vehicle.registrationNo, reason: dto.reason },
+        },
+        client,
+      );
+      await this.auditService.record(
+        {
+          actorPersonId,
+          action: 'VEHICLE_DEACTIVATE_REQUESTED',
+          objectType: 'vehicle',
+          objectId: id,
+          outcome: 'SUCCESS',
+          afterData: { approvalRequestId: request.id, reason: dto.reason },
+        },
+        client,
+      );
+      return request;
+    });
   }
 }

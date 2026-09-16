@@ -3,6 +3,7 @@ import {
   IsIn,
   IsOptional,
   IsString,
+  Matches,
   MinLength,
   ValidateNested,
 } from 'class-validator';
@@ -77,6 +78,14 @@ export class CreatePersonDto {
   @IsOptional()
   @IsString()
   pincode?: string;
+
+  @IsOptional()
+  @IsString()
+  district?: string;
+
+  @IsOptional()
+  @Matches(/^[0-9]{4}$/, { message: 'aadhaarLast4 must be exactly 4 digits' })
+  aadhaarLast4?: string;
 
   @IsIn(['EMAIL', 'MOBILE'])
   identifierType!: 'EMAIL' | 'MOBILE';

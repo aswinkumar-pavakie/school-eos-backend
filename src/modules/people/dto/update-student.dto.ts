@@ -59,4 +59,28 @@ export class UpdateStudentDto {
   @IsOptional()
   @IsString()
   bankAccountRef?: string;
+
+  @IsOptional()
+  @IsString()
+  religion?: string;
+
+  @IsOptional()
+  @IsString()
+  nationality?: string;
+
+  @IsOptional()
+  @IsString()
+  admissionQuota?: string;
+
+  @IsOptional()
+  @IsString()
+  previousSchool?: string;
+
+  @IsOptional()
+  @IsString()
+  emergencyContactName?: string;
+
+  @IsOptional()
+  @IsString()
+  emergencyContactPhone?: string;
 }

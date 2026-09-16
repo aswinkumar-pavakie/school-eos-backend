@@ -7,8 +7,12 @@ import { PrincipalDashboardService } from './principal-dashboard.service';
 // current academic year), not Principal-specific business logic, and the
 // service itself already documents why it deliberately excludes every
 // Admin-operational field. Read-only, single GET, no write endpoint exists
-// on this controller to accidentally widen.
-@Roles('PRINCIPAL', 'VICE_PRINCIPAL')
+// on this controller to accidentally widen. Broadened again to ADMIN -- the
+// Admin dashboard's own reference design wants the same real
+// parentLoginsIssued/staffMarkedToday fields this summary already computes,
+// which Admin's own separate /admin/dashboard-summary endpoint doesn't have;
+// reusing this one real service avoids a second, duplicate aggregation.
+@Roles('PRINCIPAL', 'VICE_PRINCIPAL', 'ADMIN')
 @Controller('principal/dashboard-summary')
 export class PrincipalDashboardController {
   constructor(

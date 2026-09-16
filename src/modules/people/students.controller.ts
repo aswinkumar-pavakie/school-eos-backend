@@ -111,7 +111,14 @@ export class StudentsController {
     return { data: await this.studentsService.leave(id, dto, actor.personId) };
   }
 
+  // VICE_PRINCIPAL added -- enrolment history (which class/section a student
+  // was in each year) isn't financial data like Fees/Wallet/Transport
+  // (deliberately trimmed from VP's own Student detail page elsewhere), it's
+  // the same kind of real oversight data attendance-summary/guardians below
+  // already grant VP -- VP's own Student detail page calls this and was
+  // silently getting a 403 -- caught in a wiring audit.
   @Get(':id/enrolments')
+  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
   async listEnrolments(@Param('id') id: string) {
     return { data: await this.enrolmentsService.listByStudent(id) };
   }

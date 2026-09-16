@@ -61,6 +61,15 @@ export class StaffController {
     return this.staffService.listDesignations(isTeaching);
   }
 
+  // Must come before ':id' too, same ordering trap as students.controller.ts's
+  // own next-admission-no. Backs the Admit Faculty page's "Employee ID (AUTO)"
+  // field -- same suggest-only pattern, still a free-text employee_no underneath.
+  @Get('next-employee-id')
+  @Roles('ADMIN')
+  async nextEmployeeId() {
+    return { data: await this.staffService.getNextEmployeeNo() };
+  }
+
   // Must come before ':id' too, same reason. The real authorization here is
   // self-scoping (the caller's OWN staff record via their own personId,
   // never a client-supplied id -- there is no "other person's record" this

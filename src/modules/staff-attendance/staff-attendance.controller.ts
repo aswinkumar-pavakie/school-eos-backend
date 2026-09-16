@@ -34,6 +34,14 @@ export class StaffAttendanceController {
     return { data: await this.staffAttendanceService.getDailyRoster(query) };
   }
 
+  // Real stat-row summary (design-reframe addition) -- see service's own
+  // comment for what's real vs deliberately omitted (no fabricated
+  // "corrections open").
+  @Get('summary')
+  async getSummary(@Query('date') date: string) {
+    return { data: await this.staffAttendanceService.getDailySummary(date) };
+  }
+
   @Post('mark')
   @HttpCode(HttpStatus.OK)
   async markBulk(

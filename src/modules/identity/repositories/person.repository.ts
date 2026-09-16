@@ -25,6 +25,8 @@ export interface PersonAuthView {
   city: string | null;
   state: string | null;
   pincode: string | null;
+  district: string | null;
+  aadhaarLast4: string | null;
 }
 
 export interface UpdatePersonInput {
@@ -39,6 +41,8 @@ export interface UpdatePersonInput {
   city?: string | null;
   state?: string | null;
   pincode?: string | null;
+  district?: string | null;
+  aadhaarLast4?: string | null;
 }
 
 export interface PersonWithRoles extends PersonAuthView {
@@ -58,6 +62,8 @@ export interface CreatePersonInput {
   city?: string | null;
   state?: string | null;
   pincode?: string | null;
+  district?: string | null;
+  aadhaarLast4?: string | null;
   createdBy: string;
 }
 
@@ -84,6 +90,8 @@ interface RawPersonRow {
   city: string | null;
   state: string | null;
   pincode: string | null;
+  district: string | null;
+  aadhaar_last4: string | null;
 }
 
 function mapRow(row: RawPersonRow): PersonAuthView {
@@ -102,11 +110,13 @@ function mapRow(row: RawPersonRow): PersonAuthView {
     city: row.city,
     state: row.state,
     pincode: row.pincode,
+    district: row.district,
+    aadhaarLast4: row.aadhaar_last4,
   };
 }
 
 const ROW_COLUMNS = `id, first_name, last_name, email, mobile, date_of_birth, gender, status,
-  photo_object_key, address_line1, address_line2, city, state, pincode`;
+  photo_object_key, address_line1, address_line2, city, state, pincode, district, aadhaar_last4`;
 
 @Injectable()
 export class PersonRepository {
@@ -132,8 +142,8 @@ export class PersonRepository {
   ): Promise<PersonAuthView> {
     const { rows } = await executor.query<RawPersonRow>(
       `INSERT INTO person (first_name, last_name, date_of_birth, gender, mobile, email,
-         address_line1, address_line2, city, state, pincode, created_by, updated_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12)
+         address_line1, address_line2, city, state, pincode, district, aadhaar_last4, created_by, updated_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $14)
        RETURNING ${ROW_COLUMNS}`,
       [
         input.firstName,
@@ -147,6 +157,8 @@ export class PersonRepository {
         input.city ?? null,
         input.state ?? null,
         input.pincode ?? null,
+        input.district ?? null,
+        input.aadhaarLast4 ?? null,
         input.createdBy,
       ],
     );
@@ -195,7 +207,9 @@ export class PersonRepository {
          city = COALESCE($10, city),
          state = COALESCE($11, state),
          pincode = COALESCE($12, pincode),
-         updated_by = $13,
+         district = COALESCE($13, district),
+         aadhaar_last4 = COALESCE($14, aadhaar_last4),
+         updated_by = $15,
          updated_at = now()
        WHERE id = $1
        RETURNING ${ROW_COLUMNS}`,
@@ -212,6 +226,8 @@ export class PersonRepository {
         input.city ?? null,
         input.state ?? null,
         input.pincode ?? null,
+        input.district ?? null,
+        input.aadhaarLast4 ?? null,
         updatedBy,
       ],
     );
@@ -290,7 +306,7 @@ export class PersonRepository {
     >(
       `SELECT p.id, p.first_name, p.last_name, p.email, p.mobile, p.date_of_birth, p.gender,
               p.status, p.photo_object_key, p.address_line1, p.address_line2, p.city, p.state,
-              p.pincode, p.created_at,
+              p.pincode, p.district, p.aadhaar_last4, p.created_at,
               COALESCE(
                 array_agg(DISTINCT ra.role_code) FILTER (WHERE ra.role_code IS NOT NULL),
                 '{}'

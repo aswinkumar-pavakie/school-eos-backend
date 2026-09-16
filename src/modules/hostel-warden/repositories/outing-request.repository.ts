@@ -30,6 +30,7 @@ export interface OutingRequestRow {
   approvalRequestId: string | null;
   state: string;
   requestType: string | null;
+  decidedAt: Date | null;
 }
 
 export interface CreateOutingRequestInput {
@@ -47,7 +48,7 @@ const COLUMNS = `outr.id, outr.student_id AS "studentId", p.first_name AS "stude
   outr.requested_at AS "requestedAt", outr.out_from AS "outFrom",
   outr.expected_return AS "expectedReturn", outr.is_overnight AS "isOvernight",
   outr.reason, outr.destination, outr.approval_request_id AS "approvalRequestId",
-  outr.state, ar.request_type AS "requestType"`;
+  outr.state, ar.request_type AS "requestType", ar.decided_at AS "decidedAt"`;
 
 const FROM = `outing_request outr
   JOIN student s ON s.id = outr.student_id
@@ -146,6 +147,51 @@ export class OutingRequestRepository {
        WHERE outr.requested_by = $1 AND ar.request_type = $2
        ORDER BY outr.requested_at DESC`,
       [requestedBy, requestType],
+    );
+    return rows;
+  }
+
+  /** School-wide, not hostel-scoped -- backs Principal/Vice Principal/Admin's real
+   * Hostel "Out of the hostel now" KPI + "Students out of the hostel" list
+   * (design-reframe addition), covering both Gate Pass and Emergency Exit as one
+   * "out of hostel" concept, same as the mockup does. The real outing_request state
+   * machine has no explicit "returned" flag -- "still out" vs "overdue" is inferred
+   * purely from out_from/expected_return against now(), so the window is capped to
+   * expected_return >= now() - 7 days to keep a long-forgotten APPROVED test row from
+   * showing as "overdue" forever. */
+  async findActiveOversight(
+    executor: Queryable = this.postgres,
+  ): Promise<OutingRequestRow[]> {
+    const { rows } = await executor.query<OutingRequestRow>(
+      `SELECT ${COLUMNS} FROM ${FROM}
+       WHERE outr.state = 'APPROVED'
+         AND ar.request_type IN ($1, $2)
+         AND outr.out_from <= now()
+         AND outr.expected_return >= now() - interval '7 days'
+       ORDER BY outr.expected_return ASC`,
+      [GATE_PASS_REQUEST_TYPE, EMERGENCY_EXIT_REQUEST_TYPE],
+    );
+    return rows;
+  }
+
+  /** School-wide, not hostel-scoped -- backs Principal/Vice Principal/Admin's real
+   * Hostel "Gate log" card (design-reframe addition). The real schema has no separate
+   * gate-event log table (no distinct check-in/checked-out timestamp rows) -- this
+   * surfaces the real, live decision each Gate Pass/Emergency Exit request already
+   * carries via its approval_request (decided_at -- outing_request's OWN decided_at
+   * column is never written by ApprovalsService, verified live; approval_request's is),
+   * which is the closest honest real substitute for an exit/entry feed. */
+  async findRecentDecisions(
+    limit: number,
+    executor: Queryable = this.postgres,
+  ): Promise<OutingRequestRow[]> {
+    const { rows } = await executor.query<OutingRequestRow>(
+      `SELECT ${COLUMNS} FROM ${FROM}
+       WHERE ar.decided_at IS NOT NULL
+         AND ar.request_type IN ($1, $2)
+       ORDER BY ar.decided_at DESC
+       LIMIT $3`,
+      [GATE_PASS_REQUEST_TYPE, EMERGENCY_EXIT_REQUEST_TYPE, limit],
     );
     return rows;
   }

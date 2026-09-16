@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { ApprovalsService } from '../approvals/approvals.service';
@@ -27,7 +31,8 @@ export class StaffLeaveService {
    * exists" posture as every other self-scoped lookup this app already uses. */
   async get(id: string, staffId: string) {
     const leave = await this.leaveRepo.findById(id);
-    if (!leave || leave.staffId !== staffId) throw new NotFoundException('Leave request not found');
+    if (!leave || leave.staffId !== staffId)
+      throw new NotFoundException('Leave request not found');
     return leave;
   }
 
@@ -39,11 +44,21 @@ export class StaffLeaveService {
     return this.approvalsService.getById(approvalRequestId, actor);
   }
 
-  async create(staffId: string, dto: CreateStaffLeaveDto, actor: AuthenticatedUser) {
+  async create(
+    staffId: string,
+    dto: CreateStaffLeaveDto,
+    actor: AuthenticatedUser,
+  ) {
     try {
       return await this.unitOfWork.run(async (client) => {
         const created = await this.leaveRepo.create(
-          { staffId, leaveType: dto.leaveType, fromDate: dto.fromDate, toDate: dto.toDate, reason: dto.reason },
+          {
+            staffId,
+            leaveType: dto.leaveType,
+            fromDate: dto.fromDate,
+            toDate: dto.toDate,
+            reason: dto.reason,
+          },
           client,
         );
         const approvalRequest = await this.approvalsService.createRequest(
@@ -52,12 +67,28 @@ export class StaffLeaveService {
             subjectObjectType: 'staff_leave_request',
             subjectObjectId: created.id,
             requestedBy: actor.personId,
-            payload: { leaveType: dto.leaveType, fromDate: dto.fromDate, toDate: dto.toDate },
+            payload: {
+              leaveType: dto.leaveType,
+              fromDate: dto.fromDate,
+              toDate: dto.toDate,
+            },
+            // Real routing need: when the Principal requests their own leave,
+            // approval_policy has a specific row (requesterHasRole:
+            // "PRINCIPAL") that routes to ADMIN instead of the normal
+            // PRINCIPAL approver, since a Principal is correctly blocked from
+            // approving their own request and no fallback approver existed
+            // before this. Every other staff member's leave is unaffected --
+            // the general {} condition row still routes to PRINCIPAL.
+            requesterRoleCodes: actor.roles,
           },
           client,
         );
         const leave = await this.leaveRepo.findById(created.id, client);
-        return { ...leave!, approvalRequestId: approvalRequest.id, approvalState: approvalRequest.state };
+        return {
+          ...leave!,
+          approvalRequestId: approvalRequest.id,
+          approvalState: approvalRequest.state,
+        };
       });
     } catch (err) {
       if (isCheckViolation(err)) {
@@ -77,7 +108,9 @@ export class StaffLeaveService {
   async assertOwnLeave(id: string, staffId: string) {
     const leave = await this.get(id, staffId);
     if (!leave.approvalRequestId) {
-      throw new BadRequestException('This leave request has no associated approval to withdraw.');
+      throw new BadRequestException(
+        'This leave request has no associated approval to withdraw.',
+      );
     }
     return leave;
   }

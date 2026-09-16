@@ -245,4 +245,39 @@ export class HomeworkRepository {
     );
     return rows.length > 0 ? rows[0].object_keys : null;
   }
+
+  /** The teacher directly marking one student's submission complete/not
+   * complete (and optionally awarding marks/feedback) -- distinct from the
+   * Parent/Student app's own SUBMITTED transition (see this file's header),
+   * for the real case of homework collected/checked in person rather than
+   * through the app. Real, live columns (marks_awarded/feedback/graded_by/
+   * graded_at) that already existed with zero application code writing to
+   * them until this. */
+  async gradeSubmission(
+    homeworkId: string,
+    studentId: string,
+    input: { status: string; marksAwarded?: number; feedback?: string },
+    gradedBy: string,
+    executor: Queryable = this.postgres,
+  ): Promise<boolean> {
+    const { rowCount } = await executor.query(
+      `UPDATE homework_submission
+       SET status = $3,
+           marks_awarded = COALESCE($4, marks_awarded),
+           feedback = COALESCE($5, feedback),
+           graded_by = $6,
+           graded_at = now(),
+           submitted_at = COALESCE(submitted_at, CASE WHEN $3 IN ('SUBMITTED', 'GRADED') THEN now() ELSE submitted_at END)
+       WHERE homework_id = $1 AND student_id = $2`,
+      [
+        homeworkId,
+        studentId,
+        input.status,
+        input.marksAwarded ?? null,
+        input.feedback ?? null,
+        gradedBy,
+      ],
+    );
+    return (rowCount ?? 0) > 0;
+  }
 }

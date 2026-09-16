@@ -40,10 +40,14 @@ export interface TripListRow {
    * the trip detail's own attendance breakdown disambiguates the two. */
   boardedCount: string;
   alertCount: string;
+  /** Added to the list row (not detail-only anymore) -- the Transport
+   * Overview dashboard's own real "Distance covered" KPI sums this across a
+   * date range from the list endpoint; fetching every trip's own detail row
+   * just for this one field would be a real N+1 for no reason. */
+  distanceKm: string | null;
 }
 
 export interface TripDetailRow extends TripListRow {
-  distanceKm: string | null;
   startedByPersonId: string | null;
 }
 
@@ -84,7 +88,8 @@ const TRIP_COLUMNS = `t.id, t.trip_date AS "tripDate", t.direction, t.state,
   d.id AS "driverId", d.full_name AS "driverName",
   COALESCE(sts.expected, 0) AS "expectedCount",
   COALESCE(sts.boarded, 0) AS "boardedCount",
-  COALESCE(al.alert_count, 0) AS "alertCount"`;
+  COALESCE(al.alert_count, 0) AS "alertCount",
+  t.distance_km AS "distanceKm"`;
 
 // LATERAL, not a GROUP BY over the whole result set -- keeps the list query a
 // single pass per trip row, same shape as this backend's other per-row
@@ -102,6 +107,34 @@ const TRIP_JOINS = `
 @Injectable()
 export class TripsRepository {
   constructor(private readonly postgres: PostgresService) {}
+
+  /** Real "on-time arrivals" for the Transport Overview dashboard -- reads
+   * `trip.scheduled_arrival_at`, a column that doesn't exist until query.md's
+   * `ALTER TABLE trip ADD COLUMN ...` is run. Catches 42703 (undefined_column)
+   * and returns `{ tracked: 0, onTime: 0 }` instead of a 500, same reasoning
+   * as VehicleRepository.findServiceDueMap -- degrades to "not tracked yet"
+   * rather than breaking the page, and starts working the moment the column
+   * exists. Only counts trips that actually HAVE a scheduled_arrival_at
+   * (`tracked`) -- a trip with none is excluded, never counted as late. */
+  async findOnTimeStats(
+    filter: { dateFrom: string; dateTo: string },
+    executor: Queryable = this.postgres,
+  ): Promise<{ tracked: number; onTime: number }> {
+    try {
+      const { rows } = await executor.query<{ tracked: string; on_time: string }>(
+        `SELECT count(*) FILTER (WHERE scheduled_arrival_at IS NOT NULL) AS tracked,
+                count(*) FILTER (WHERE scheduled_arrival_at IS NOT NULL AND completed_at IS NOT NULL
+                  AND completed_at <= scheduled_arrival_at + interval '10 minutes') AS on_time
+         FROM trip t
+         WHERE t.trip_date BETWEEN $1 AND $2 AND t.state = 'COMPLETED'`,
+        [filter.dateFrom, filter.dateTo],
+      );
+      return { tracked: Number(rows[0]?.tracked ?? 0), onTime: Number(rows[0]?.on_time ?? 0) };
+    } catch (err) {
+      if ((err as { code?: string }).code === '42703') return { tracked: 0, onTime: 0 };
+      throw err;
+    }
+  }
 
   async findMany(
     filter: TripListFilter,
@@ -159,7 +192,7 @@ export class TripsRepository {
     executor: Queryable = this.postgres,
   ): Promise<TripDetailRow | null> {
     const { rows } = await executor.query<TripDetailRow>(
-      `SELECT ${TRIP_COLUMNS}, t.distance_km AS "distanceKm", t.started_by AS "startedByPersonId"
+      `SELECT ${TRIP_COLUMNS}, t.started_by AS "startedByPersonId"
        ${TRIP_FROM} ${TRIP_JOINS}
        WHERE t.id = $1`,
       [id],

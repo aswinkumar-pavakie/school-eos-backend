@@ -8,10 +8,12 @@ import {
 } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { PARENT_ERRORS } from '../../common/errors/error-codes';
+import { OutboxService } from '../../common/outbox/outbox.service';
 import { GuardianLinkRepository } from '../parent/repositories/guardian-link.repository';
 import { CreateCallRequestDto } from './dto/create-call-request.dto';
 import { HostelCallRequestRepository } from './repositories/hostel-call-request.repository';
 import { StudentHostelRepository } from './repositories/student-hostel.repository';
+import { WardenAssignmentRepository } from './repositories/warden-assignment.repository';
 
 const NOT_A_HOSTELLER =
   'This student does not currently have an active hostel room allocation';
@@ -22,6 +24,8 @@ export class ParentCallRequestsService {
     private readonly guardianLinkRepo: GuardianLinkRepository,
     private readonly studentHostelRepo: StudentHostelRepository,
     private readonly callRequestRepo: HostelCallRequestRepository,
+    private readonly wardenAssignmentRepo: WardenAssignmentRepository,
+    private readonly outbox: OutboxService,
     private readonly audit: AuditService,
   ) {}
 
@@ -58,6 +62,23 @@ export class ParentCallRequestsService {
       outcome: 'SUCCESS',
       afterData: request,
     });
+
+    // Not routed through the generic approvals engine (see this feature's own
+    // repository header comment), so it needs its own real notification --
+    // otherwise the warden never learns a call request exists until they
+    // happen to open their own inbox.
+    const wardenPersonIds =
+      await this.wardenAssignmentRepo.findPersonIdsForHostel(hostelId);
+    for (const wardenPersonId of wardenPersonIds) {
+      await this.outbox.enqueue({
+        personId: wardenPersonId,
+        notificationType: 'HOSTEL_CALL_REQUEST_CREATED',
+        title: 'New call request',
+        body: `A parent has requested a call for a student in your hostel`,
+        relatedObjectType: 'hostel_call_request',
+        relatedObjectId: request.id,
+      });
+    }
 
     return request;
   }

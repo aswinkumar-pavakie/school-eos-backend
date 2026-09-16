@@ -69,6 +69,26 @@ export class StaffLeaveRequestRepository {
     return rows.map(mapRow);
   }
 
+  /** Real "who's absent today" signal for Substitute teacher -- every
+   * APPROVED staff_leave_request (leave or on-duty, both real states this
+   * same table already models) whose real date range covers `date`, among
+   * the given staffIds. This is the one real absence signal this schema
+   * has -- there is no separate daily "marked absent" flag anywhere. */
+  async findApprovedForDateAndStaff(
+    staffIds: string[],
+    date: string,
+    executor: Queryable = this.postgres,
+  ): Promise<StaffLeaveRequestRow[]> {
+    if (staffIds.length === 0) return [];
+    const { rows } = await executor.query(
+      `SELECT ${COLUMNS} ${FROM}
+       WHERE slr.staff_id = ANY($1) AND slr.state = 'APPROVED'
+         AND slr.from_date <= $2 AND slr.to_date >= $2`,
+      [staffIds, date],
+    );
+    return rows.map(mapRow);
+  }
+
   async findById(
     id: string,
     executor: Queryable = this.postgres,

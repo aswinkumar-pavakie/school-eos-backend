@@ -47,6 +47,20 @@ export class FacultyAttendanceController {
     };
   }
 
+  @Post('publish')
+  async publish(
+    @Query() query: AttendanceDayQueryDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.publish(
+        actor.personId,
+        query.sectionId,
+        query.date,
+      ),
+    };
+  }
+
   @Post('records/:id')
   async markRecord(
     @Param('id', ParseUUIDPipe) id: string,

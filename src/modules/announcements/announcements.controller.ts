@@ -37,13 +37,25 @@ export class AnnouncementsController {
   // change -- create (@Post() below) has no override of its own and inherits
   // the class-level ADMIN+PRINCIPAL default, and Vice Principal is not meant
   // to gain that create authority just by being able to read the list.
+  // TRANSPORT_MANAGER added for the same reason -- the Transport Overview
+  // dashboard's own real "Notices" card (SIS Transport mockup) reads
+  // SCHOOL-wide + ROLE=TRANSPORT_MANAGER announcements via ?roleCode= --
+  // still read-only, no create/edit/delete authority granted.
   @Get()
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   async list(@Query() query: AnnouncementQueryDto) {
     return { data: await this.announcementsService.list(query) };
   }
 
+  // TRANSPORT_MANAGER added here deliberately (explicit product decision,
+  // matching the SIS Transport mockup's own "Post a notice" dashboard
+  // control) -- real create access, but every notice this role posts uses
+  // audienceType 'ROLE'/targetRoles ['TRANSPORT_MANAGER'] client-side (see
+  // PostNoticeForm.tsx), so it only ever reaches the same real
+  // SCHOOL+ROLE=TRANSPORT_MANAGER feed the Transport dashboard's own Notices
+  // card already reads -- never a school-wide post from this role.
   @Post()
+  @Roles('ADMIN', 'PRINCIPAL', 'TRANSPORT_MANAGER')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateAnnouncementDto,

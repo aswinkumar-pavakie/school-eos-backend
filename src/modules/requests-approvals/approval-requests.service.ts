@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
+import { ADMIN_REQUEST_TYPES } from './admin-request-types';
 import { ApprovalRequestQueryDto } from './dto/approval-request-query.dto';
 import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
 import { DecideApprovalRequestDto } from './dto/decide-approval-request.dto';
@@ -42,6 +43,9 @@ export class ApprovalRequestsService {
               : {}; // 'history' (or no view) -- every state
     const { rows, total } = await this.requestRepo.findMany({
       requestType: query.requestType,
+      // Real scoping fix -- see ApprovalRequestFilter's own comment. Only
+      // takes effect when requestType (a single explicit filter) is absent.
+      requestTypes: ADMIN_REQUEST_TYPES as unknown as string[],
       search: query.search,
       limit,
       offset: (page - 1) * limit,

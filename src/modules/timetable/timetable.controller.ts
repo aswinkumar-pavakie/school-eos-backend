@@ -8,12 +8,15 @@ import { TimetableService } from './timetable.service';
 // discovered (a prior assumption that "Timetable isn't built yet" was wrong; the
 // schema and data already existed, just with no API in front of it). Broadened
 // to include PRINCIPAL for read-only oversight (Principal's own Class Timetable
-// module), and to VICE_PRINCIPAL (Phase 9 mobile Class Timetable module -- same
-// oversight need) -- no method-level override needed anywhere in this
-// controller, since every endpoint here is already GET-only for every role,
-// Admin included -- there is no write endpoint on this controller at all, so
-// this class-level broadening carries zero risk of granting write access.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+// module), VICE_PRINCIPAL (Phase 9 mobile Class Timetable module -- same
+// oversight need), and ACADEMIC_COORDINATOR (the Substitute Teacher screen's
+// free-period finder: ?teacherStaffId= per staff member in the coordinator's
+// own stage, to compute who's free a given period from their real published
+// schedule) -- no method-level override needed anywhere in this controller,
+// since every endpoint here is already GET-only for every role, Admin
+// included -- there is no write endpoint on this controller at all, so this
+// class-level broadening carries zero risk of granting write access.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'ACADEMIC_COORDINATOR')
 @Controller('timetable')
 export class TimetableController {
   constructor(private readonly timetableService: TimetableService) {}

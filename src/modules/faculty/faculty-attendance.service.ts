@@ -167,6 +167,40 @@ export class FacultyAttendanceService {
     return this.getOrCreateRoster(personId, sectionId, date);
   }
 
+  /** "Publish" for the class advisor -- reuses the exact same session-lock
+   * primitive (attendance_session.is_locked) the ADMIN-only
+   * POST /attendance-sessions/:id/lock endpoint already writes, just
+   * section-scoped and authorized for FACULTY via assertAdvisor (that admin
+   * endpoint has no section check at all, which is fine there since ADMIN is
+   * org-wide -- it would not be fine to expose unscoped to FACULTY). Before
+   * this, "marking attendance" had no draft/published distinction: every tap
+   * already wrote straight to attendance_record (so nothing is ever lost),
+   * but there was no explicit "this day is final" step. Publishing sets
+   * is_locked = true, after which any further change goes through the
+   * existing correction path (see markRecord/markAllPresent above) instead
+   * of a plain update -- unchanged, pre-existing behavior once locked. */
+  async publish(
+    personId: string,
+    sectionId: string,
+    date: string,
+  ): Promise<AttendanceRoster> {
+    await this.assertAdvisor(personId, sectionId);
+    const { session } = await this.getOrCreateRoster(personId, sectionId, date);
+    if (!session.isLocked) {
+      await this.sessionRepo.lock(session.id, personId);
+      await this.audit.record({
+        actorPersonId: personId,
+        actorRoleCode: 'FACULTY',
+        action: 'FACULTY_ATTENDANCE_PUBLISHED',
+        objectType: 'attendance_session',
+        objectId: session.id,
+        outcome: 'SUCCESS',
+        afterData: { sectionId, date },
+      });
+    }
+    return this.getOrCreateRoster(personId, sectionId, date);
+  }
+
   /** Real month-by-month calendar data for the "Past records" panel -- one
    * summary row per session actually held that month. */
   async getHistory(

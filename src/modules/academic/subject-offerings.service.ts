@@ -16,6 +16,12 @@ export class SubjectOfferingsService {
     return this.subjectOfferingRepo.findBySection(query.sectionId);
   }
 
+  /** School-wide mapping for the current academic year -- backs the Principal
+   * web console's "Subjects & mapping" page. */
+  listAllCurrentYear() {
+    return this.subjectOfferingRepo.findAllCurrentYear();
+  }
+
   /** "Which subjects is this faculty handling" -- the reverse lookup, used by
    * the Faculty profile page. */
   async listForTeacher(teacherStaffId: string) {

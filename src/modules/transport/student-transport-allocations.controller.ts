@@ -16,6 +16,7 @@ import { CancelStudentTransportAllocationDto } from './dto/cancel-student-transp
 import { CreateStudentTransportAllocationDto } from './dto/create-student-transport-allocation.dto';
 import { StudentTransportAllocationQueryDto } from './dto/student-transport-allocation-query.dto';
 import { UpdateStudentTransportAllocationDto } from './dto/update-student-transport-allocation.dto';
+import { RequestStudentTransportAllocationCancelDto } from './dto/request-student-transport-allocation-cancel.dto';
 import { StudentTransportAllocationsService } from './student-transport-allocations.service';
 
 @Roles('ADMIN')
@@ -26,10 +27,11 @@ export class StudentTransportAllocationsController {
   ) {}
 
   // Method-level @Roles OVERRIDES the class-level one (RolesGuard uses
-  // getAllAndOverride, not a merge) -- TRANSPORT_MANAGER gets read-only access
-  // here (monitoring which students are on which route/stop); create/update/
-  // cancel stay ADMIN-only -- student transport allocation is Admin's
-  // configuration, not something Transport Manager changes.
+  // getAllAndOverride, not a merge) -- TRANSPORT_MANAGER gets real
+  // create/update access here now (explicit product decision) alongside the
+  // existing read access; cancel stays ADMIN-only -- Transport Manager's own
+  // path for removing a student is the request-cancel endpoint below,
+  // routed through the generic approvals engine to a real ADMIN decision.
   @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @Get()
   async list(@Query() query: StudentTransportAllocationQueryDto) {
@@ -42,6 +44,7 @@ export class StudentTransportAllocationsController {
     return { data: await this.allocationsService.get(id) };
   }
 
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(
@@ -51,6 +54,7 @@ export class StudentTransportAllocationsController {
     return { data: await this.allocationsService.create(dto, actor.personId) };
   }
 
+  @Roles('ADMIN', 'TRANSPORT_MANAGER')
   @Patch(':id')
   async update(
     @Param('id') id: string,
@@ -71,6 +75,21 @@ export class StudentTransportAllocationsController {
   ) {
     return {
       data: await this.allocationsService.cancel(id, dto, actor.personId),
+    };
+  }
+
+  // No direct cancel access for Transport Manager (see class comment) -- this
+  // is their own request, routed through the generic approvals engine.
+  @Post(':id/request-cancel')
+  @Roles('TRANSPORT_MANAGER')
+  @HttpCode(HttpStatus.CREATED)
+  async requestCancel(
+    @Param('id') id: string,
+    @Body() dto: RequestStudentTransportAllocationCancelDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.allocationsService.requestCancel(id, dto, actor.personId),
     };
   }
 }

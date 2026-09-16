@@ -44,12 +44,14 @@ function buildService(
     run: jest.fn((work: (client: unknown) => Promise<unknown>) => work({})),
   } as any;
 
+  const hostelRepo = { findMany: jest.fn() } as any;
   const service = new NightAttendanceService(
     wardenContext,
     attendanceRepo,
     studentHostelRepo,
     auditService,
     unitOfWork,
+    hostelRepo,
   );
   return {
     service,

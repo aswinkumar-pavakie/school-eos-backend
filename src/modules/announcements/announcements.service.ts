@@ -45,6 +45,19 @@ export class AnnouncementsService {
     return this.announcementRepo.findMany({ roleCode: 'PARENT', sectionIds });
   }
 
+  /** Everything relevant to an Academic Coordinator caller: SCHOOL-wide,
+   * ROLE=ACADEMIC_COORDINATOR (a real, valid targetRoles value -- 'role'
+   * table has this code, same as FACULTY/PARENT), and any SECTION-targeted
+   * announcement aimed at one of their own scoped stage sections. Same shape
+   * as listForFaculty, reused for the Notice screen in the Academic
+   * Coordinator portal. */
+  listForCoordinator(sectionIds: string[]) {
+    return this.announcementRepo.findMany({
+      roleCode: 'ACADEMIC_COORDINATOR',
+      sectionIds,
+    });
+  }
+
   /** Announcements a Faculty member can manage (edit/delete) -- their own,
    * regardless of audience. */
   listCreatedBy(personId: string) {

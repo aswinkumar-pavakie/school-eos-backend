@@ -112,8 +112,12 @@ export class DepartmentsController {
   }
 }
 
+// PRINCIPAL added for read-only oversight (design-reframe addition) -- backs
+// the Principal web console's real academic-year selector in its header,
+// same read-only-oversight pattern used elsewhere in this codebase. This
+// controller only ever exposes GET, so there's no write surface to widen.
 @Controller('finance/academic-years')
-@Roles('FINANCE', 'ADMIN')
+@Roles('FINANCE', 'ADMIN', 'PRINCIPAL')
 export class AcademicYearsController {
   constructor(private readonly repo: AcademicYearLookupRepository) {}
 
@@ -135,9 +139,13 @@ export class MediumsController {
 }
 
 // The school's own institutional profile — used only to put a real name/address on a
-// printed receipt.
+// printed receipt. PRINCIPAL and VICE_PRINCIPAL added for read-only oversight
+// (design-reframe addition) -- backs the Principal/Vice Principal web
+// console's real school-name sidebar header tile, same read-only-oversight
+// pattern used elsewhere in this codebase. GET-only controller, no write
+// surface to widen.
 @Controller('finance/school-profile')
-@Roles('FINANCE', 'ADMIN')
+@Roles('FINANCE', 'ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 export class SchoolProfileController {
   constructor(private readonly repo: SchoolProfileRepository) {}
 

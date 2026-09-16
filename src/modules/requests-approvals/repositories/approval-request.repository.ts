@@ -33,6 +33,12 @@ export interface CreateApprovalRequestInput {
 
 export interface ApprovalRequestFilter {
   requestType?: string;
+  /** Real scoping fix (design-reframe addition) -- used only when requestType
+   * (a single explicit filter) isn't given, so an unfiltered "All types" list
+   * still only ever shows the admin-authorized request types, matching this
+   * controller's own documented scope, instead of every approval_request row
+   * regardless of type (a pre-existing gap this pass found and closed). */
+  requestTypes?: string[];
   state?: string;
   states?: string[];
   search?: string;
@@ -72,6 +78,9 @@ export class ApprovalRequestRepository {
     if (filter.requestType) {
       params.push(filter.requestType);
       conditions.push(`ar.request_type = $${params.length}`);
+    } else if (filter.requestTypes && filter.requestTypes.length > 0) {
+      params.push(filter.requestTypes);
+      conditions.push(`ar.request_type = ANY($${params.length}::text[])`);
     }
     if (filter.state) {
       params.push(filter.state);
