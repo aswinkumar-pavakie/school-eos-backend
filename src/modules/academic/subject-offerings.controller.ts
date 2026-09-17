@@ -17,7 +17,7 @@ import { SubjectOfferingsService } from './subject-offerings.service';
 export class SubjectOfferingsController {
   constructor(private readonly subjectOfferingsService: SubjectOfferingsService) {}
 
-  @Roles('ADMIN', 'PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
   @Get()
   async list(@Query() query: SubjectOfferingQueryDto) {
     return { data: await this.subjectOfferingsService.list(query) };
@@ -26,13 +26,13 @@ export class SubjectOfferingsController {
   // School-wide mapping for the current year -- a distinct route (not GET /
   // with sectionId omitted) since list()'s DTO expects a section. Backs the
   // Principal web console's "Subjects & mapping" page.
-  @Roles('ADMIN', 'PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
   @Get('all')
   async listAll() {
     return { data: await this.subjectOfferingsService.listAllCurrentYear() };
   }
 
-  @Roles('ADMIN', 'PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
   @Get('by-teacher/:staffId')
   async listForTeacher(@Param('staffId') staffId: string) {
     return { data: await this.subjectOfferingsService.listForTeacher(staffId) };

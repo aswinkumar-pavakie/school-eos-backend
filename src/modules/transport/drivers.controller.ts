@@ -24,7 +24,7 @@ import { RequestDriverDeactivateDto } from './dto/request-driver-deactivate.dto'
 // need) -- every write method below keeps its own narrower @Roles('ADMIN')
 // override. Drivers remain plain transport master records, never application
 // users -- no driver login/role is introduced here.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('drivers')
 export class DriversController {
   constructor(private readonly driversService: DriversService) {}
@@ -36,13 +36,13 @@ export class DriversController {
   // default rather than adding to it, so both must be listed explicitly
   // here or PRINCIPAL/VICE_PRINCIPAL would silently lose read access);
   // create/update stay ADMIN-only exactly as before.
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get()
   async list() {
     return { data: await this.driversService.list() };
   }
 
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get(':id')
   async get(@Param('id') id: string) {
     return { data: await this.driversService.get(id) };
@@ -92,7 +92,7 @@ export class DriversController {
   // Driver documents: same role split as vehicle documents on
   // VehiclesController -- TRANSPORT_MANAGER has real operational access
   // (list/create/update), delete stays ADMIN-only.
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get(':id/documents')
   async listDocuments(@Param('id') id: string) {
     return { data: await this.driversService.listDocuments(id) };

@@ -152,6 +152,74 @@ export class AttendanceRecordRepository {
     };
   }
 
+  /** Correspondent Phase 9 addition -- real, school-wide attendance ranked
+   * lowest-first over a date window, for active students currently enrolled
+   * in the current academic year. Deliberately NO minimum-attendance
+   * threshold is applied here (no such config exists anywhere in this schema
+   * -- checked school-wide before adding this) -- every row shows its own
+   * real presentCount/totalCount so a student with e.g. 0/1 isn't
+   * misrepresented as equivalent to 0/40. The frontend sorts/filters this
+   * real data; it does not decide who is "flagged". Same effective-status
+   * derivation (post-correction) as every other read in this repository. */
+  async findLowestAttendance(
+    sinceDate: string,
+    limit: number,
+    executor: Queryable = this.postgres,
+  ): Promise<
+    Array<{
+      studentId: string;
+      firstName: string;
+      lastName: string | null;
+      admissionNo: string;
+      gradeName: string | null;
+      sectionName: string | null;
+      presentCount: number;
+      totalCount: number;
+    }>
+  > {
+    const { rows } = await executor.query<{
+      student_id: string;
+      first_name: string;
+      last_name: string | null;
+      admission_no: string;
+      grade_name: string | null;
+      section_name: string | null;
+      present_count: string;
+      total_count: string;
+    }>(
+      `SELECT s.id AS student_id, p.first_name, p.last_name, s.admission_no,
+              g.name AS grade_name, sec.name AS section_name,
+              count(*) FILTER (WHERE COALESCE(latest_correction.new_status, ar.status) IN ('PRESENT', 'LATE', 'HALF_DAY')) AS present_count,
+              count(*) AS total_count
+       FROM attendance_record ar
+       JOIN attendance_session ats ON ats.id = ar.session_id
+       JOIN student s ON s.id = ar.student_id
+       JOIN person p ON p.id = s.person_id
+       LEFT JOIN student_enrolment se ON se.student_id = s.id AND se.status = 'ACTIVE'
+         AND se.academic_year_id = (SELECT id FROM academic_year WHERE is_current LIMIT 1)
+       LEFT JOIN section sec ON sec.id = se.section_id
+       LEFT JOIN grade g ON g.id = sec.grade_id
+       ${LATEST_CORRECTION_JOIN}
+       WHERE s.status = 'ACTIVE' AND ats.session_date >= $1
+       GROUP BY s.id, p.first_name, p.last_name, s.admission_no, g.name, sec.name
+       HAVING count(*) > 0
+       ORDER BY (count(*) FILTER (WHERE COALESCE(latest_correction.new_status, ar.status) IN ('PRESENT', 'LATE', 'HALF_DAY')))::numeric / count(*) ASC,
+                count(*) DESC
+       LIMIT $2`,
+      [sinceDate, limit],
+    );
+    return rows.map((r) => ({
+      studentId: r.student_id,
+      firstName: r.first_name,
+      lastName: r.last_name,
+      admissionNo: r.admission_no,
+      gradeName: r.grade_name,
+      sectionName: r.section_name,
+      presentCount: parseInt(r.present_count, 10),
+      totalCount: parseInt(r.total_count, 10),
+    }));
+  }
+
   /** Which of these students have an effective status of ABSENT for this exact
    * calendar date, across whatever section(s) they were enrolled in that day --
    * feeds the Hostel module's Class Absence Alert (a student marked absent in class

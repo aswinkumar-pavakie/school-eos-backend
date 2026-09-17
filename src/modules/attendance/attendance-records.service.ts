@@ -141,4 +141,22 @@ export class AttendanceRecordsService {
         totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : null,
     };
   }
+
+  /** Correspondent Phase 9 addition -- see repository method's own comment
+   * for why no threshold is applied here. */
+  async findLowestAttendance(days: number, limit: number) {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    const rows = await this.recordRepo.findLowestAttendance(
+      since.toISOString().slice(0, 10),
+      limit,
+    );
+    return rows.map((r) => ({
+      ...r,
+      percentage:
+        r.totalCount > 0
+          ? Math.round((r.presentCount / r.totalCount) * 100)
+          : null,
+    }));
+  }
 }

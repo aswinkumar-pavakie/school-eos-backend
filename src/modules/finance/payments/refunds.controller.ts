@@ -16,7 +16,7 @@ export class RefundsController {
   constructor(private readonly service: PaymentsService) {}
 
   @Get(':id')
-  @Roles('FINANCE', 'ADMIN', 'PRINCIPAL')
+  @Roles('FINANCE', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
   async getById(@Param('id') id: string) {
     const data = await this.service.getRefundById(id);
     return { data };

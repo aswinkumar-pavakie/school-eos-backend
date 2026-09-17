@@ -49,14 +49,14 @@ export class MessagingController {
     private readonly studentsService: StudentsService,
   ) {}
 
-  @Roles('FACULTY', 'PARENT', 'PRINCIPAL')
+  @Roles('FACULTY', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
   @Get('conversations')
   async listConversations(@CurrentActor() actor: AuthenticatedUser) {
     const result = await this.messagingService.listConversations(actor);
     return { data: result };
   }
 
-  @Roles('FACULTY', 'PARENT', 'PRINCIPAL')
+  @Roles('FACULTY', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
   @Get('conversations/:id')
   async getConversation(
     @CurrentActor() actor: AuthenticatedUser,
@@ -66,7 +66,7 @@ export class MessagingController {
     return { data: result };
   }
 
-  @Roles('FACULTY', 'PARENT', 'PRINCIPAL')
+  @Roles('FACULTY', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
   @Get('conversations/:id/messages')
   async listMessages(
     @CurrentActor() actor: AuthenticatedUser,
@@ -82,7 +82,7 @@ export class MessagingController {
     return { data: items, meta };
   }
 
-  @Roles('FACULTY', 'PARENT', 'PRINCIPAL')
+  @Roles('FACULTY', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
   @Post('conversations/:id/messages')
   @HttpCode(HttpStatus.OK)
   async sendMessage(
@@ -103,7 +103,7 @@ export class MessagingController {
     return { data: result };
   }
 
-  @Roles('FACULTY', 'PARENT', 'PRINCIPAL')
+  @Roles('FACULTY', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
   @Patch('conversations/:id/read')
   @HttpCode(HttpStatus.OK)
   async markRead(
@@ -114,7 +114,7 @@ export class MessagingController {
     return { data: { success: true } };
   }
 
-  @Roles('FACULTY', 'PARENT', 'PRINCIPAL')
+  @Roles('FACULTY', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
   @Post('conversations/:conversationId/messages/:messageId/translate')
   @HttpCode(HttpStatus.OK)
   async translateMessage(
@@ -134,7 +134,7 @@ export class MessagingController {
 
   // ---- Principal: start a new conversation -----------------------------------
 
-  @Roles('PRINCIPAL')
+  @Roles('PRINCIPAL', 'CORRESPONDENT')
   @Post('principal/conversations/faculty')
   @HttpCode(HttpStatus.OK)
   async startFacultyConversation(
@@ -148,7 +148,7 @@ export class MessagingController {
     return { data: result };
   }
 
-  @Roles('PRINCIPAL')
+  @Roles('PRINCIPAL', 'CORRESPONDENT')
   @Post('principal/conversations/student')
   @HttpCode(HttpStatus.OK)
   async startStudentConversation(
@@ -182,7 +182,7 @@ export class MessagingController {
   // Events module's "monitoring teacher" picker). Principal gets read-only
   // search, never the ADMIN create/update/exit surface.
 
-  @Roles('PRINCIPAL')
+  @Roles('PRINCIPAL', 'CORRESPONDENT')
   @Get('principal/faculty/search')
   async searchFaculty(@Query() query: PrincipalDirectorySearchDto) {
     const facultyQuery = new StaffQueryDto();
@@ -192,7 +192,7 @@ export class MessagingController {
     return result;
   }
 
-  @Roles('PRINCIPAL')
+  @Roles('PRINCIPAL', 'CORRESPONDENT')
   @Get('principal/students/search')
   async searchStudents(@Query() query: PrincipalDirectorySearchDto) {
     const studentQuery = new StudentQueryDto();

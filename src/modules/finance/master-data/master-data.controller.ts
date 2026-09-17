@@ -102,7 +102,7 @@ export class GradesController {
 // Also readable by PRINCIPAL — needed to populate the department picker on the
 // Purchase/Service Request creation form.
 @Controller('finance/departments')
-@Roles('FINANCE', 'ADMIN', 'PRINCIPAL')
+@Roles('FINANCE', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 export class DepartmentsController {
   constructor(private readonly repo: DepartmentLookupRepository) {}
 
@@ -117,7 +117,7 @@ export class DepartmentsController {
 // same read-only-oversight pattern used elsewhere in this codebase. This
 // controller only ever exposes GET, so there's no write surface to widen.
 @Controller('finance/academic-years')
-@Roles('FINANCE', 'ADMIN', 'PRINCIPAL')
+@Roles('FINANCE', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 export class AcademicYearsController {
   constructor(private readonly repo: AcademicYearLookupRepository) {}
 
@@ -145,7 +145,7 @@ export class MediumsController {
 // pattern used elsewhere in this codebase. GET-only controller, no write
 // surface to widen.
 @Controller('finance/school-profile')
-@Roles('FINANCE', 'ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('FINANCE', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 export class SchoolProfileController {
   constructor(private readonly repo: SchoolProfileRepository) {}
 

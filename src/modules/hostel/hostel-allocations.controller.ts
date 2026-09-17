@@ -20,7 +20,7 @@ import { HostelAllocationsService } from './hostel-allocations.service';
 // and to VICE_PRINCIPAL (Vice Principal mobile Hostel module -- same
 // oversight need) -- every write method below keeps its own narrower
 // @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('hostel-allocations')
 export class HostelAllocationsController {
   constructor(

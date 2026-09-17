@@ -29,14 +29,14 @@ export class AttendanceSessionsController {
   constructor(private readonly sessionsService: AttendanceSessionsService) {}
 
   @Get()
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async list(@Query() query: AttendanceSessionQueryDto) {
     const result = await this.sessionsService.list(query);
     return { data: result.data, meta: result.meta };
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async get(@Param('id') id: string) {
     return { data: await this.sessionsService.get(id) };
   }

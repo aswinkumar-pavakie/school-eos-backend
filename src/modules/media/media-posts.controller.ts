@@ -28,7 +28,7 @@ import { MediaPostsService } from './media-posts.service';
 // write method below carries its own narrower @Roles('MEDIA_ROOM', 'ADMIN')
 // override (RolesGuard's Reflector.getAllAndOverride means a method-level
 // @Roles fully replaces the class-level one).
-@Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL')
+@Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 @Controller('media/posts')
 export class MediaPostsController {
   constructor(private readonly service: MediaPostsService) {}
@@ -70,13 +70,13 @@ export class MediaPostsController {
   // PUBLISHED regardless of what they ask for: drafts/scheduled/cancelled
   // posts must never leak outside Media Room's own privileged callers.
   @Get()
-  @Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL', 'FACULTY', 'PARENT')
+  @Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'FACULTY', 'PARENT')
   async list(
     @Query() query: MediaPostQueryDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
     const privileged = actor.roles.some((r) =>
-      ['MEDIA_ROOM', 'ADMIN', 'PRINCIPAL'].includes(r),
+      ['MEDIA_ROOM', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT'].includes(r),
     );
     const filter = privileged ? query : { state: 'PUBLISHED' };
     return { data: await this.service.list(filter) };

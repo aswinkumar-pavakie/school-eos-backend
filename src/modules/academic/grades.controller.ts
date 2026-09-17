@@ -19,7 +19,7 @@ import { UpdateGradeDto } from './dto/update-grade.dto';
 // (Principal's Students module needs grade names for filters/enrolment display),
 // and to VICE_PRINCIPAL (Phase 4 mobile Students module -- same filter-dropdown
 // need) -- write methods below have their own narrower @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'SPORTS_ADMIN')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'SPORTS_ADMIN')
 @Controller('grades')
 export class GradesController {
   constructor(private readonly gradesService: GradesService) {}

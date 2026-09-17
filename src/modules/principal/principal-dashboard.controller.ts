@@ -12,7 +12,7 @@ import { PrincipalDashboardService } from './principal-dashboard.service';
 // parentLoginsIssued/staffMarkedToday fields this summary already computes,
 // which Admin's own separate /admin/dashboard-summary endpoint doesn't have;
 // reusing this one real service avoids a second, duplicate aggregation.
-@Roles('PRINCIPAL', 'VICE_PRINCIPAL', 'ADMIN')
+@Roles('PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'ADMIN')
 @Controller('principal/dashboard-summary')
 export class PrincipalDashboardController {
   constructor(

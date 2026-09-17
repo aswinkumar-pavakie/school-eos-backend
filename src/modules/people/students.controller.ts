@@ -45,7 +45,7 @@ import { StudentsService } from './students.service';
 // untouched -- the Vice Principal mobile detail screen reads current
 // grade/section straight off the student row itself, no enrolment history
 // needed for a leadership overview.
-@Roles('ADMIN', 'PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 @Controller('students')
 export class StudentsController {
   constructor(
@@ -59,7 +59,7 @@ export class StudentsController {
   ) {}
 
   @Get()
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'SPORTS_ADMIN')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'SPORTS_ADMIN')
   async list(@Query() query: StudentQueryDto) {
     const result = await this.studentsService.list(query);
     return { data: result.data, meta: result.meta };
@@ -74,8 +74,25 @@ export class StudentsController {
     return { data: await this.studentsService.getNextAdmissionNo() };
   }
 
+  // Correspondent Phase 9 addition -- real, school-wide attendance ranked
+  // lowest-first (see AttendanceRecordRepository.findLowestAttendance's own
+  // comment for why no threshold is applied). Registered before ':id' for
+  // the same ordering reason as 'next-admission-no' above.
+  @Get('attendance-lowest')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
+  async attendanceLowest(
+    @Query('days') days?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const parsedDays = Math.min(Math.max(parseInt(days ?? '30', 10) || 30, 1), 365);
+    const parsedLimit = Math.min(Math.max(parseInt(limit ?? '25', 10) || 25, 1), 100);
+    return {
+      data: await this.attendanceRecordsService.findLowestAttendance(parsedDays, parsedLimit),
+    };
+  }
+
   @Get(':id')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'SPORTS_ADMIN')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'SPORTS_ADMIN')
   async get(@Param('id') id: string) {
     return { data: await this.studentsService.get(id) };
   }
@@ -118,7 +135,7 @@ export class StudentsController {
   // already grant VP -- VP's own Student detail page calls this and was
   // silently getting a 403 -- caught in a wiring audit.
   @Get(':id/enrolments')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async listEnrolments(@Param('id') id: string) {
     return { data: await this.enrolmentsService.listByStudent(id) };
   }
@@ -183,7 +200,7 @@ export class StudentsController {
   }
 
   @Get(':id/attendance-summary')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async getAttendanceSummary(@Param('id') id: string) {
     return {
       data: await this.attendanceRecordsService.getAttendanceSummaryForStudent(
@@ -193,7 +210,7 @@ export class StudentsController {
   }
 
   @Get(':id/guardians')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async listGuardians(@Param('id') id: string) {
     return { data: await this.guardianLinksService.listByStudent(id) };
   }

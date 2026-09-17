@@ -25,13 +25,13 @@ export class CirculationController {
   // the Principal web console's real Library "Overdue & fines" table, same
   // read-only-oversight pattern used elsewhere in this codebase. Write methods
   // below keep their own narrower @Roles('LIBRARY') override, unaffected.
-  @Roles('LIBRARY', 'ADMIN', 'PRINCIPAL')
+  @Roles('LIBRARY', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
   @Get()
   async list(@Query() query: IssueQueryDto) {
     return this.circulationService.list(query);
   }
 
-  @Roles('LIBRARY', 'ADMIN', 'PRINCIPAL')
+  @Roles('LIBRARY', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
   @Get(':id')
   async get(@Param('id') id: string) {
     return { data: await this.circulationService.get(id) };

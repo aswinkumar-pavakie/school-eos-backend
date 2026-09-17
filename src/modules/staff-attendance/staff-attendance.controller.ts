@@ -22,7 +22,7 @@ import { StaffAttendanceService } from './staff-attendance.service';
 // /staff/attendance/manual"), manual staff attendance is "Admin/Principal
 // (direct, confirmed)", the one write action in this build where Principal has
 // full parity with Admin rather than a narrowed, view-only role.
-@Roles('ADMIN', 'PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 @Controller('staff-attendance')
 export class StaffAttendanceController {
   constructor(

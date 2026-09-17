@@ -127,5 +127,10 @@ import { SportsService } from './sports.service';
     SportsFacultyAchievementsService,
     SportsAdminOverviewService,
   ],
+  // PrincipalDashboardService needs SportsAdminOverviewService directly for the
+  // shared Principal/VP/Correspondent/Admin dashboard summary's real "upcoming
+  // fixtures" figure -- same reuse pattern InventoryModule/MaintenanceModule/
+  // LibraryModule already export their own overview services for.
+  exports: [SportsAdminOverviewService],
 })
 export class SportsModule {}

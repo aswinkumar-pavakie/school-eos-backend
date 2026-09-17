@@ -21,7 +21,7 @@ import { HostelsService } from './hostels.service';
 // and to VICE_PRINCIPAL (Vice Principal mobile Hostel module -- same
 // oversight need) -- every write method below keeps its own narrower
 // @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller()
 export class HostelsController {
   constructor(private readonly hostelsService: HostelsService) {}

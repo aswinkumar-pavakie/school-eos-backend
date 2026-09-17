@@ -18,15 +18,16 @@ import { UpdateAcademicYearDto } from './dto/update-academic-year.dto';
 // Class-level @Roles broadened to include PRINCIPAL for read-only oversight
 // (Principal's Students module needs grade/section/academic-year names for
 // enrolment display), VICE_PRINCIPAL (Phase 8 mobile Academics module -- same
+// read-only oversight need), CORRESPONDENT (Correspondent Phase 4 -- same
 // read-only oversight need), MEDIA_ROOM (needs the current academic year's
 // id to read/create its own Academic Calendar entries), and TRANSPORT_MANAGER
 // (the Transport Overview dashboard's own real "This year" date-range tab
 // needs the current academic_year's start/end dates) -- every write method
 // below has its own narrower @Roles('ADMIN') override (RolesGuard's
 // Reflector.getAllAndOverride means a method-level @Roles fully replaces the
-// class-level one), so none of these four ever gains create/update/
+// class-level one), so none of these five ever gains create/update/
 // set-current/close access even by calling the API directly.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'MEDIA_ROOM', 'TRANSPORT_MANAGER', 'SPORTS_ADMIN')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'MEDIA_ROOM', 'TRANSPORT_MANAGER', 'SPORTS_ADMIN')
 @Controller('academic-years')
 export class AcademicYearsController {
   constructor(private readonly academicYearsService: AcademicYearsService) {}

@@ -20,7 +20,7 @@ import { UpdateCampusDto } from './dto/update-campus.dto';
 // Calendar page already calls GET /campuses to scope events by campus, and
 // was silently getting a 403 -- caught in a wiring audit) -- write methods
 // below keep their own narrower @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('campuses')
 export class CampusesController {
   constructor(private readonly campusesService: CampusesService) {}

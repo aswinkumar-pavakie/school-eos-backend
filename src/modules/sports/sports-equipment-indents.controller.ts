@@ -32,7 +32,7 @@ const SPORTS_EQUIPMENT_CONTEXT = {
   actorRoleCode: 'SPORTS_FACULTY',
 };
 
-@Roles('FACULTY', 'ADMIN', 'PRINCIPAL', 'FINANCE', 'SPORTS_ADMIN')
+@Roles('FACULTY', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'FINANCE', 'SPORTS_ADMIN')
 @Controller('sports/equipment-indents')
 export class SportsEquipmentIndentsController {
   constructor(
