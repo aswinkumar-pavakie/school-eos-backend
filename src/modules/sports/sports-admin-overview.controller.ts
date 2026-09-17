@@ -12,7 +12,7 @@ import { Controller, Get } from '@nestjs/common';
 import { Roles } from '../../common/auth/roles.decorator';
 import { SportsAdminOverviewService } from './sports-admin-overview.service';
 
-@Roles('ADMIN', 'PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'SPORTS_ADMIN')
 @Controller('sports/overview')
 export class SportsAdminOverviewController {
   constructor(private readonly service: SportsAdminOverviewService) {}

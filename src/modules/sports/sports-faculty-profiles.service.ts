@@ -28,6 +28,7 @@ export class SportsFacultyProfilesService {
   ) {}
 
   private async requireActiveFaculty(actor: AuthenticatedUser): Promise<void> {
+    if (actor.roles.includes('SPORTS_ADMIN')) return; // school-wide login, no staff/SPORTS_FACULTY scope required
     const staff = await this.staffRepo.findByPersonId(actor.personId);
     if (!staff || staff.status !== 'ACTIVE')
       throw new ForbiddenException(SPORTS_ERRORS.NOT_ACTIVE_FACULTY);
@@ -39,12 +40,12 @@ export class SportsFacultyProfilesService {
   ): Promise<SportsProfileRow[]> {
     await this.requireActiveFaculty(actor);
     const authorized = await this.sportsFacultyRepo.isAuthorizedForSport(
-      actor.personId,
+      actor,
       sportId,
     );
     if (!authorized) throw new NotFoundException(SPORTS_ERRORS.SPORT_NOT_FOUND);
     const mine = await this.sportsFacultyRepo.findActiveSportIdsForFaculty(
-      actor.personId,
+      actor,
     );
     return this.profileRepo.findBySportIds(mine.filter((id) => id === sportId));
   }
@@ -56,7 +57,7 @@ export class SportsFacultyProfilesService {
   ): Promise<SportsProfileRow> {
     await this.requireActiveFaculty(actor);
     const authorized = await this.sportsFacultyRepo.isAuthorizedForSport(
-      actor.personId,
+      actor,
       sportId,
     );
     if (!authorized) throw new NotFoundException(SPORTS_ERRORS.SPORT_NOT_FOUND);
@@ -65,7 +66,7 @@ export class SportsFacultyProfilesService {
       const profile = await this.profileRepo.upsert({ sportId, ...dto });
       await this.audit.record({
         actorPersonId: actor.personId,
-        actorRoleCode: 'FACULTY',
+        actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
         action: 'SPORTS_PROFILE_UPSERTED',
         objectType: 'sports_profile',
         objectId: profile.id,
@@ -90,7 +91,7 @@ export class SportsFacultyProfilesService {
   ): Promise<SportsProfileRow> {
     await this.requireActiveFaculty(actor);
     const authorized = await this.sportsFacultyRepo.isAuthorizedForSport(
-      actor.personId,
+      actor,
       sportId,
     );
     if (!authorized) throw new NotFoundException(SPORTS_ERRORS.SPORT_NOT_FOUND);
@@ -102,7 +103,7 @@ export class SportsFacultyProfilesService {
     const updated = await this.profileRepo.update(profileId, dto);
     await this.audit.record({
       actorPersonId: actor.personId,
-      actorRoleCode: 'FACULTY',
+      actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
       action: 'SPORTS_PROFILE_UPDATED',
       objectType: 'sports_profile',
       objectId: profileId,

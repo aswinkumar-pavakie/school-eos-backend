@@ -58,7 +58,7 @@ export class FacultyHrRequestsService {
     };
   }
 
-  async create(personId: string, dto: CreateStaffHrRequestDto) {
+  async create(personId: string, dto: CreateStaffHrRequestDto, actorRoleCode = 'FACULTY') {
     const staffId = await this.scopeRepo.getStaffId(personId);
     if (!staffId)
       throw new ForbiddenException('No active staff record for this account.');
@@ -93,7 +93,7 @@ export class FacultyHrRequestsService {
       await this.audit.record(
         {
           actorPersonId: personId,
-          actorRoleCode: 'FACULTY',
+          actorRoleCode,
           action: 'STAFF_HR_REQUEST_CREATED',
           objectType: 'staff_hr_request',
           objectId: request.id,

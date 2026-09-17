@@ -23,7 +23,7 @@ import { IssueEquipmentDto } from './dto/issue-equipment.dto';
 import { ReturnEquipmentDto } from './dto/return-equipment.dto';
 import { SportsEquipmentOperationsService } from './sports-equipment-operations.service';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'SPORTS_ADMIN')
 @Controller('sports/faculty/equipment')
 export class SportsEquipmentOperationsController {
   constructor(private readonly service: SportsEquipmentOperationsService) {}

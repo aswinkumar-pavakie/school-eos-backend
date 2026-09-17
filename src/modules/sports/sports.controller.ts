@@ -17,7 +17,7 @@ import { UpdateSportCategoryDto } from './dto/update-sport-category.dto';
 import { UpdateSportDto } from './dto/update-sport.dto';
 import { SportsService } from './sports.service';
 
-@Roles('ADMIN')
+@Roles('ADMIN', 'SPORTS_ADMIN')
 @Controller()
 export class SportsController {
   constructor(private readonly sportsService: SportsService) {}

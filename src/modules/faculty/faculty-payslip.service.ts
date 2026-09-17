@@ -69,7 +69,7 @@ export class FacultyPayslipService {
     };
   }
 
-  async requestAccess(personId: string, note?: string) {
+  async requestAccess(personId: string, note?: string, actorRoleCode = 'FACULTY') {
     const staffId = await this.scopeRepo.getStaffId(personId);
     if (!staffId)
       throw new ForbiddenException('No active staff record for this account.');
@@ -114,7 +114,7 @@ export class FacultyPayslipService {
       await this.audit.record(
         {
           actorPersonId: personId,
-          actorRoleCode: 'FACULTY',
+          actorRoleCode,
           action: 'PAYSLIP_ACCESS_REQUESTED',
           objectType: 'staff_hr_request',
           objectId: request.id,

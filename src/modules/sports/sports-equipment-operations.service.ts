@@ -49,6 +49,7 @@ export class SportsEquipmentOperationsService {
   ) {}
 
   private async requireActiveFaculty(actor: AuthenticatedUser): Promise<void> {
+    if (actor.roles.includes('SPORTS_ADMIN')) return; // school-wide login, no staff/SPORTS_FACULTY scope required
     const staff = await this.staffRepo.findByPersonId(actor.personId);
     if (!staff || staff.status !== 'ACTIVE') {
       throw new ForbiddenException(SPORTS_ERRORS.NOT_ACTIVE_FACULTY);
@@ -60,10 +61,11 @@ export class SportsEquipmentOperationsService {
    * see EquipmentController). */
   async listMyEquipment(actor: AuthenticatedUser): Promise<EquipmentRow[]> {
     await this.requireActiveFaculty(actor);
-    const sportIds = await this.sportsFacultyRepo.findActiveSportIdsForFaculty(
-      actor.personId,
-    );
     const all = await this.equipmentRepo.findMany();
+    if (actor.roles.includes('SPORTS_ADMIN')) return all; // school-wide oversight sees general/shared items too, not just sport-tagged ones
+    const sportIds = await this.sportsFacultyRepo.findActiveSportIdsForFaculty(
+      actor,
+    );
     return all.filter((e) => e.sportId && sportIds.includes(e.sportId));
   }
 
@@ -72,14 +74,23 @@ export class SportsEquipmentOperationsService {
     equipmentId: string,
   ): Promise<EquipmentRow> {
     const equipment = await this.equipmentRepo.findById(equipmentId);
-    if (!equipment || !equipment.sportId)
-      throw new NotFoundException(SPORTS_ERRORS.EQUIPMENT_NOT_FOUND);
-    const authorized = await this.sportsFacultyRepo.isAuthorizedForSport(
-      actor.personId,
-      equipment.sportId,
-    );
-    if (!authorized)
-      throw new NotFoundException(SPORTS_ERRORS.EQUIPMENT_NOT_FOUND);
+    if (!equipment) throw new NotFoundException(SPORTS_ERRORS.EQUIPMENT_NOT_FOUND);
+    // Same real gap as sports-equipment-indents.controller.ts's own fix:
+    // general/shared equipment (sportId null) has no single sport to check
+    // Faculty's scoped authorization against, but SPORTS_ADMIN's school-wide
+    // oversight has no per-sport scope to check in the first place -- it
+    // must not be blocked by a sportId that doesn't exist. Confirmed live
+    // (issuing a general catalog item 404'd for every actor until this fix).
+    if (!actor.roles.includes('SPORTS_ADMIN')) {
+      if (!equipment.sportId)
+        throw new NotFoundException(SPORTS_ERRORS.EQUIPMENT_NOT_FOUND);
+      const authorized = await this.sportsFacultyRepo.isAuthorizedForSport(
+        actor,
+        equipment.sportId,
+      );
+      if (!authorized)
+        throw new NotFoundException(SPORTS_ERRORS.EQUIPMENT_NOT_FOUND);
+    }
     return equipment;
   }
 
@@ -108,7 +119,7 @@ export class SportsEquipmentOperationsService {
       if (!team) throw new NotFoundException(SPORTS_ERRORS.TEAM_NOT_FOUND);
       const authorizedForTeam =
         await this.sportsFacultyRepo.isAuthorizedForSport(
-          actor.personId,
+          actor,
           team.sportId,
         );
       if (!authorizedForTeam)
@@ -177,7 +188,7 @@ export class SportsEquipmentOperationsService {
       await this.audit.record(
         {
           actorPersonId: actor.personId,
-          actorRoleCode: 'FACULTY',
+          actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
           action: 'SPORTS_EQUIPMENT_ISSUED',
           objectType: 'equipment_issue',
           objectId: created.id,
@@ -215,20 +226,27 @@ export class SportsEquipmentOperationsService {
         throw new ConflictException(SPORTS_ERRORS.ALREADY_RETURNED);
 
       // Re-check sport authorization for the issue's own equipment, live.
-      const { rows } = await client.query<{ sport_id: string | null }>(
-        `SELECT sport_id FROM equipment WHERE id = $1`,
-        [locked.equipmentId],
-      );
-      const sportId = rows[0]?.sport_id ?? null;
-      if (
-        !sportId ||
-        !(await this.sportsFacultyRepo.isAuthorizedForSport(
-          actor.personId,
-          sportId,
-          client,
-        ))
-      ) {
-        throw new NotFoundException(SPORTS_ERRORS.EQUIPMENT_ISSUE_NOT_FOUND);
+      // Same real gap as issue()/listOutstanding()'s own fixes: general
+      // equipment (sport_id null) has no sport for Faculty's scoped check,
+      // but SPORTS_ADMIN's school-wide oversight isn't scoped by sport at
+      // all, so a null sportId must not block it. Confirmed live (returning
+      // a general-equipment issue 404'd for SPORTS_ADMIN until this fix).
+      if (!actor.roles.includes('SPORTS_ADMIN')) {
+        const { rows } = await client.query<{ sport_id: string | null }>(
+          `SELECT sport_id FROM equipment WHERE id = $1`,
+          [locked.equipmentId],
+        );
+        const sportId = rows[0]?.sport_id ?? null;
+        if (
+          !sportId ||
+          !(await this.sportsFacultyRepo.isAuthorizedForSport(
+            actor,
+            sportId,
+            client,
+          ))
+        ) {
+          throw new NotFoundException(SPORTS_ERRORS.EQUIPMENT_ISSUE_NOT_FOUND);
+        }
       }
 
       await this.equipmentIssueRepo.recordReturn(
@@ -245,7 +263,7 @@ export class SportsEquipmentOperationsService {
       await this.audit.record(
         {
           actorPersonId: actor.personId,
-          actorRoleCode: 'FACULTY',
+          actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
           action: 'SPORTS_EQUIPMENT_RETURNED',
           objectType: 'equipment_issue',
           objectId: issueId,
@@ -264,18 +282,24 @@ export class SportsEquipmentOperationsService {
   ): Promise<EquipmentIssueRow[]> {
     await this.requireActiveFaculty(actor);
     const sportIds = await this.sportsFacultyRepo.findActiveSportIdsForFaculty(
-      actor.personId,
+      actor,
     );
-    return this.equipmentIssueRepo.findOutstandingBySportIds(sportIds);
+    return this.equipmentIssueRepo.findOutstandingBySportIds(
+      sportIds,
+      actor.roles.includes('SPORTS_ADMIN'),
+    );
   }
 
   /** Cheap add-on: anything outstanding past its due_on. */
   async listOverdue(actor: AuthenticatedUser): Promise<EquipmentIssueRow[]> {
     await this.requireActiveFaculty(actor);
     const sportIds = await this.sportsFacultyRepo.findActiveSportIdsForFaculty(
-      actor.personId,
+      actor,
     );
-    return this.equipmentIssueRepo.findOverdueBySportIds(sportIds);
+    return this.equipmentIssueRepo.findOverdueBySportIds(
+      sportIds,
+      actor.roles.includes('SPORTS_ADMIN'),
+    );
   }
 
   /** Cheap add-on: equipment at/below a threshold — visible before it becomes a

@@ -18,7 +18,7 @@ import { RecordTrainingAttendanceDto } from './dto/record-training-attendance.dt
 import { UpdateTrainingSessionDto } from './dto/update-training-session.dto';
 import { SportsFacultyTrainingService } from './sports-faculty-training.service';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'SPORTS_ADMIN')
 @Controller('sports/training-sessions')
 export class SportsFacultyTrainingController {
   constructor(private readonly service: SportsFacultyTrainingService) {}

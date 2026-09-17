@@ -14,7 +14,13 @@ import { Roles } from '../../common/auth/roles.decorator';
 import { CreateStaffHrRequestDto } from './dto/create-staff-hr-request.dto';
 import { FacultyHrRequestsService } from './faculty-hr-requests.service';
 
-@Roles('FACULTY')
+// Broadened to PRINCIPAL (2026-09) -- this is a real, generic staff
+// self-service capability (FacultyScopeRepository.getStaffId() resolves any
+// active `staff` row by person_id, not a Faculty-specific lookup), and
+// Principal genuinely has an active staff record like any other employee.
+// Nothing here narrows differently for Principal -- same request/approval
+// flow, same data shape.
+@Roles('FACULTY', 'PRINCIPAL')
 @Controller('faculty/hr-requests')
 export class FacultyHrRequestsController {
   constructor(private readonly service: FacultyHrRequestsService) {}
@@ -38,6 +44,8 @@ export class FacultyHrRequestsController {
     @Body() dto: CreateStaffHrRequestDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.service.create(actor.personId, dto) };
+    return {
+      data: await this.service.create(actor.personId, dto, actor.roles[0]),
+    };
   }
 }

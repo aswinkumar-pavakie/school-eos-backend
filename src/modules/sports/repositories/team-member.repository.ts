@@ -74,9 +74,11 @@ export class TeamMemberRepository {
   /** Ends a roster membership — deactivate, not delete, matching this repo's
    * "supersede, not delete" convention for anything with business meaning
    * (equipment issues, achievements, etc. all reference team_member historically). */
+  // team_member_status_check only allows ACTIVE/REMOVED -- 'ENDED' isn't a
+  // real value and used to crash this as an uncaught 500. Confirmed live.
   async end(id: string, executor: Queryable = this.postgres): Promise<boolean> {
     const { rows } = await executor.query(
-      `UPDATE team_member SET status = 'ENDED' WHERE id = $1 AND status = 'ACTIVE' RETURNING id`,
+      `UPDATE team_member SET status = 'REMOVED' WHERE id = $1 AND status = 'ACTIVE' RETURNING id`,
       [id],
     );
     return rows.length > 0;

@@ -14,7 +14,10 @@ import { Roles } from '../../common/auth/roles.decorator';
 import { CreateStaffAppraisalDto } from './dto/create-staff-appraisal.dto';
 import { FacultyAppraisalService } from './faculty-appraisal.service';
 
-@Roles('FACULTY')
+// Broadened to PRINCIPAL (2026-09) -- same generic staff self-service
+// capability as faculty-hr-requests.controller.ts (identical
+// FacultyScopeRepository.getStaffId() lookup, not Faculty-specific).
+@Roles('FACULTY', 'PRINCIPAL')
 @Controller('faculty/appraisal')
 export class FacultyAppraisalController {
   constructor(private readonly service: FacultyAppraisalService) {}
@@ -38,6 +41,8 @@ export class FacultyAppraisalController {
     @Body() dto: CreateStaffAppraisalDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.service.create(actor.personId, dto) };
+    return {
+      data: await this.service.create(actor.personId, dto, actor.roles[0]),
+    };
   }
 }

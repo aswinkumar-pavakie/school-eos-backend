@@ -26,7 +26,7 @@ import { UpdateAcademicYearDto } from './dto/update-academic-year.dto';
 // Reflector.getAllAndOverride means a method-level @Roles fully replaces the
 // class-level one), so none of these four ever gains create/update/
 // set-current/close access even by calling the API directly.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'MEDIA_ROOM', 'TRANSPORT_MANAGER')
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'MEDIA_ROOM', 'TRANSPORT_MANAGER', 'SPORTS_ADMIN')
 @Controller('academic-years')
 export class AcademicYearsController {
   constructor(private readonly academicYearsService: AcademicYearsService) {}

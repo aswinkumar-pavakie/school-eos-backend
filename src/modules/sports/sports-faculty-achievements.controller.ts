@@ -14,7 +14,7 @@ import { Roles } from '../../common/auth/roles.decorator';
 import { CreateSportsAchievementDto } from './dto/create-sports-achievement.dto';
 import { SportsFacultyAchievementsService } from './sports-faculty-achievements.service';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'SPORTS_ADMIN')
 @Controller('sports/achievements')
 export class SportsFacultyAchievementsController {
   constructor(private readonly service: SportsFacultyAchievementsService) {}

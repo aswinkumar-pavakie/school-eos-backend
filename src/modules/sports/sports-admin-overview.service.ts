@@ -40,7 +40,7 @@ export class SportsAdminOverviewService {
         this.fixtureRepo.findBySportIds(sportIds),
         this.odRequestRepo.findBySportIds(sportIds),
         this.achievementRepo.findBySportIds(sportIds),
-        this.equipmentIssueRepo.findOutstandingBySportIds(sportIds),
+        this.equipmentIssueRepo.findOutstandingBySportIds(sportIds, true),
       ]);
 
     const now = Date.now();
