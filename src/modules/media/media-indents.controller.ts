@@ -25,7 +25,7 @@ const MEDIA_INDENT_CONTEXT = {
   actorRoleCode: 'MEDIA_ROOM',
 };
 
-@Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL')
+@Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 @Controller('media/indents')
 export class MediaIndentsController {
   constructor(private readonly service: PurchaseRequestsService) {}

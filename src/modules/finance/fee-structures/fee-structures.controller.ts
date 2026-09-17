@@ -26,7 +26,7 @@ import { FeeStructuresService } from './fee-structures.service';
 // replaces, never merges with, the class-level one), so Principal never gains
 // create/update/delete/activate/deactivate access even by calling the API directly.
 @Controller('finance/fee-structures')
-@Roles('FINANCE', 'ADMIN', 'PRINCIPAL')
+@Roles('FINANCE', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 export class FeeStructuresController {
   constructor(private readonly service: FeeStructuresService) {}
 

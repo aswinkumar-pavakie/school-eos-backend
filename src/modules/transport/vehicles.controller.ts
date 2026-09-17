@@ -43,7 +43,7 @@ import { RequestVehicleDeactivateDto } from './dto/request-vehicle-deactivate.dt
 // Maintenance module (repair_request table, Inventory/asset workflow) --
 // still two separate systems, not merged by this change; see this repo's own
 // query.md notes on that open design question.
-@Roles('ADMIN', 'PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 @Controller()
 export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
@@ -53,7 +53,7 @@ export class VehiclesController {
   // TRANSPORT_MANAGER and PRINCIPAL/VICE_PRINCIPAL (Phase 13 mobile
   // Transport module), while every other route on this controller stays
   // ADMIN-only exactly as before (create/update/documents/maintenance).
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get('vehicles')
   async list() {
     return { data: await this.vehiclesService.list() };
@@ -62,26 +62,26 @@ export class VehiclesController {
   // Fixed-path routes registered BEFORE 'vehicles/:id' below -- Nest matches
   // routes in registration order, and ':id' would otherwise greedily swallow
   // 'service-due' or 'fuel-log' as a literal vehicle id.
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get('vehicles/service-due')
   async serviceDue() {
     const map = await this.vehiclesService.serviceDueMap();
     return { data: Array.from(map.entries()).map(([vehicleId, v]) => ({ vehicleId, ...v })) };
   }
 
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get('vehicles/compliance-summary')
   async complianceSummary() {
     return { data: await this.vehiclesService.complianceSummary() };
   }
 
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get('vehicles/fuel-log/summary')
   async fuelSummary(@Query('from') from: string, @Query('to') to: string) {
     return { data: await this.vehiclesService.fuelSummary({ from, to }) };
   }
 
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get('vehicles/:id')
   async get(@Param('id') id: string) {
     return { data: await this.vehiclesService.get(id) };
@@ -94,7 +94,7 @@ export class VehiclesController {
   // spec columns query.md adds, so Transport Manager still can't rename or
   // decommission a vehicle through it. Same "Transport owns operational
   // upkeep" principle as documents/maintenance/fuel-log above.
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get('vehicles/:id/spec')
   async getSpec(@Param('id') id: string) {
     return { data: await this.vehiclesService.getSpec(id) };
@@ -110,7 +110,7 @@ export class VehiclesController {
     return { data: await this.vehiclesService.updateSpec(id, dto, actor.personId) };
   }
 
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get('vehicles/:id/gps-status')
   async getGpsStatus(@Param('id') id: string) {
     return { data: await this.vehiclesService.getGpsStatus(id) };
@@ -165,7 +165,7 @@ export class VehiclesController {
   // VICE_PRINCIPAL added -- GET /vehicles above already grants VP; these
   // sibling read routes on the same resource didn't, an inconsistency caught
   // in a wiring audit.
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get('vehicles/:id/documents')
   async listDocuments(@Param('id') id: string) {
     return { data: await this.vehiclesService.listDocuments(id) };
@@ -211,7 +211,7 @@ export class VehiclesController {
     return { data: { deleted: true } };
   }
 
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get('vehicles/:id/maintenance')
   async listMaintenance(@Param('id') id: string) {
     return { data: await this.vehiclesService.listMaintenance(id) };
@@ -254,7 +254,7 @@ export class VehiclesController {
   // maintenance above -- Transport Manager owns day-to-day upkeep, Admin
   // retains it too, no delete route (a logged fill-up is a real fuel
   // transaction, not something to quietly remove).
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get('vehicles/:id/fuel-log')
   async listFuelLog(@Param('id') id: string) {
     return { data: await this.vehiclesService.listFuelLog(id) };

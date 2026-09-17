@@ -9,7 +9,7 @@ import { FeeOverviewService } from './fee-overview.service';
 // has; nothing to narrow, this controller is 100% GET.
 // VICE_PRINCIPAL added (Vice Principal mobile Finance module) for the exact
 // same read-only oversight scope as Principal, nothing more.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('fee-overview')
 export class FeeOverviewController {
   constructor(private readonly feeOverviewService: FeeOverviewService) {}

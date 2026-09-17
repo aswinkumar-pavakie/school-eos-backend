@@ -28,7 +28,7 @@ import { InventoryItemsService } from './inventory-items.service';
 // keeps its own narrower @Roles('ADMIN') override -- RolesGuard's
 // Reflector.getAllAndOverride means a method-level @Roles fully replaces,
 // never merges with, the class-level one.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('inventory-items')
 export class InventoryItemsController {
   constructor(private readonly itemsService: InventoryItemsService) {}

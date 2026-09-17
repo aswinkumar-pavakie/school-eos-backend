@@ -25,7 +25,7 @@ import { ReportsService } from './reports.service';
 // who isn't ADMIN/PRINCIPAL -- same "real data, granular enforcement" outcome
 // with the smallest possible change: reuses getSummary() completely
 // unchanged, no duplicated query, no new route.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('admin/reports-summary')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
@@ -33,7 +33,7 @@ export class ReportsController {
   @Get()
   async get(@CurrentActor() actor: AuthenticatedUser) {
     const summary = await this.reportsService.getSummary();
-    const isLeadership = actor.roles.includes('ADMIN') || actor.roles.includes('PRINCIPAL');
+    const isLeadership = actor.roles.includes('ADMIN') || actor.roles.includes('PRINCIPAL') || actor.roles.includes('CORRESPONDENT');
     if (isLeadership) return { data: summary };
     const { requestsApprovals: _requestsApprovals, ...vpSummary } = summary;
     return { data: vpSummary };

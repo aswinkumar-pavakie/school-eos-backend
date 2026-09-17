@@ -29,13 +29,13 @@ export class AttendantsController {
   // added too -- vehicles/drivers/routes in this module already grant VP the
   // same real access; this controller was the one inconsistent holdout,
   // caught in a wiring audit.
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get()
   async list() {
     return { data: await this.attendantsService.list() };
   }
 
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get(':id')
   async get(@Param('id') id: string) {
     return { data: await this.attendantsService.get(id) };

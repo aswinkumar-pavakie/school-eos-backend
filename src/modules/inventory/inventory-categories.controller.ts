@@ -22,7 +22,7 @@ import { InventoryCategoriesService } from './inventory-categories.service';
 // and to VICE_PRINCIPAL (Vice Principal mobile Inventory module -- same
 // oversight need) -- every write method below keeps its own narrower
 // @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('inventory-categories')
 export class InventoryCategoriesController {
   constructor(private readonly categoriesService: InventoryCategoriesService) {}

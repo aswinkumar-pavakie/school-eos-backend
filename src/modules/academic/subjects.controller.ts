@@ -19,7 +19,7 @@ import { UpdateSubjectDto } from './dto/update-subject.dto';
 // (Principal's Academics module), and to VICE_PRINCIPAL (Phase 8 mobile
 // Academics module -- same read-only oversight need) -- write methods below
 // have their own narrower @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('subjects')
 export class SubjectsController {
   constructor(private readonly subjectsService: SubjectsService) {}

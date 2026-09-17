@@ -12,7 +12,7 @@ import { AuditService } from '../../common/audit/audit.service';
 import { Roles } from '../../common/auth/roles.decorator';
 import { AuditEventQueryDto } from './dto/audit-event-query.dto';
 
-@Roles('ADMIN', 'PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 @Controller('audit-events')
 export class AuditEventsController {
   constructor(private readonly auditService: AuditService) {}

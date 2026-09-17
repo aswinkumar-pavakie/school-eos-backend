@@ -11,7 +11,7 @@ import { FeeStructuresService } from './fee-structures.service';
 // PRINCIPAL added (Phase 16) -- same read-only oversight scope; 100% GET.
 // VICE_PRINCIPAL added (Vice Principal mobile Finance module) for the exact
 // same read-only oversight scope as Principal, nothing more.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller()
 export class FeeStructuresController {
   constructor(private readonly feeStructuresService: FeeStructuresService) {}

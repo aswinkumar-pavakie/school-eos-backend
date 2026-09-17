@@ -23,10 +23,12 @@ import { CreateCalendarEventDto } from './dto/create-calendar-event.dto';
 // registers the identical 'calendar-events' path and wins (AcademicModule is
 // imported before CalendarModule in app.module.ts), confirmed live via a real
 // MEDIA_ROOM 403 against a @Roles change made here that never took effect.
-// The actual Principal/Vice Principal/MEDIA_ROOM read + MEDIA_ROOM create
-// access lives on that other file now -- left unchanged here since editing
-// unreachable code serves no purpose.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+// The actual Principal/Vice Principal/Correspondent/MEDIA_ROOM read +
+// Correspondent/MEDIA_ROOM create access lives on that other file now -- left
+// unchanged here since editing unreachable code serves no purpose (the
+// @Roles below is kept in sync with the other file only for readability, not
+// because it does anything).
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('calendar-events')
 export class CalendarEventsController {
   constructor(private readonly calendarEventsService: CalendarEventsService) {}

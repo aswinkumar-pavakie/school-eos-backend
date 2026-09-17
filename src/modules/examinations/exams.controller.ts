@@ -34,7 +34,7 @@ export class ExamsController {
   // both need a leadership-level read of examinations -- every write endpoint
   // below stays untouched, inheriting the class-level ADMIN-only default.
   @Get('examinations')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async list(@Query() query: ListExamsQueryDto) {
     return { data: await this.examsService.list(query) };
   }
@@ -43,7 +43,7 @@ export class ExamsController {
   // module (Phase 10) and Principal's own web Examinations page both need the
   // exam's own name/academicYear/term/state context above its schedule.
   @Get('examinations/:id')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async get(@Param('id') id: string) {
     return { data: await this.examsService.get(id) };
   }
@@ -69,7 +69,7 @@ export class ExamsController {
   // schedule write below (create/update/publish/lock) stays untouched,
   // ADMIN-only via the class-level default.
   @Get('examinations/:id/schedules')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async listSchedules(@Param('id') id: string) {
     return { data: await this.examsService.listSchedules(id) };
   }

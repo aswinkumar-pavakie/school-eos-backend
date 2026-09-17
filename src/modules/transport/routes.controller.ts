@@ -25,7 +25,7 @@ import { RequestRouteStopDeleteDto } from './dto/request-route-stop-delete.dto';
 // need, covers list/get/listStops/listAssignedStudents, all explicitly
 // requested this phase) -- every write method below keeps its own narrower
 // @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller()
 export class RoutesController {
   constructor(private readonly routesService: RoutesService) {}
@@ -37,13 +37,13 @@ export class RoutesController {
   // default rather than adding to it, so both must be listed explicitly
   // here or PRINCIPAL/VICE_PRINCIPAL would silently lose read access);
   // create/update/stop-write routes below stay ADMIN-only exactly as before.
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get('routes')
   async list() {
     return { data: await this.routesService.list() };
   }
 
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get('routes/:id')
   async get(@Param('id') id: string) {
     return { data: await this.routesService.get(id) };
@@ -96,13 +96,13 @@ export class RoutesController {
     return { data: await this.routesService.update(id, dto, actor.personId) };
   }
 
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get('routes/:id/stops')
   async listStops(@Param('id') id: string) {
     return { data: await this.routesService.listStops(id) };
   }
 
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get('routes/:id/assigned-students')
   async listAssignedStudents(@Param('id') id: string) {
     return { data: await this.routesService.listAssignedStudents(id) };

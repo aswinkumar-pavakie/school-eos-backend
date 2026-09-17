@@ -21,7 +21,7 @@ import { SectionQueryDto } from './dto/section-query.dto';
 // (Principal's Students module needs section names for enrolment display),
 // and to VICE_PRINCIPAL (Phase 4 mobile Students module -- same filter-dropdown
 // need) -- write methods below have their own narrower @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('sections')
 export class SectionsController {
   constructor(private readonly sectionsService: SectionsService) {}

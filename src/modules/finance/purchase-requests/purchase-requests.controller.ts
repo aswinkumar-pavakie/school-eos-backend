@@ -32,12 +32,12 @@ import {
 import { PurchaseRequestsService } from './purchase-requests.service';
 
 @Controller('finance/purchase-requests')
-@Roles('FINANCE', 'ADMIN', 'PRINCIPAL')
+@Roles('FINANCE', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 export class PurchaseRequestsController {
   constructor(private readonly service: PurchaseRequestsService) {}
 
   @Post()
-  @Roles('PRINCIPAL')
+  @Roles('PRINCIPAL', 'CORRESPONDENT')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreatePurchaseRequestDto,

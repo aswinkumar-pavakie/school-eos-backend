@@ -27,7 +27,7 @@ import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 // other action (schedule/publish/cancel/expire in the doc; archive is the one
 // actually implemented) is just "Authorized role" generically, so archive
 // stays Admin-only until that's explicitly documented for leadership too.
-@Roles('ADMIN', 'PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 @Controller('announcements')
 export class AnnouncementsController {
   constructor(private readonly announcementsService: AnnouncementsService) {}
@@ -42,7 +42,7 @@ export class AnnouncementsController {
   // SCHOOL-wide + ROLE=TRANSPORT_MANAGER announcements via ?roleCode= --
   // still read-only, no create/edit/delete authority granted.
   @Get()
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   async list(@Query() query: AnnouncementQueryDto) {
     return { data: await this.announcementsService.list(query) };
   }
@@ -55,7 +55,7 @@ export class AnnouncementsController {
   // SCHOOL+ROLE=TRANSPORT_MANAGER feed the Transport dashboard's own Notices
   // card already reads -- never a school-wide post from this role.
   @Post()
-  @Roles('ADMIN', 'PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'TRANSPORT_MANAGER')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateAnnouncementDto,

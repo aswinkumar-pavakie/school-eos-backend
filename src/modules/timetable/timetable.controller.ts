@@ -16,7 +16,7 @@ import { TimetableService } from './timetable.service';
 // since every endpoint here is already GET-only for every role, Admin
 // included -- there is no write endpoint on this controller at all, so this
 // class-level broadening carries zero risk of granting write access.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'ACADEMIC_COORDINATOR')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'ACADEMIC_COORDINATOR')
 @Controller('timetable')
 export class TimetableController {
   constructor(private readonly timetableService: TimetableService) {}
