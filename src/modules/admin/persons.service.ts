@@ -100,6 +100,8 @@ export class PersonsService {
             city: dto.city ?? null,
             state: dto.state ?? null,
             pincode: dto.pincode ?? null,
+            district: dto.district ?? null,
+            aadhaarLast4: dto.aadhaarLast4 ?? null,
             createdBy: actorPersonId,
           },
           client,
@@ -114,6 +116,7 @@ export class PersonsService {
         await this.userCredentialRepo.createInitial(
           person.id,
           passwordHash,
+          password,
           client,
         );
 
@@ -211,6 +214,7 @@ export class PersonsService {
         await this.userCredentialRepo.createInitial(
           coordinatorPerson.id,
           passwordHash,
+          dto.password,
           client,
         );
         await this.academicCoordinatorLoginRepo.create(
@@ -425,6 +429,7 @@ export class PersonsService {
         personId,
         passwordHash,
         hasSelfServiceResetUi,
+        password,
         client,
       );
       await this.sessionRepo.deleteAllForPerson(personId, client);

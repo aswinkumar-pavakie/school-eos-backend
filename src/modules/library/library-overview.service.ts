@@ -28,6 +28,13 @@ export interface LibraryOverview {
   readyReservationsCount: number;
   pendingFinesAmountPaise: string;
   sentToFinanceFinesAmountPaise: string;
+  // Design-reframe addition -- real counts from library_issue's own
+  // issued_at/returned_at columns, not a fabricated "today's activity"
+  // number. No grade_band or is_ebook column exists on library_book, so the
+  // mockup's "Copies available by grade band" bars and "Total ebooks" stat
+  // have no real backing here and are deliberately not added.
+  todayIssuedCount: number;
+  todayReturnedCount: number;
   recentActivity: {
     id: string;
     action: string;
@@ -51,6 +58,7 @@ export class LibraryOverviewService {
       reservationsResult,
       pendingFines,
       sentToFinanceFines,
+      todayActivityResult,
       activityResult,
     ] = await Promise.all([
       this.postgres.query<{ count: string }>(
@@ -88,6 +96,12 @@ export class LibraryOverviewService {
       ),
       this.fineRepo.sumPendingAmount(),
       this.fineRepo.sumSentToFinanceAmount(),
+      this.postgres.query<{ issued: string; returned: string }>(
+        `SELECT
+           count(*) FILTER (WHERE issued_at::date = current_date) AS issued,
+           count(*) FILTER (WHERE returned_at::date = current_date) AS returned
+         FROM library_issue`,
+      ),
       this.postgres.query<{
         id: string;
         action: string;
@@ -126,6 +140,8 @@ export class LibraryOverviewService {
       readyReservationsCount: parseInt(reservationsResult.rows[0].ready, 10),
       pendingFinesAmountPaise: pendingFines,
       sentToFinanceFinesAmountPaise: sentToFinanceFines,
+      todayIssuedCount: parseInt(todayActivityResult.rows[0].issued, 10),
+      todayReturnedCount: parseInt(todayActivityResult.rows[0].returned, 10),
       recentActivity: activityResult.rows.map((row) => ({
         id: row.id,
         action: row.action,

@@ -17,8 +17,11 @@ import { RoleAssignmentsService } from './role-assignments.service';
 
 // Class-level @Roles broadened to include PRINCIPAL for read-only oversight
 // (Principal's Faculty profile needs to display Class Advisor/Academic
-// Coordinator role assignments) -- grant/revoke below stay narrowed to ADMIN.
-@Roles('ADMIN', 'PRINCIPAL')
+// Coordinator role assignments), and VICE_PRINCIPAL too (VP's own Academics
+// page calls this for the same real Class Advisor/Academic Coordinator data
+// and was silently getting a 403 -- caught in a wiring audit) -- grant/revoke
+// below stay narrowed to ADMIN.
+@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
 @Controller('role-assignments')
 export class RoleAssignmentsController {
   constructor(

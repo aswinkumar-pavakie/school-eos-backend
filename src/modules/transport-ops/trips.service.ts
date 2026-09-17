@@ -23,6 +23,10 @@ export class TripsService {
     return { data: rows, meta: { page, limit, total } };
   }
 
+  onTimeStats(filter: { dateFrom: string; dateTo: string }) {
+    return this.tripsRepo.findOnTimeStats(filter);
+  }
+
   async get(id: string) {
     const trip = await this.tripsRepo.findById(id);
     if (!trip) throw new NotFoundException('Trip not found.');

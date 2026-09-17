@@ -13,6 +13,13 @@ export class TripsController {
     return this.tripsService.list(query);
   }
 
+  // Fixed path registered before ':id' below -- same route-ordering
+  // reasoning as vehicles.controller.ts's own 'vehicles/service-due'.
+  @Get('on-time-stats')
+  async onTimeStats(@Query('dateFrom') dateFrom: string, @Query('dateTo') dateTo: string) {
+    return { data: await this.tripsService.onTimeStats({ dateFrom, dateTo }) };
+  }
+
   @Get(':id')
   async get(@Param('id') id: string) {
     return { data: await this.tripsService.get(id) };

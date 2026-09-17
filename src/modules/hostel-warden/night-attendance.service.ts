@@ -6,6 +6,7 @@ import { MarkNightAttendanceDto } from './dto/mark-night-attendance.dto';
 import { HostelAttendanceRepository } from './repositories/hostel-attendance.repository';
 import { StudentHostelRepository } from './repositories/student-hostel.repository';
 import { WardenContextService } from './warden-context.service';
+import { HostelRepository } from '../hostel/repositories/hostel.repository';
 
 @Injectable()
 export class NightAttendanceService {
@@ -15,11 +16,21 @@ export class NightAttendanceService {
     private readonly studentHostelRepo: StudentHostelRepository,
     private readonly auditService: AuditService,
     private readonly unitOfWork: UnitOfWork,
+    private readonly hostelRepo: HostelRepository,
   ) {}
 
   async getRoster(personId: string, date: string) {
     const ctx = await this.wardenContext.requireActiveWarden(personId);
     return this.attendanceRepo.findRoster(ctx.hostelIds, date);
+  }
+
+  /** School-wide roster, not warden-scoped -- backs the Principal web console's
+   * real Hostel roll-call oversight (design-reframe addition). Reuses the same
+   * findRoster query every warden's own roster already uses, just across every
+   * hostel instead of one warden's assigned subset. */
+  async getRosterSchoolWide(date: string) {
+    const hostels = await this.hostelRepo.findMany();
+    return this.attendanceRepo.findRoster(hostels.map((h) => h.id), date);
   }
 
   /** Every entry's hostel-membership is resolved and checked BEFORE any write, so a

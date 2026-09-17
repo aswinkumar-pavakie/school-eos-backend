@@ -55,6 +55,15 @@ export class StaffService {
     return { data: rows, meta: { page, limit: effectiveLimit, total } };
   }
 
+  /** Same pattern as StudentsService.getNextAdmissionNo() -- suggests the
+   * next employee_no, but the field stays free-text/editable on the create
+   * form (real HR numbers sometimes differ from this sequence). */
+  async getNextEmployeeNo() {
+    const maxSeq = await this.staffRepo.findMaxEmployeeSeq();
+    const nextSeq = (maxSeq ?? 0) + 1;
+    return { employeeNo: `EMP${String(nextSeq).padStart(4, '0')}` };
+  }
+
   async listDesignations(isTeaching?: string) {
     const rows = await this.staffRepo.findDistinctDesignations(
       isTeaching === undefined ? undefined : isTeaching === 'true',
@@ -86,6 +95,10 @@ export class StaffService {
       ...staff,
       loginIdentifiers,
       resetAllowanceUsed: credential?.resetAllowanceUsed ?? false,
+      // Same field parents.service.ts's own get() exposes -- set only while
+      // this is still the password Admin created/last reset for this faculty
+      // member, cleared once they self-service their own change.
+      adminVisiblePassword: credential?.adminVisiblePassword ?? null,
     };
   }
 
@@ -128,6 +141,22 @@ export class StaffService {
         isTeaching: dto.isTeaching,
         dateOfJoining: dto.dateOfJoining,
         experienceYears: dto.experienceYears ?? null,
+        departmentId: dto.departmentId ?? null,
+        campusId: dto.campusId ?? null,
+        bloodGroup: dto.bloodGroup ?? null,
+        employmentType: dto.employmentType ?? null,
+        staffRoom: dto.staffRoom ?? null,
+        emergencyContactName: dto.emergencyContactName ?? null,
+        emergencyContactPhone: dto.emergencyContactPhone ?? null,
+        highestQualification: dto.highestQualification ?? null,
+        specialization: dto.specialization ?? null,
+        university: dto.university ?? null,
+        yearOfGraduation: dto.yearOfGraduation ?? null,
+        tetNetCleared: dto.tetNetCleared ?? null,
+        areasOfExpertise: dto.areasOfExpertise ?? null,
+        certifications: dto.certifications ?? null,
+        workshopsTraining: dto.workshopsTraining ?? null,
+        achievementsAwards: dto.achievementsAwards ?? null,
       });
       await this.auditService.record({
         actorPersonId,

@@ -29,6 +29,7 @@ import { ExaminationsModule } from './modules/examinations/examinations.module';
 import { FacultyModule } from './modules/faculty/faculty.module';
 import { AdminFinanceModule } from './modules/finance/admin-finance.module';
 import { FinanceModule } from './modules/finance/finance.module';
+import { HealthModule } from './modules/health/health.module';
 import { HostelModule } from './modules/hostel/hostel.module';
 import { HostelWardenModule } from './modules/hostel-warden/hostel-warden.module';
 import { HostelWardenPendingModule } from './modules/hostel-warden/hostel-warden-pending.module';
@@ -57,6 +58,7 @@ import { RequestsApprovalsModule } from './modules/requests-approvals/requests-a
 import { SportsModule } from './modules/sports/sports.module';
 import { AiBotModule } from './modules/ai-bot/ai-bot.module';
 import { StaffAttendanceModule } from './modules/staff-attendance/staff-attendance.module';
+import { StudentDevelopmentModule } from './modules/student-development/student-development.module';
 import { StudentEventsModule } from './modules/student-events/student-events.module';
 import { TimetableModule } from './modules/timetable/timetable.module';
 import { TransportModule } from './modules/transport/transport.module';
@@ -112,6 +114,8 @@ import { TransportOpsModule } from './modules/transport-ops/transport-ops.module
     MediaModule,
     StudentEventsModule,
     ExaminationsModule,
+    HealthModule,
+    StudentDevelopmentModule,
     CommunityLoginModule,
     CommunityProposalsModule,
     CommunityInitiativesModule,

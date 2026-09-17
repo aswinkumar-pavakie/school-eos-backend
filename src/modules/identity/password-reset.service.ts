@@ -160,6 +160,7 @@ export class PasswordResetService {
       await this.userCredentialRepo.completeAdminReset(
         personId,
         passwordHash,
+        newPassword,
         client,
       );
       await this.sessionRepo.deleteAllForPerson(personId, client);

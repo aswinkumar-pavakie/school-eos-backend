@@ -51,8 +51,16 @@ export class CalendarEventsController {
     return { data: await this.calendarEventsService.get(id) };
   }
 
+  // PRINCIPAL added for real create access (design-reframe addition, per the
+  // SIS mockup's own "+ Add event" flow and explicit user confirmation this
+  // supersedes the module's earlier "view-only, Admin creates" decision) --
+  // MEDIA_ROOM added separately for its own real Academic Calendar screen.
+  // update/delete stay gated by assertCanModify() below (Admin: any event;
+  // Media Room: only its own) -- Principal has no update/delete override at
+  // all yet, so it can add new events but not edit/remove ones Admin (or
+  // another Principal) created.
   @Post()
-  @Roles('ADMIN', 'MEDIA_ROOM')
+  @Roles('ADMIN', 'MEDIA_ROOM', 'PRINCIPAL')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateCalendarEventDto,

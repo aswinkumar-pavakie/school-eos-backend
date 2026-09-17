@@ -1,0 +1,69 @@
+import { Injectable } from '@nestjs/common';
+import { AuditService } from '../../common/audit/audit.service';
+import { StudentDevelopmentRepository } from './repositories/student-development.repository';
+import { CreateAchievementDto } from './dto/create-achievement.dto';
+import { CreateMeritPointDto } from './dto/create-merit-point.dto';
+import { CreateDisciplineIncidentDto } from './dto/create-discipline-incident.dto';
+
+@Injectable()
+export class StudentDevelopmentService {
+  constructor(
+    private readonly repo: StudentDevelopmentRepository,
+    private readonly auditService: AuditService,
+  ) {}
+
+  listAchievements(studentId?: string) {
+    return this.repo.findAchievements({ studentId });
+  }
+
+  async createAchievement(dto: CreateAchievementDto, actorPersonId: string) {
+    const created = await this.repo.createAchievement(dto);
+    await this.auditService.record({
+      actorPersonId,
+      action: 'ACHIEVEMENT_RECORDED',
+      objectType: 'achievement',
+      objectId: created.id,
+      outcome: 'SUCCESS',
+      afterData: { ...dto },
+    });
+    return created;
+  }
+
+  listMeritPoints(studentId?: string) {
+    return this.repo.findMeritPoints({ studentId });
+  }
+
+  async createMeritPoint(dto: CreateMeritPointDto, actorPersonId: string) {
+    const created = await this.repo.createMeritPoint({ ...dto, awardedBy: actorPersonId });
+    await this.auditService.record({
+      actorPersonId,
+      action: 'MERIT_POINT_AWARDED',
+      objectType: 'merit_point',
+      objectId: created.id,
+      outcome: 'SUCCESS',
+      afterData: { ...dto },
+    });
+    return created;
+  }
+
+  listObservations(studentId?: string) {
+    return this.repo.findObservations({ studentId });
+  }
+
+  listDisciplineIncidents(filter: { studentId?: string; state?: string }) {
+    return this.repo.findDisciplineIncidents(filter);
+  }
+
+  async createDisciplineIncident(dto: CreateDisciplineIncidentDto, actorPersonId: string) {
+    const created = await this.repo.createDisciplineIncident({ ...dto, reportedBy: actorPersonId });
+    await this.auditService.record({
+      actorPersonId,
+      action: 'DISCIPLINE_INCIDENT_RECORDED',
+      objectType: 'discipline_incident',
+      objectId: created.id,
+      outcome: 'SUCCESS',
+      afterData: { ...dto },
+    });
+    return created;
+  }
+}

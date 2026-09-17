@@ -8,6 +8,7 @@
 
 import { Module } from '@nestjs/common';
 import { ApprovalsModule } from '../approvals/approvals.module';
+import { HostelModule } from '../hostel/hostel.module';
 import { ParentModule } from '../parent/parent.module';
 import { CallRequestsController } from './call-requests.controller';
 import { CallRequestsService } from './call-requests.service';
@@ -33,7 +34,7 @@ import { StudySessionsService } from './study-sessions.service';
   // SubjectStateRegistry (HostelWardenModule already imports ApprovalsModule too, for
   // its own outing_request handler -- importing it again here for this module's own
   // providers is normal Nest module composition, not a duplicate/conflicting registration).
-  imports: [HostelWardenModule, ParentModule, ApprovalsModule],
+  imports: [HostelWardenModule, ParentModule, ApprovalsModule, HostelModule],
   controllers: [
     StudySessionsController,
     CallRequestsController,

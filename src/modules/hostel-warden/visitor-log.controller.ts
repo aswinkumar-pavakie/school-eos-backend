@@ -31,6 +31,15 @@ export class VisitorLogController {
     };
   }
 
+  // School-wide, not warden-scoped -- backs the Principal/Vice Principal web console's real
+  // Hostel "gate log" oversight (design-reframe addition). Registered before
+  // the :id route below so "oversight" is never swallowed as a path param.
+  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Get('oversight')
+  async listSchoolWide(@Query() query: VisitorQueryDto) {
+    return { data: await this.service.listSchoolWide(query.status === 'open') };
+  }
+
   @Get(':id')
   async get(
     @Param('id', ParseUUIDPipe) id: string,

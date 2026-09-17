@@ -53,6 +53,19 @@ export class StudentsService {
     return student;
   }
 
+  /** Suggests the next admission_no for a new admission -- SMS<year><4-digit
+   * seq>, incrementing the highest sequence already used for the current
+   * calendar year (or starting at 0001 for a year with none yet, which
+   * naturally covers the new-year rollover). A suggestion only: the Admin
+   * still sees and can edit it before submitting, same as this project's own
+   * "Roll no. — auto-assigned if left blank" pattern elsewhere. */
+  async getNextAdmissionNo() {
+    const year = String(new Date().getFullYear());
+    const maxSeq = await this.studentRepo.findMaxAdmissionSeqForYear(year);
+    const nextSeq = (maxSeq ?? 0) + 1;
+    return { admissionNo: `SMS${year}${String(nextSeq).padStart(4, '0')}` };
+  }
+
   /** Students never log in, so there's no existing endpoint that creates a bare
    * person for one -- POST /persons always sets up login credentials + a role
    * assignment, which a student must never have. Person + student are created
@@ -80,6 +93,8 @@ export class StudentsService {
             city: dto.city ?? null,
             state: dto.state ?? null,
             pincode: dto.pincode ?? null,
+            district: dto.district ?? null,
+            aadhaarLast4: dto.aadhaarLast4 ?? null,
             createdBy: actorPersonId,
           },
           client,
@@ -103,6 +118,12 @@ export class StudentsService {
             usesSchoolTransport: dto.usesSchoolTransport,
             commuteMode: dto.commuteMode ?? null,
             bankAccountRef: dto.bankAccountRef ?? null,
+            religion: dto.religion ?? null,
+            nationality: dto.nationality ?? null,
+            admissionQuota: dto.admissionQuota ?? null,
+            previousSchool: dto.previousSchool ?? null,
+            emergencyContactName: dto.emergencyContactName ?? null,
+            emergencyContactPhone: dto.emergencyContactPhone ?? null,
           },
           client,
         );
