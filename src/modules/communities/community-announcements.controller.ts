@@ -30,7 +30,7 @@ import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 // VICE_PRINCIPAL added (Vice Principal mobile Communities module) -- same
 // read-only tier as Principal; create/update stay ADMIN/COMMUNITY-only,
 // unaffected since those keep their own narrower method-level override.
-@Roles('ADMIN', 'PRINCIPAL', 'COMMUNITY', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller()
 export class CommunityAnnouncementsController {
   constructor(
@@ -43,7 +43,7 @@ export class CommunityAnnouncementsController {
   }
 
   @Post('communities/:id/announcements')
-  @Roles('ADMIN', 'COMMUNITY')
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Param('id', ParseUUIDPipe) id: string,
@@ -56,7 +56,7 @@ export class CommunityAnnouncementsController {
   }
 
   @Patch('community-announcements/:announcementId')
-  @Roles('ADMIN', 'COMMUNITY')
+  @Roles('ADMIN')
   async update(
     @Param('announcementId', ParseUUIDPipe) announcementId: string,
     @Body() dto: UpdateAnnouncementDto,

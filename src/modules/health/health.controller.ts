@@ -9,7 +9,7 @@ import { ListHealthAlertsQueryDto } from './dto/list-health-alerts.query.dto';
 // comment for why this stays read-only: the real data owner, HEALTH_INCHARGE,
 // has no login built yet). Every method below is class-level, no write routes
 // exist in this module at all.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('health')
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}

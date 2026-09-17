@@ -13,7 +13,7 @@ import { ParentsService } from './parents.service';
 // and every guardian-link mutation -- set-primary, revoke, relationship edit
 // -- all live on separate controllers this change doesn't touch, still
 // ADMIN-only).
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('parents')
 export class ParentsController {
   constructor(private readonly parentsService: ParentsService) {}
@@ -47,7 +47,7 @@ export class ParentsController {
     // ParentsService.get() later stays excluded here by default instead of
     // silently leaking to PRINCIPAL/VICE_PRINCIPAL until someone remembers
     // to also deny-list it.
-    const isPrincipal = actor.roles.includes('PRINCIPAL');
+    const isPrincipal = actor.roles.includes('PRINCIPAL') || actor.roles.includes('CORRESPONDENT');
     const children = parent.children.map((child) => ({
       id: child.id,
       studentId: child.studentId,

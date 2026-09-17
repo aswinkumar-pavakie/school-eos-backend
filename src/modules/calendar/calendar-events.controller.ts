@@ -25,7 +25,7 @@ import { CreateCalendarEventDto } from './dto/create-calendar-event.dto';
 // Principal nor Vice Principal has create/edit/delete authority here (no
 // PATCH endpoint even exists for Admin, and no approval workflow gates
 // calendar events).
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('calendar-events')
 export class CalendarEventsController {
   constructor(private readonly calendarEventsService: CalendarEventsService) {}

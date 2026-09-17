@@ -20,7 +20,7 @@ import { CreateMembershipDto } from './dto/create-membership.dto';
 // own narrower @Roles('ADMIN') override.
 // VICE_PRINCIPAL added (Vice Principal mobile Communities module) for the
 // exact same read-only oversight scope as Principal, nothing more.
-@Roles('ADMIN', 'PRINCIPAL', 'COMMUNITY', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller()
 export class CommunityMembershipsController {
   constructor(

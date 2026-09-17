@@ -36,7 +36,7 @@ import { StaffService } from './staff.service';
 // getAttendanceSummary), each with its own method-level override below --
 // deliberately NOT a class-level change, same reasoning as students.controller.ts's
 // own Phase 4 comment. create/update/exit stay untouched, ADMIN-only.
-@Roles('ADMIN', 'PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 @Controller('staff')
 export class StaffController {
   constructor(
@@ -48,7 +48,7 @@ export class StaffController {
   ) {}
 
   @Get()
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async list(@Query() query: StaffQueryDto) {
     const result = await this.staffService.list(query);
     return { data: result.data, meta: result.meta };
@@ -56,7 +56,7 @@ export class StaffController {
 
   // Must come before ':id' -- otherwise "designations" would be parsed as an id.
   @Get('designations')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async listDesignations(@Query('isTeaching') isTeaching?: string) {
     return this.staffService.listDesignations(isTeaching);
   }
@@ -75,7 +75,7 @@ export class StaffController {
   // never a client-supplied id -- there is no "other person's record" this
   // route can ever return), same idea as GET /auth/me, /approvals and
   // /notifications. A method-level @Roles() is still required despite that
-  // -- this class carries its own class-level @Roles('ADMIN', 'PRINCIPAL')
+  // -- this class carries its own class-level @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
   // default, and RolesGuard's Reflector.getAllAndOverride falls back to it
   // for any method with no override of its own, so omitting one here would
   // silently inherit ADMIN/PRINCIPAL-only rather than open up. Scoped to
@@ -83,7 +83,7 @@ export class StaffController {
   // 25) -- not opened to every authenticated role, since no other role
   // currently needs it.
   @Get('me')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async getMine(@CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.staffService.getMine(actor.personId) };
   }
@@ -97,7 +97,7 @@ export class StaffController {
   // already used, just also returning the day rows and a month-scoped count
   // alongside the existing lifetime one -- no new table, no new write path.
   @Get('me/attendance-history')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async getMyAttendanceHistory(@Query() query: MyAttendanceQueryDto, @CurrentActor() actor: AuthenticatedUser) {
     const staff = await this.staffService.getMine(actor.personId);
     return { data: await this.staffAttendanceService.getMyAttendanceHistory(staff.id, query.month) };
@@ -111,14 +111,14 @@ export class StaffController {
   // inventing a new leave engine. Vice Principal mobile My Leave (Phase 28)
   // is the first consumer.
   @Get('me/leave-requests')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async listMyLeaveRequests(@CurrentActor() actor: AuthenticatedUser) {
     const staff = await this.staffService.getMine(actor.personId);
     return { data: await this.staffLeaveService.list(staff.id) };
   }
 
   @Get('me/leave-requests/:id')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async getMyLeaveRequest(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
     const staff = await this.staffService.getMine(actor.personId);
     const leave = await this.staffLeaveService.get(id, staff.id);
@@ -127,7 +127,7 @@ export class StaffController {
   }
 
   @Post('me/leave-requests')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   @HttpCode(HttpStatus.CREATED)
   async createMyLeaveRequest(@Body() dto: CreateStaffLeaveDto, @CurrentActor() actor: AuthenticatedUser) {
     const staff = await this.staffService.getMine(actor.personId);
@@ -140,7 +140,7 @@ export class StaffController {
   // own before revealing/using its approvalRequestId, then delegates
   // entirely to that existing, unmodified method.
   @Post('me/leave-requests/:id/withdraw')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   @HttpCode(HttpStatus.OK)
   async withdrawMyLeaveRequest(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
     const staff = await this.staffService.getMine(actor.personId);
@@ -149,7 +149,7 @@ export class StaffController {
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async get(@Param('id') id: string) {
     return { data: await this.staffService.get(id) };
   }
@@ -175,13 +175,13 @@ export class StaffController {
   }
 
   @Get(':id/timetable')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async listTimetable(@Param('id') id: string) {
     return { data: await this.timetableService.getForTeacher(id) };
   }
 
   @Get(':id/attendance-summary')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async getAttendanceSummary(@Param('id') id: string) {
     return {
       data: await this.staffAttendanceService.getAttendanceSummaryForStaff(id),

@@ -19,7 +19,7 @@ import { MediaTeamService } from './media-team.service';
 // write method below carries its own narrower @Roles('MEDIA_ROOM', 'ADMIN')
 // override (RolesGuard's Reflector.getAllAndOverride means a method-level
 // @Roles fully replaces the class-level one).
-@Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL')
+@Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 @Controller('media/team')
 export class MediaTeamController {
   constructor(private readonly service: MediaTeamService) {}

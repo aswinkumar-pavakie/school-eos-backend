@@ -11,6 +11,11 @@
 
 import { Injectable } from '@nestjs/common';
 import { PostgresService } from '../../infrastructure/postgres/postgres.service';
+import { InventoryItemsService } from '../inventory/inventory-items.service';
+import { RepairRequestsService } from '../maintenance/repair-requests.service';
+import { LibraryOverviewService } from '../library/library-overview.service';
+import { SportsAdminOverviewService } from '../sports/sports-admin-overview.service';
+import { VehiclesService } from '../transport/vehicles.service';
 
 export interface PrincipalDashboardSummary {
   activeStudents: number;
@@ -38,12 +43,33 @@ export interface PrincipalDashboardSummary {
   staffSplit: { teaching: number; support: number };
   studentResidence: { hostellers: number; dayScholars: number };
   activeSectionsCount: number;
+  // Correspondent Phase 5 addition -- real operational KPIs for the six
+  // school-operations modules (Transport/Hostel already covered above by
+  // vehiclesCount/hostelOccupancy). Each figure is read straight from that
+  // module's own existing overview service, not a new duplicate query.
+  inventoryLowStockCount: number;
+  inventoryDamagedCount: number;
+  maintenanceOpenRequestsCount: number;
+  sportsUpcomingFixturesCount: number;
+  libraryOverdueCount: number;
+  // Correspondent Phase 8 addition -- real vehicle_document/driver_document
+  // expiry counts, straight from VehiclesService.complianceSummary() (already
+  // backs Transport's own "Docs to renew" KPI) -- no new query.
+  complianceExpiringCount: number;
+  complianceOverdueCount: number;
   generatedAt: string;
 }
 
 @Injectable()
 export class PrincipalDashboardService {
-  constructor(private readonly postgres: PostgresService) {}
+  constructor(
+    private readonly postgres: PostgresService,
+    private readonly inventoryItemsService: InventoryItemsService,
+    private readonly repairRequestsService: RepairRequestsService,
+    private readonly libraryOverviewService: LibraryOverviewService,
+    private readonly sportsAdminOverviewService: SportsAdminOverviewService,
+    private readonly vehiclesService: VehiclesService,
+  ) {}
 
   async getSummary(): Promise<PrincipalDashboardSummary> {
     const [
@@ -61,6 +87,11 @@ export class PrincipalDashboardService {
       staffSplitResult,
       studentResidenceResult,
       activeSectionsResult,
+      inventoryOverview,
+      maintenanceOverview,
+      libraryOverview,
+      sportsOverview,
+      complianceSummary,
     ] = await Promise.all([
       this.postgres.query<{ count: string }>(
         `SELECT count(*) FROM student WHERE status = 'ACTIVE'`,
@@ -150,6 +181,11 @@ export class PrincipalDashboardService {
          WHERE status = 'ACTIVE'
            AND academic_year_id = (SELECT id FROM academic_year WHERE is_current LIMIT 1)`,
       ),
+      this.inventoryItemsService.overview(),
+      this.repairRequestsService.overview(),
+      this.libraryOverviewService.get(),
+      this.sportsAdminOverviewService.getOverview(),
+      this.vehiclesService.complianceSummary(),
     ]);
 
     const year = yearResult.rows[0];
@@ -207,6 +243,14 @@ export class PrincipalDashboardService {
         dayScholars: parseInt(studentResidenceResult.rows[0].day_scholars, 10),
       },
       activeSectionsCount: parseInt(activeSectionsResult.rows[0].count, 10),
+      inventoryLowStockCount: inventoryOverview.lowStock,
+      inventoryDamagedCount: inventoryOverview.damaged,
+      maintenanceOpenRequestsCount:
+        maintenanceOverview.requested + maintenanceOverview.assigned + maintenanceOverview.inProgress,
+      sportsUpcomingFixturesCount: sportsOverview.totals.upcomingFixtures,
+      libraryOverdueCount: libraryOverview.overdueCount,
+      complianceExpiringCount: complianceSummary.expiring,
+      complianceOverdueCount: complianceSummary.overdue,
       generatedAt: new Date().toISOString(),
     };
   }

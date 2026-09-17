@@ -34,13 +34,13 @@ export class CalendarEventsController {
   constructor(private readonly calendarEventsService: CalendarEventsService) {}
 
   @Get()
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async list(@Query() query: CalendarEventQueryDto) {
     return { data: await this.calendarEventsService.list(query) };
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   async get(@Param('id') id: string) {
     return { data: await this.calendarEventsService.get(id) };
   }
@@ -51,7 +51,7 @@ export class CalendarEventsController {
   // update/delete stay ADMIN-only via the class default; Principal can add
   // new events but not edit/remove ones Admin (or another Principal) created.
   @Post()
-  @Roles('ADMIN', 'PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateCalendarEventDto,

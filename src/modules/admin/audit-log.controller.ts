@@ -9,7 +9,7 @@ import { AuditService } from '../../common/audit/audit.service';
 import { Roles } from '../../common/auth/roles.decorator';
 import { AuditLogQueryDto } from './dto/audit-log-query.dto';
 
-@Roles('ADMIN', 'PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 @Controller('audit-log')
 export class AuditLogController {
   constructor(private readonly auditService: AuditService) {}

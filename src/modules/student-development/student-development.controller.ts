@@ -22,7 +22,7 @@ import { isForeignKeyViolation } from './pg-error.util';
 // future build). Observations stay read-only end to end: recording one is a
 // class advisor's own note-taking action, not something Admin should be
 // creating on a teacher's behalf.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('student-development')
 export class StudentDevelopmentController {
   constructor(private readonly service: StudentDevelopmentService) {}

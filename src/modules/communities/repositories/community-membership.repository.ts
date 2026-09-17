@@ -15,6 +15,8 @@ export interface CommunityMembershipRow {
   studentId: string;
   studentFirstName: string;
   studentLastName: string | null;
+  studentGradeName: string | null;
+  studentSectionName: string | null;
   roleInCommunity: string;
   parentConsentAt: Date | null;
   joinedOn: string;
@@ -31,8 +33,19 @@ export interface CreateMembershipInput {
 
 const COLUMNS = `m.id, m.community_id AS "communityId", m.student_id AS "studentId",
   p.first_name AS "studentFirstName", p.last_name AS "studentLastName",
+  g.name AS "studentGradeName", sec.name AS "studentSectionName",
   m.role_in_community AS "roleInCommunity", m.parent_consent_at AS "parentConsentAt",
   m.joined_on AS "joinedOn", m.added_by AS "addedBy", m.status`;
+
+// Same "current enrolment, active only" join student.repository.ts's own
+// listing already uses -- a student with no current-year enrolment (rare,
+// e.g. between admission and section assignment) just shows null class/
+// section rather than erroring.
+const CURRENT_ENROLMENT_JOIN = `
+  LEFT JOIN student_enrolment se ON se.student_id = s.id AND se.status = 'ACTIVE'
+    AND se.academic_year_id = (SELECT id FROM academic_year WHERE is_current LIMIT 1)
+  LEFT JOIN section sec ON sec.id = se.section_id
+  LEFT JOIN grade g ON g.id = sec.grade_id`;
 
 @Injectable()
 export class CommunityMembershipRepository {
@@ -46,6 +59,7 @@ export class CommunityMembershipRepository {
       `SELECT ${COLUMNS} FROM community_membership m
        JOIN student s ON s.id = m.student_id
        JOIN person p ON p.id = s.person_id
+       ${CURRENT_ENROLMENT_JOIN}
        WHERE m.community_id = $1
        ORDER BY m.joined_on DESC`,
       [communityId],
@@ -61,6 +75,7 @@ export class CommunityMembershipRepository {
       `SELECT ${COLUMNS} FROM community_membership m
        JOIN student s ON s.id = m.student_id
        JOIN person p ON p.id = s.person_id
+       ${CURRENT_ENROLMENT_JOIN}
        WHERE m.id = $1`,
       [id],
     );

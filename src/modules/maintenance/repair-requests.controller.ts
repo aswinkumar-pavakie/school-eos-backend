@@ -30,7 +30,7 @@ import { RepairRequestsService } from './repair-requests.service';
 // mobile Repair & Maintenance module) for the same read-only oversight scope
 // as Principal, nothing more. Every write method below keeps its own
 // narrower @Roles('ADMIN') override.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('repair-requests')
 export class RepairRequestsController {
   constructor(private readonly repairRequestsService: RepairRequestsService) {}

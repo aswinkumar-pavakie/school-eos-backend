@@ -29,7 +29,7 @@ export class ComplaintsController {
   // School-wide, not warden-scoped -- backs the Principal/Vice Principal web console's real
   // Hostel "open complaints" oversight (design-reframe addition). Registered
   // before the :id route below so "oversight" is never swallowed as a path param.
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
   @Get('oversight')
   async listSchoolWide() {
     return { data: await this.service.listSchoolWide() };

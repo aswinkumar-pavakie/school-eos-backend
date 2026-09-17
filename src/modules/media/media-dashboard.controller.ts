@@ -4,7 +4,7 @@ import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
 import { MediaDashboardService } from './media-dashboard.service';
 
-@Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL')
+@Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 @Controller('media/dashboard')
 export class MediaDashboardController {
   constructor(private readonly service: MediaDashboardService) {}

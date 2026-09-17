@@ -10,7 +10,7 @@ import { OutingRequestsSharedService } from './outing-requests-shared.service';
 // routes but summed across every hostel instead of one Warden's assignment.
 // A distinct controller (rather than an @Get('oversight') on either of those
 // two) since this one endpoint intentionally spans both request types.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('hostel/outings')
 export class OutingOversightController {
   constructor(private readonly service: OutingRequestsSharedService) {}

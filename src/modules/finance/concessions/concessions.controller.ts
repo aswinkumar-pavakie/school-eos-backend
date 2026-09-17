@@ -26,7 +26,7 @@ import { UpdateConcessionDto } from './dto/update-concession.dto';
 // replaces, never merges with, the class-level one), so Principal never gains
 // create/update/delete access even by calling the API directly.
 @Controller('finance/concessions')
-@Roles('FINANCE', 'ADMIN', 'PRINCIPAL')
+@Roles('FINANCE', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT')
 export class ConcessionsController {
   constructor(private readonly service: ConcessionsService) {}
 

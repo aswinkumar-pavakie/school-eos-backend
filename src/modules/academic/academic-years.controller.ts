@@ -25,7 +25,7 @@ import { UpdateAcademicYearDto } from './dto/update-academic-year.dto';
 // means a method-level @Roles fully replaces the class-level one), so none of
 // these three ever gains create/update/set-current/close access even by
 // calling the API directly.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
 @Controller('academic-years')
 export class AcademicYearsController {
   constructor(private readonly academicYearsService: AcademicYearsService) {}

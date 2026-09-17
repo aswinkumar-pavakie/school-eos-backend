@@ -13,7 +13,7 @@ import { LibraryOverviewService } from './library-overview.service';
 // Principal nor Vice Principal should; there is no method-level write here
 // to narrow, this controller only ever had the one read.
 @Controller('library/overview')
-@Roles('LIBRARY', 'ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('LIBRARY', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 export class LibraryOverviewController {
   constructor(private readonly overviewService: LibraryOverviewService) {}
 

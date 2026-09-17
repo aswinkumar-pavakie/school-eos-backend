@@ -22,7 +22,7 @@ import { VehicleRouteAssignmentQueryDto } from './dto/vehicle-route-assignment-q
 // need, this is exactly the vehicle<->route<->driver linkage that module
 // needs) -- every write method below keeps its own narrower @Roles('ADMIN')
 // override.
-@Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL')
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('vehicle-route-assignments')
 export class VehicleRouteAssignmentsController {
   constructor(
@@ -41,13 +41,13 @@ export class VehicleRouteAssignmentsController {
   // permitted"), the one write Transport Manager is meant to perform.
   // Vehicle/route/driver/attendant master data and student allocation stay
   // ADMIN-only.
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get()
   async list(@Query() query: VehicleRouteAssignmentQueryDto) {
     return { data: await this.assignmentsService.list(query) };
   }
 
-  @Roles('ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
   @Get(':id')
   async get(@Param('id') id: string) {
     return { data: await this.assignmentsService.get(id) };

@@ -7,9 +7,12 @@ import { CommunityAnnouncementsController } from './community-announcements.cont
 import { CommunityAnnouncementsService } from './community-announcements.service';
 import { CommunityMembershipsController } from './community-memberships.controller';
 import { CommunityMembershipsService } from './community-memberships.service';
+import { CommunityPositionsController } from './community-positions.controller';
+import { CommunityPositionsService } from './community-positions.service';
 import { CommunityActivityRepository } from './repositories/community-activity.repository';
 import { CommunityAnnouncementRepository } from './repositories/community-announcement.repository';
 import { CommunityMembershipRepository } from './repositories/community-membership.repository';
+import { CommunityPositionRepository } from './repositories/community-position.repository';
 import { CommunityRepository } from './repositories/community.repository';
 
 @Module({
@@ -18,16 +21,19 @@ import { CommunityRepository } from './repositories/community.repository';
     CommunityMembershipsController,
     CommunityActivitiesController,
     CommunityAnnouncementsController,
+    CommunityPositionsController,
   ],
   providers: [
     CommunitiesService,
     CommunityMembershipsService,
     CommunityActivitiesService,
     CommunityAnnouncementsService,
+    CommunityPositionsService,
     CommunityRepository,
     CommunityMembershipRepository,
     CommunityActivityRepository,
     CommunityAnnouncementRepository,
+    CommunityPositionRepository,
   ],
   // CommunityMembershipRepository exported so the standalone Community
   // module's own membership-request approval handler can write the same
