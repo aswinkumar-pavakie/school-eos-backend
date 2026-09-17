@@ -15,6 +15,14 @@ export class MediaTeamService {
     return this.repo.listWithLoad();
   }
 
+  getById(id: string) {
+    return this.repo.findById(id);
+  }
+
+  getJobCounts(id: string) {
+    return this.repo.getJobCounts(id);
+  }
+
   async create(dto: CreateMediaTeamMemberDto, actorPersonId: string) {
     const created = await this.repo.create({
       ...dto,

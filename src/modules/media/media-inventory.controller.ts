@@ -18,6 +18,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { AuditService } from '../../common/audit/audit.service';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -41,6 +42,7 @@ export class MediaInventoryController {
   constructor(
     private readonly itemsService: InventoryItemsService,
     private readonly categoryRepo: InventoryCategoryRepository,
+    private readonly auditService: AuditService,
   ) {}
 
   private async mediaCategoryId(): Promise<string> {
@@ -101,6 +103,31 @@ export class MediaInventoryController {
     const categoryId = await this.mediaCategoryId();
     await this.assertOwnedByMedia(id, categoryId);
     return { data: await this.itemsService.get(id) };
+  }
+
+  // Real movement history -- the existing audit_event trail every write
+  // method on this controller already records (INVENTORY_ITEM_CREATED/
+  // UPDATED/ISSUED/RETURNED/TRANSFERRED, plus mark-damaged/lost/retire which
+  // fall under UPDATED), scoped to this one item only after the same
+  // ownership check every other :id route here uses. No new table needed --
+  // this is genuinely already-recorded data, just not read back until now.
+  @Get(':id/history')
+  async history(@Param('id') id: string) {
+    const categoryId = await this.mediaCategoryId();
+    await this.assertOwnedByMedia(id, categoryId);
+    const { rows } = await this.auditService.query({
+      objectType: 'inventory_item',
+      objectId: id,
+      limit: 50,
+    });
+    return {
+      data: rows.map((r) => ({
+        id: r.id,
+        date: r.occurredAt,
+        action: r.action,
+        actorName: r.actorName,
+      })),
+    };
   }
 
   @Post()
@@ -198,5 +225,23 @@ export class MediaInventoryController {
     const categoryId = await this.mediaCategoryId();
     await this.assertOwnedByMedia(id, categoryId);
     return { data: await this.itemsService.retire(id, dto, actor.personId) };
+  }
+
+  // Repair/service finished -- the other side of mark-damaged. Without this,
+  // DAMAGED was a dead end: a Media Room login could send an asset to
+  // service but never bring it back to AVAILABLE again.
+  @Post(':id/mark-available')
+  @Roles('MEDIA_ROOM', 'ADMIN')
+  @HttpCode(HttpStatus.OK)
+  async markAvailable(
+    @Param('id') id: string,
+    @Body() dto: InventoryItemNoteDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    const categoryId = await this.mediaCategoryId();
+    await this.assertOwnedByMedia(id, categoryId);
+    return {
+      data: await this.itemsService.markAvailable(id, dto, actor.personId),
+    };
   }
 }
