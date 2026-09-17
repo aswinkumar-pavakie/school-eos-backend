@@ -97,4 +97,19 @@ export class ShootAssignmentsService {
   countToday() {
     return this.repo.countToday();
   }
+
+  async delete(id: string, actorPersonId: string) {
+    const existing = await this.get(id);
+    const deleted = await this.repo.delete(id);
+    if (!deleted) throw new NotFoundException('Shoot assignment not found');
+    await this.audit.record({
+      actorPersonId,
+      actorRoleCode: 'MEDIA_ROOM',
+      action: 'SHOOT_ASSIGNMENT_DELETED',
+      objectType: 'shoot_assignment',
+      objectId: id,
+      outcome: 'SUCCESS',
+      beforeData: existing,
+    });
+  }
 }

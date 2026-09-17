@@ -73,6 +73,25 @@ export class MediaTeamMemberRepository {
     return rows.length ? mapRow(rows[0]) : null;
   }
 
+  /** Real, per-member job counts for the Team Detail screen -- active =
+   * still PLANNED/IN_PROGRESS, completed = COMPLETED, both counted from the
+   * same shoot_assignment_crew join listWithLoad's own activeJobs uses. */
+  async getJobCounts(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<{ active: number; completed: number }> {
+    const { rows } = await executor.query<{ active: string; completed: string }>(
+      `SELECT
+         COUNT(*) FILTER (WHERE sa.status IN ('PLANNED','IN_PROGRESS'))::int AS active,
+         COUNT(*) FILTER (WHERE sa.status = 'COMPLETED')::int AS completed
+       FROM shoot_assignment_crew sac
+       JOIN shoot_assignment sa ON sa.id = sac.shoot_assignment_id
+       WHERE sac.media_team_member_id = $1`,
+      [id],
+    );
+    return { active: Number(rows[0]?.active ?? 0), completed: Number(rows[0]?.completed ?? 0) };
+  }
+
   async findManyByIds(
     ids: string[],
     executor: Queryable = this.postgres,

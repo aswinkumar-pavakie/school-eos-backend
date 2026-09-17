@@ -9,10 +9,12 @@ import { MediaInventoryController } from './media-inventory.controller';
 import { MediaPostsController } from './media-posts.controller';
 import { MediaPostsScheduler } from './media-posts.scheduler';
 import { MediaPostsService } from './media-posts.service';
+import { MediaReportController } from './media-report.controller';
 import { MediaTeamController } from './media-team.controller';
 import { MediaTeamService } from './media-team.service';
 import { MediaPostCommentRepository } from './repositories/media-post-comment.repository';
 import { MediaPostRepository } from './repositories/media-post.repository';
+import { MediaReportMetricRepository } from './repositories/media-report-metric.repository';
 import { MediaTeamMemberRepository } from './repositories/media-team-member.repository';
 import { ShootAssignmentRepository } from './repositories/shoot-assignment.repository';
 import { ShootAssignmentsController } from './shoot-assignments.controller';
@@ -31,6 +33,7 @@ import { ShootAssignmentsService } from './shoot-assignments.service';
     MediaInventoryController,
     MediaIndentsController,
     MediaDashboardController,
+    MediaReportController,
   ],
   providers: [
     AuditService,
@@ -38,6 +41,7 @@ import { ShootAssignmentsService } from './shoot-assignments.service';
     ShootAssignmentRepository,
     MediaPostRepository,
     MediaPostCommentRepository,
+    MediaReportMetricRepository,
     MediaTeamService,
     ShootAssignmentsService,
     MediaPostsService,
