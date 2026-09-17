@@ -47,8 +47,12 @@ export class StaffController {
     private readonly approvalsService: ApprovalsService,
   ) {}
 
+  // SPORTS_ADMIN added for real read-only lookup only (see coaches.service.ts:
+  // creating a non-external coach requires an existing person's UUID, and
+  // Sports Admin had no way to find one -- confirmed as a real gap during live
+  // testing, not a guess).
   @Get()
-  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'SPORTS_ADMIN')
   async list(@Query() query: StaffQueryDto) {
     const result = await this.staffService.list(query);
     return { data: result.data, meta: result.meta };

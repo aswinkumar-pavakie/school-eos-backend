@@ -15,7 +15,7 @@ import { CoachesService } from './coaches.service';
 import { CreateCoachDto } from './dto/create-coach.dto';
 import { UpdateCoachDto } from './dto/update-coach.dto';
 
-@Roles('ADMIN')
+@Roles('ADMIN', 'SPORTS_ADMIN')
 @Controller('coaches')
 export class CoachesController {
   constructor(private readonly coachesService: CoachesService) {}

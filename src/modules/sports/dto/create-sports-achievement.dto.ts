@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsISO8601,
   IsOptional,
   IsString,
@@ -27,6 +28,15 @@ export class CreateSportsAchievementDto {
   @MinLength(1)
   @MaxLength(100)
   placement!: string;
+
+  // The shared achievement.level column's real check constraint is a
+  // competition-level enum (SCHOOL/BLOCK/DISTRICT/.../INTERNATIONAL), not a
+  // free-text placement string -- confirmed live (a placement like "1st
+  // place" written into it violates achievement_level_check and 500s).
+  // Defaults to SCHOOL when not given, matching this table's most common case.
+  @IsOptional()
+  @IsIn(['SCHOOL', 'BLOCK', 'DISTRICT', 'STATE', 'NATIONAL', 'INTERNATIONAL'])
+  level?: string;
 
   @IsISO8601({ strict: true })
   awardedOn!: string;

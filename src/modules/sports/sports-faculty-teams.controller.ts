@@ -19,7 +19,7 @@ import { AssignCoachDto } from './dto/assign-coach.dto';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { SportsFacultyTeamsService } from './sports-faculty-teams.service';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'SPORTS_ADMIN')
 @Controller('sports/teams')
 export class SportsFacultyTeamsController {
   constructor(private readonly service: SportsFacultyTeamsService) {}

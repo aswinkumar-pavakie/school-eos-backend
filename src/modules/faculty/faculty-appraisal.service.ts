@@ -57,7 +57,7 @@ export class FacultyAppraisalService {
     };
   }
 
-  async create(personId: string, dto: CreateStaffAppraisalDto) {
+  async create(personId: string, dto: CreateStaffAppraisalDto, actorRoleCode = 'FACULTY') {
     const staffId = await this.scopeRepo.getStaffId(personId);
     if (!staffId)
       throw new ForbiddenException('No active staff record for this account.');
@@ -86,7 +86,7 @@ export class FacultyAppraisalService {
       await this.audit.record(
         {
           actorPersonId: personId,
-          actorRoleCode: 'FACULTY',
+          actorRoleCode,
           action: 'STAFF_APPRAISAL_SUBMITTED',
           objectType: 'staff_appraisal',
           objectId: id,

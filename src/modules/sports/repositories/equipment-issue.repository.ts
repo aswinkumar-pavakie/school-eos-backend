@@ -177,14 +177,25 @@ export class EquipmentIssueRepository {
 
   /** Every issue scoped to equipment belonging to sports this Faculty member is
    * authorized for — never a school-wide list. */
+  // includeGeneral: SPORTS_ADMIN's school-wide oversight must also see issues
+  // of general/shared equipment (eq.sport_id IS NULL) -- confirmed as a real
+  // gap live (an issue of general equipment was permanently invisible to
+  // outstanding/overdue tracking for every actor, Faculty included, since
+  // eq.sport_id = ANY($1) alone can never match a null). Faculty's own scoped
+  // view stays sport-only (false) -- a scoped role has no business seeing
+  // unscoped equipment traffic.
   async findOutstandingBySportIds(
     sportIds: string[],
+    includeGeneral: boolean,
     executor: Queryable = this.postgres,
   ): Promise<EquipmentIssueRow[]> {
-    if (sportIds.length === 0) return [];
+    if (sportIds.length === 0 && !includeGeneral) return [];
     const { rows } = await executor.query<EquipmentIssueRow>(
-      `SELECT ${COLUMNS} ${FROM} WHERE eq.sport_id = ANY($1::uuid[]) AND ei.returned_on IS NULL ORDER BY ei.issued_on`,
-      [sportIds],
+      `SELECT ${COLUMNS} ${FROM}
+       WHERE (eq.sport_id = ANY($1::uuid[]) OR ($2::boolean AND eq.sport_id IS NULL))
+         AND ei.returned_on IS NULL
+       ORDER BY ei.issued_on`,
+      [sportIds, includeGeneral],
     );
     return rows;
   }
@@ -192,15 +203,17 @@ export class EquipmentIssueRepository {
   /** Outstanding (not returned) AND past due_on — the "overdue equipment" flag. */
   async findOverdueBySportIds(
     sportIds: string[],
+    includeGeneral: boolean,
     executor: Queryable = this.postgres,
   ): Promise<EquipmentIssueRow[]> {
-    if (sportIds.length === 0) return [];
+    if (sportIds.length === 0 && !includeGeneral) return [];
     const { rows } = await executor.query<EquipmentIssueRow>(
       `SELECT ${COLUMNS} ${FROM}
-       WHERE eq.sport_id = ANY($1::uuid[]) AND ei.returned_on IS NULL
+       WHERE (eq.sport_id = ANY($1::uuid[]) OR ($2::boolean AND eq.sport_id IS NULL))
+         AND ei.returned_on IS NULL
          AND ei.due_on IS NOT NULL AND ei.due_on < CURRENT_DATE
        ORDER BY ei.due_on`,
-      [sportIds],
+      [sportIds, includeGeneral],
     );
     return rows;
   }

@@ -27,7 +27,7 @@ import {
 import { SportsFacultyRepository } from './repositories/sports-faculty.repository';
 import { StaffRepository } from './repositories/staff.repository';
 
-const PLACEMENT_LEVEL = 'SCHOOL'; // achievement.level has no dedicated "placement" concept — reused verbatim as the level string, since a placement (e.g. "1st place") IS the achievement's level for sports.
+const DEFAULT_LEVEL = 'SCHOOL'; // achievement.level is a real competition-level enum (see CreateSportsAchievementDto) — falls back to SCHOOL when the caller doesn't specify one.
 
 @Injectable()
 export class SportsFacultyAchievementsService {
@@ -41,6 +41,7 @@ export class SportsFacultyAchievementsService {
   ) {}
 
   private async requireActiveFaculty(actor: AuthenticatedUser): Promise<void> {
+    if (actor.roles.includes('SPORTS_ADMIN')) return; // school-wide login, no staff/SPORTS_FACULTY scope required
     const staff = await this.staffRepo.findByPersonId(actor.personId);
     if (!staff || staff.status !== 'ACTIVE')
       throw new ForbiddenException(SPORTS_ERRORS.NOT_ACTIVE_FACULTY);
@@ -49,7 +50,7 @@ export class SportsFacultyAchievementsService {
   async list(actor: AuthenticatedUser): Promise<SportsAchievementRow[]> {
     await this.requireActiveFaculty(actor);
     const sportIds = await this.sportsFacultyRepo.findActiveSportIdsForFaculty(
-      actor.personId,
+      actor,
     );
     return this.sportsAchievementRepo.findBySportIds(sportIds);
   }
@@ -69,7 +70,7 @@ export class SportsFacultyAchievementsService {
         'teamId/tournamentId does not resolve to a real sport',
       );
     const authorized = await this.sportsFacultyRepo.isAuthorizedForSport(
-      actor.personId,
+      actor,
       sportId,
     );
     if (!authorized) throw new NotFoundException(SPORTS_ERRORS.SPORT_NOT_FOUND);
@@ -91,7 +92,7 @@ export class SportsFacultyAchievementsService {
           {
             studentId: dto.studentId,
             title: dto.title ?? `${dto.placement} — Sports`,
-            level: dto.placement || PLACEMENT_LEVEL,
+            level: dto.level ?? DEFAULT_LEVEL,
             awardedOn: dto.awardedOn,
           },
           client,
@@ -114,7 +115,7 @@ export class SportsFacultyAchievementsService {
         await this.audit.record(
           {
             actorPersonId: actor.personId,
-            actorRoleCode: 'FACULTY',
+            actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
             action: 'SPORTS_ACHIEVEMENT_CREATED',
             objectType: 'sports_achievement',
             objectId: final.id,

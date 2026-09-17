@@ -22,7 +22,7 @@ import { UpdateFixtureDto } from './dto/update-fixture.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { SportsFacultyTournamentsService } from './sports-faculty-tournaments.service';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'SPORTS_ADMIN')
 @Controller('sports/tournaments')
 export class SportsFacultyTournamentsController {
   constructor(private readonly service: SportsFacultyTournamentsService) {}
@@ -66,7 +66,7 @@ export class SportsFacultyTournamentsController {
   }
 }
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'SPORTS_ADMIN')
 @Controller('sports/fixtures')
 export class SportsFacultyFixturesController {
   constructor(private readonly service: SportsFacultyTournamentsService) {}
@@ -109,7 +109,7 @@ export class SportsFacultyFixturesController {
   }
 }
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'SPORTS_ADMIN')
 @Controller('sports/houses')
 export class SportsHousesController {
   constructor(private readonly service: SportsFacultyTournamentsService) {}

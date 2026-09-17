@@ -18,7 +18,7 @@ import { Roles } from '../../common/auth/roles.decorator';
 import { CreateSportOdRequestDto } from './dto/create-sport-od-request.dto';
 import { SportOdRequestService } from './sport-od-request.service';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'SPORTS_ADMIN')
 @Controller('sports/od-requests')
 export class SportOdRequestsController {
   constructor(private readonly service: SportOdRequestService) {}

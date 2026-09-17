@@ -32,7 +32,7 @@ const SPORTS_EQUIPMENT_CONTEXT = {
   actorRoleCode: 'SPORTS_FACULTY',
 };
 
-@Roles('FACULTY', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'FINANCE')
+@Roles('FACULTY', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'FINANCE', 'SPORTS_ADMIN')
 @Controller('sports/equipment-indents')
 export class SportsEquipmentIndentsController {
   constructor(
@@ -65,25 +65,38 @@ export class SportsEquipmentIndentsController {
   }
 
   @Post()
-  @Roles('FACULTY')
+  @Roles('FACULTY', 'SPORTS_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateSportsEquipmentIndentDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    const staff = await this.staffRepo.findByPersonId(actor.personId);
-    if (!staff || staff.status !== 'ACTIVE')
-      throw new NotFoundException(SPORTS_ERRORS.NOT_ACTIVE_FACULTY);
+    if (!actor.roles.includes('SPORTS_ADMIN')) {
+      const staff = await this.staffRepo.findByPersonId(actor.personId);
+      if (!staff || staff.status !== 'ACTIVE')
+        throw new NotFoundException(SPORTS_ERRORS.NOT_ACTIVE_FACULTY);
+    }
 
     const equipment = await this.equipmentRepo.findById(dto.equipmentId);
-    if (!equipment || !equipment.sportId)
-      throw new NotFoundException(SPORTS_ERRORS.EQUIPMENT_NOT_FOUND);
-    const authorized = await this.sportsFacultyRepo.isAuthorizedForSport(
-      actor.personId,
-      equipment.sportId,
-    );
-    if (!authorized)
-      throw new NotFoundException(SPORTS_ERRORS.EQUIPMENT_NOT_FOUND);
+    if (!equipment) throw new NotFoundException(SPORTS_ERRORS.EQUIPMENT_NOT_FOUND);
+    // General/shared equipment (sportId null) has no single sport to check
+    // Faculty's own scoped authorization against, so it stays Faculty-
+    // unreachable here same as before -- but SPORTS_ADMIN's school-wide
+    // oversight has no per-sport scope to check in the first place, so it
+    // must not be blocked by a sportId that doesn't exist. Confirmed as a
+    // real gap live: general equipment (a real, valid catalog category --
+    // see the Equipment screen's own "General / shared" option) couldn't be
+    // indented by anyone until this fix.
+    if (!actor.roles.includes('SPORTS_ADMIN')) {
+      if (!equipment.sportId)
+        throw new NotFoundException(SPORTS_ERRORS.EQUIPMENT_NOT_FOUND);
+      const authorized = await this.sportsFacultyRepo.isAuthorizedForSport(
+        actor,
+        equipment.sportId,
+      );
+      if (!authorized)
+        throw new NotFoundException(SPORTS_ERRORS.EQUIPMENT_NOT_FOUND);
+    }
 
     // No equipmentId field exists on PurchaseRequestsService.create()'s input
     // (nor a column for it on purchase_request) -- this merge found the
