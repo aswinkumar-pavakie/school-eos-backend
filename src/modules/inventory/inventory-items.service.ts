@@ -312,4 +312,18 @@ export class InventoryItemsService {
       actorPersonId,
     );
   }
+
+  // The other side of markDamaged: repair/service finished, item goes back
+  // into the available pool. Without this, DAMAGED was a dead end in the UI
+  // -- once sent to service, status could never change again except via
+  // markLost/retire (also unwired on the frontend until now).
+  markAvailable(id: string, dto: InventoryItemNoteDto, actorPersonId: string) {
+    return this.markStatus(
+      id,
+      'AVAILABLE',
+      'INVENTORY_ITEM_MARKED_AVAILABLE',
+      dto,
+      actorPersonId,
+    );
+  }
 }

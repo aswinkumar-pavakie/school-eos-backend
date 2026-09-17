@@ -204,4 +204,15 @@ export class ShootAssignmentRepository {
     );
     return rows[0].count;
   }
+
+  // shoot_assignment_crew/shoot_assignment_gear both reference this row with
+  // ON DELETE CASCADE (see database/migrations/0006_media_room.sql), so a
+  // real hard delete here needs no separate cleanup of either join table.
+  async delete(id: string, executor: Queryable = this.postgres): Promise<boolean> {
+    const { rowCount } = await executor.query(
+      `DELETE FROM shoot_assignment WHERE id = $1`,
+      [id],
+    );
+    return (rowCount ?? 0) > 0;
+  }
 }

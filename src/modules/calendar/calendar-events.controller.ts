@@ -19,12 +19,15 @@ import { CreateCalendarEventDto } from './dto/create-calendar-event.dto';
 // Read/write over the real, already-populated calendar_event table -- see
 // query.md for how this was found (same story as Timetable: schema and data
 // existed, just no API).
-// Class-level role covers the read-only list endpoint for Principal's (and,
-// as of Vice Principal Phase 3's dashboard, Vice Principal's) own oversight
-// view; create/remove are explicitly re-narrowed to ADMIN below -- neither
-// Principal nor Vice Principal has create/edit/delete authority here (no
-// PATCH endpoint even exists for Admin, and no approval workflow gates
-// calendar events).
+// NOTE: this controller is dead code -- modules/academic/calendar-events.controller.ts
+// registers the identical 'calendar-events' path and wins (AcademicModule is
+// imported before CalendarModule in app.module.ts), confirmed live via a real
+// MEDIA_ROOM 403 against a @Roles change made here that never took effect.
+// The actual Principal/Vice Principal/Correspondent/MEDIA_ROOM read +
+// Correspondent/MEDIA_ROOM create access lives on that other file now -- left
+// unchanged here since editing unreachable code serves no purpose (the
+// @Roles below is kept in sync with the other file only for readability, not
+// because it does anything).
 @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
 @Controller('calendar-events')
 export class CalendarEventsController {

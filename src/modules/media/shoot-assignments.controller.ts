@@ -1,6 +1,8 @@
 import {
   Body,
   Controller,
+  Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -54,5 +56,22 @@ export class ShootAssignmentsController {
     @CurrentActor() actor: AuthenticatedUser,
   ) {
     return { data: await this.service.update(id, dto, actor.personId) };
+  }
+
+  @Delete(':id')
+  @Roles('MEDIA_ROOM', 'ADMIN')
+  @HttpCode(HttpStatus.OK)
+  async delete(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    if (!actor.roles.includes('ADMIN')) {
+      const existing = await this.service.get(id);
+      if (existing.createdBy !== actor.personId) {
+        throw new ForbiddenException('You can only delete shoot assignments you created.');
+      }
+    }
+    await this.service.delete(id, actor.personId);
+    return { data: { deleted: true } };
   }
 }
