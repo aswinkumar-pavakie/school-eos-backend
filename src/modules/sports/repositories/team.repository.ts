@@ -98,4 +98,27 @@ export class TeamRepository {
     ]);
     return this.findById(id, executor);
   }
+
+  /** Core team fields (name/category/captain/house/status) -- COALESCE-based
+   * partial update, same pattern as every other real update method in this
+   * codebase. No delete route exists at all (rosters/fixtures/sessions
+   * reference the team), so status='INACTIVE' via this method is the real
+   * soft-delete path. */
+  async update(
+    id: string,
+    input: { name?: string; sportCategoryId?: string; captainStudentId?: string; houseId?: string; status?: string },
+    executor: Queryable = this.postgres,
+  ): Promise<TeamRow | null> {
+    await executor.query(
+      `UPDATE team SET
+         name = COALESCE($2, name),
+         sport_category_id = COALESCE($3, sport_category_id),
+         captain_student_id = COALESCE($4, captain_student_id),
+         house_id = COALESCE($5, house_id),
+         status = COALESCE($6, status)
+       WHERE id = $1`,
+      [id, input.name ?? null, input.sportCategoryId ?? null, input.captainStudentId ?? null, input.houseId ?? null, input.status ?? null],
+    );
+    return this.findById(id, executor);
+  }
 }

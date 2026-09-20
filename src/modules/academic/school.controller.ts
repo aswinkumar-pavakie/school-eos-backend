@@ -17,7 +17,10 @@ import { SchoolService } from './school.service';
 // identity info, shown in the sidebar header (school name/logo tile) matching
 // "Transport Module.dc.html"'s own literal markup. PATCH stays ADMIN-only via
 // the override below, unchanged.
-@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER', 'SPORTS_ADMIN')
+// HOSTEL_WARDEN added -- same read-only identity info, used as the header of
+// the mobile Reports screen's own PDF export (school name/address/contact),
+// same reuse pattern as every role above.
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER', 'SPORTS_ADMIN', 'HOSTEL_WARDEN')
 @Controller('school')
 export class SchoolController {
   constructor(private readonly schoolService: SchoolService) {}

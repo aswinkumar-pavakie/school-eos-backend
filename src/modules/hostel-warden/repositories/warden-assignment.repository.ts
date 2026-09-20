@@ -68,4 +68,43 @@ export class WardenAssignmentRepository {
     );
     return rows.length > 0;
   }
+
+  /** Every ACTIVE co-warden across the caller's own hostel(s) -- the real,
+   * well-scoped relationship backing the Warden mobile app's own "Warden
+   * roster" screen (Warden App.dc.html's own `staff` block). Deliberately
+   * scoped to exactly the caller's own hostels (via WardenContextService's
+   * hostelIds), never a school-wide staff directory -- a Warden should see
+   * co-wardens of hostels they administer, not every staff member in the
+   * school. */
+  async findRosterForHostels(
+    hostelIds: string[],
+    executor: Queryable = this.postgres,
+  ): Promise<{ personId: string; firstName: string; lastName: string | null; mobile: string | null; hostelId: string; hostelName: string }[]> {
+    if (hostelIds.length === 0) return [];
+    const { rows } = await executor.query<{
+      person_id: string;
+      first_name: string;
+      last_name: string | null;
+      mobile: string | null;
+      hostel_id: string;
+      hostel_name: string;
+    }>(
+      `SELECT p.id AS person_id, p.first_name, p.last_name, p.mobile,
+              h.id AS hostel_id, h.name AS hostel_name
+       FROM v_active_role_assignment ra
+       JOIN person p ON p.id = ra.person_id
+       JOIN hostel h ON h.id = ra.scope_id
+       WHERE ra.role_code = 'HOSTEL_WARDEN' AND ra.scope_type = 'HOSTEL' AND ra.scope_id = ANY($1)
+       ORDER BY h.name, p.first_name`,
+      [hostelIds],
+    );
+    return rows.map((r) => ({
+      personId: r.person_id,
+      firstName: r.first_name,
+      lastName: r.last_name,
+      mobile: r.mobile,
+      hostelId: r.hostel_id,
+      hostelName: r.hostel_name,
+    }));
+  }
 }

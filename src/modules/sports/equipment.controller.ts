@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
@@ -21,8 +22,8 @@ export class EquipmentController {
   constructor(private readonly equipmentService: EquipmentService) {}
 
   @Get()
-  async list() {
-    return { data: await this.equipmentService.list() };
+  async list(@Query('includeRetired') includeRetired?: string) {
+    return { data: await this.equipmentService.list(includeRetired === 'true') };
   }
 
   @Get(':id')

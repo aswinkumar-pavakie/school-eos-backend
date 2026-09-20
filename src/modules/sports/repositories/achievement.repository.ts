@@ -66,4 +66,23 @@ export class AchievementRepository {
       [id, referenceId],
     );
   }
+
+  async update(
+    id: string,
+    input: { title?: string; level?: string; awardedOn?: string },
+    executor: Queryable,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE achievement SET
+         title = COALESCE($2, title),
+         level = COALESCE($3, level),
+         awarded_on = COALESCE($4, awarded_on)
+       WHERE id = $1`,
+      [id, input.title ?? null, input.level ?? null, input.awardedOn ?? null],
+    );
+  }
+
+  async delete(id: string, executor: Queryable): Promise<void> {
+    await executor.query(`DELETE FROM achievement WHERE id = $1`, [id]);
+  }
 }

@@ -86,8 +86,13 @@ export class StaffController {
   // exactly VICE_PRINCIPAL added, for its own mobile Profile screen (Phase
   // 25) -- not opened to every authenticated role, since no other role
   // currently needs it.
+  // SPORTS_ADMIN added, same self-scoped reason -- the Sports Staff mobile
+  // app's own real Profile screen (Sports Staff Mobile App.dc.html's own
+  // isProfile block: designation/employee no./join date under "Professional
+  // information") needs its own staff record the same way VICE_PRINCIPAL's
+  // does.
   @Get('me')
-  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'SPORTS_ADMIN')
   async getMine(@CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.staffService.getMine(actor.personId) };
   }

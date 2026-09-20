@@ -17,18 +17,27 @@ export interface SportsAchievementRow {
   awardedOn: string;
   certificateKey: string | null;
   achievementId: string | null;
+  title: string | null;
+  level: string | null;
 }
 
+// title/level come from the shared achievement row this sports_achievement
+// links back to (see sports-faculty-achievements.service.ts's own two-step
+// insert) -- needed by the website's Achievements list to show the design's
+// own EVENT/LEVEL columns instead of guessing at them from team/tournament
+// name alone.
 const COLUMNS = `sa.id, sa.student_id AS "studentId", p.first_name AS "studentFirstName", p.last_name AS "studentLastName",
   sa.team_id AS "teamId", t.name AS "teamName", sa.tournament_id AS "tournamentId", tour.name AS "tournamentName",
-  sa.placement, sa.awarded_on AS "awardedOn", sa.certificate_key AS "certificateKey", sa.achievement_id AS "achievementId"`;
+  sa.placement, sa.awarded_on AS "awardedOn", sa.certificate_key AS "certificateKey", sa.achievement_id AS "achievementId",
+  ach.title, ach.level`;
 
 const FROM = `
   FROM sports_achievement sa
   JOIN student s ON s.id = sa.student_id
   JOIN person p ON p.id = s.person_id
   LEFT JOIN team t ON t.id = sa.team_id
-  LEFT JOIN tournament tour ON tour.id = sa.tournament_id`;
+  LEFT JOIN tournament tour ON tour.id = sa.tournament_id
+  LEFT JOIN achievement ach ON ach.id = sa.achievement_id`;
 
 @Injectable()
 export class SportsAchievementRepository {
@@ -120,5 +129,23 @@ export class SportsAchievementRepository {
       [sportIds],
     );
     return rows;
+  }
+
+  async update(
+    id: string,
+    input: { placement?: string; awardedOn?: string },
+    executor: Queryable,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE sports_achievement SET
+         placement = COALESCE($2, placement),
+         awarded_on = COALESCE($3, awarded_on)
+       WHERE id = $1`,
+      [id, input.placement ?? null, input.awardedOn ?? null],
+    );
+  }
+
+  async delete(id: string, executor: Queryable): Promise<void> {
+    await executor.query(`DELETE FROM sports_achievement WHERE id = $1`, [id]);
   }
 }

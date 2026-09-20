@@ -20,12 +20,19 @@ import { UpdateHouseDto } from './dto/update-house.dto';
 export class HousesController {
   constructor(private readonly housesService: HousesService) {}
 
+  // SPORTS_ADMIN broadened onto these two reads only -- the Sports Admin
+  // console's own Houses & inter-house screen needs the real, full list of
+  // houses (not just ones with fixture results, which is all
+  // /sports/houses/performance can offer) to populate its "+ Record points"
+  // house picker. Writes stay ADMIN-only.
   @Get()
+  @Roles('ADMIN', 'SPORTS_ADMIN')
   async list() {
     return { data: await this.housesService.list() };
   }
 
   @Get(':id')
+  @Roles('ADMIN', 'SPORTS_ADMIN')
   async get(@Param('id') id: string) {
     return { data: await this.housesService.get(id) };
   }
