@@ -15,6 +15,21 @@ import {
 export const GATE_PASS_REQUEST_TYPE = 'HOSTEL_GATE_PASS_REQUEST';
 export const EMERGENCY_EXIT_REQUEST_TYPE = 'HOSTEL_EMERGENCY_EXIT_REQUEST';
 
+// Real, distinct CHECK constraint values (see migration
+// 0021_outing_request_movement_log_fields.sql) -- only ever set on a
+// Warden-authored Movement Log entry (createDirect below), never on a
+// parent-app-submitted Gate Pass/Emergency Exit request, so
+// `purpose_category IS NOT NULL` is the real, non-fabricated discriminator
+// findDirectEntriesForHostels filters on.
+export const MOVEMENT_LOG_PURPOSES = [
+  'HOME_LEAVE',
+  'LOCAL_OUTING',
+  'MEDICAL',
+  'SCHOOL_EVENT',
+  'OTHER',
+] as const;
+export type MovementLogPurpose = (typeof MOVEMENT_LOG_PURPOSES)[number];
+
 export interface OutingRequestRow {
   id: string;
   studentId: string;
@@ -31,6 +46,10 @@ export interface OutingRequestRow {
   state: string;
   requestType: string | null;
   decidedAt: Date | null;
+  calledByName: string | null;
+  calledByPhone: string | null;
+  purposeCategory: MovementLogPurpose | null;
+  actualReturnAt: Date | null;
 }
 
 export interface CreateOutingRequestInput {
@@ -43,12 +62,26 @@ export interface CreateOutingRequestInput {
   destination?: string | null;
 }
 
+export interface CreateDirectMovementLogInput {
+  studentId: string;
+  recordedByPersonId: string;
+  outFrom: Date;
+  expectedReturn: Date;
+  isOvernight?: boolean;
+  reason: string;
+  purposeCategory: MovementLogPurpose;
+  calledByName: string;
+  calledByPhone: string;
+}
+
 const COLUMNS = `outr.id, outr.student_id AS "studentId", p.first_name AS "studentFirstName",
   p.last_name AS "studentLastName", outr.requested_by AS "requestedBy",
   outr.requested_at AS "requestedAt", outr.out_from AS "outFrom",
   outr.expected_return AS "expectedReturn", outr.is_overnight AS "isOvernight",
   outr.reason, outr.destination, outr.approval_request_id AS "approvalRequestId",
-  outr.state, ar.request_type AS "requestType", ar.decided_at AS "decidedAt"`;
+  outr.state, ar.request_type AS "requestType", ar.decided_at AS "decidedAt",
+  outr.called_by_name AS "calledByName", outr.called_by_phone AS "calledByPhone",
+  outr.purpose_category AS "purposeCategory", outr.actual_return_at AS "actualReturnAt"`;
 
 const FROM = `outing_request outr
   JOIN student s ON s.id = outr.student_id
@@ -205,5 +238,93 @@ export class OutingRequestRepository {
       id,
       state,
     ]);
+  }
+
+  /** Warden-authored Movement Log entry -- the design's own "Record an
+   * exit" form: the Warden takes the parent's call and logs the exit
+   * directly, with no separate approval step (they ARE the authority
+   * making the call in real life). No approval_request row at all --
+   * state is set straight to APPROVED, decided_by/decided_at point at the
+   * Warden themself, matching what an instantly-self-decided record
+   * actually means. */
+  async createDirect(
+    input: CreateDirectMovementLogInput,
+    executor: Queryable,
+  ): Promise<OutingRequestRow> {
+    const { rows } = await executor.query<{ id: string }>(
+      `INSERT INTO outing_request (
+         student_id, requested_by, out_from, expected_return, is_overnight,
+         reason, state, decided_by, decided_at, called_by_name, called_by_phone,
+         purpose_category
+       )
+       VALUES ($1, $2, $3, $4, COALESCE($5, false), $6, 'APPROVED', $2, now(), $7, $8, $9)
+       RETURNING id`,
+      [
+        input.studentId,
+        input.recordedByPersonId,
+        input.outFrom,
+        input.expectedReturn,
+        input.isOvernight ?? null,
+        input.reason,
+        input.calledByName,
+        input.calledByPhone,
+        input.purposeCategory,
+      ],
+    );
+    return (await this.findById(rows[0].id, executor))!;
+  }
+
+  /** Every Warden-authored direct Movement Log entry for the Warden's own
+   * hostel(s) -- same hostel-scoping join as findManyForHostels, but no
+   * approval_request join is meaningful here (there isn't one), so this
+   * discriminates on purpose_category instead (see MOVEMENT_LOG_PURPOSES'
+   * own comment: only ever set on a direct entry). */
+  async findDirectEntriesForHostels(
+    hostelIds: string[],
+    executor: Queryable = this.postgres,
+  ): Promise<OutingRequestRow[]> {
+    const { rows } = await executor.query<OutingRequestRow>(
+      `SELECT ${COLUMNS} FROM ${FROM}
+       JOIN hostel_allocation a ON a.student_id = outr.student_id AND a.status = 'ACTIVE'
+       JOIN hostel_bed bed ON bed.id = a.bed_id
+       JOIN hostel_room r ON r.id = bed.room_id
+       JOIN hostel_floor f ON f.id = r.floor_id
+       JOIN hostel_block bl ON bl.id = f.block_id
+       WHERE bl.hostel_id = ANY($1) AND outr.purpose_category IS NOT NULL
+       ORDER BY outr.out_from DESC`,
+      [hostelIds],
+    );
+    return rows;
+  }
+
+  /** Records the real moment a Warden-logged exit actually returned --
+   * the "Record return" action. Only ever meaningful for a direct entry
+   * (purpose_category IS NOT NULL); enforced by the service layer's own
+   * ownership check, not here. */
+  async recordReturn(id: string, executor: Queryable): Promise<void> {
+    await executor.query(
+      `UPDATE outing_request SET actual_return_at = now() WHERE id = $1`,
+      [id],
+    );
+  }
+
+  /** "Amend" -- lets the Warden correct their own direct entry (expected
+   * return time, or the reason/purpose they logged) before or after the
+   * student returns. Never touches student_id/out_from/who-recorded-it. */
+  async amendDirect(
+    id: string,
+    patch: { expectedReturn?: Date; reason?: string; calledByName?: string; calledByPhone?: string },
+    executor: Queryable,
+  ): Promise<OutingRequestRow> {
+    await executor.query(
+      `UPDATE outing_request SET
+         expected_return = COALESCE($2, expected_return),
+         reason = COALESCE($3, reason),
+         called_by_name = COALESCE($4, called_by_name),
+         called_by_phone = COALESCE($5, called_by_phone)
+       WHERE id = $1`,
+      [id, patch.expectedReturn ?? null, patch.reason ?? null, patch.calledByName ?? null, patch.calledByPhone ?? null],
+    );
+    return (await this.findById(id, executor))!;
   }
 }

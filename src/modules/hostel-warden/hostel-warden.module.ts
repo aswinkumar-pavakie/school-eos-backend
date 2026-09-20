@@ -21,6 +21,8 @@ import { ClassAbsenceAlertsService } from './class-absence-alerts.service';
 import { EmergencyExitRequestsController } from './emergency-exit-requests.controller';
 import { GatePassRequestsController } from './gate-pass-requests.controller';
 import { HostelWardenApprovalHandlers } from './hostel-warden-approval-handlers.service';
+import { MovementLogController } from './movement-log.controller';
+import { MovementLogService } from './movement-log.service';
 import { NightAttendanceController } from './night-attendance.controller';
 import { NightAttendanceService } from './night-attendance.service';
 import { OutingOversightController } from './outing-oversight.controller';
@@ -49,6 +51,7 @@ import { WardenContextService } from './warden-context.service';
     ClassAbsenceAlertsController,
     RoomBedViewController,
     OutingOversightController,
+    MovementLogController,
   ],
   providers: [
     WardenContextService,
@@ -67,6 +70,7 @@ import { WardenContextService } from './warden-context.service';
     RoomBedViewService,
     StudentGuardianRepository,
     OutboxService,
+    MovementLogService,
   ],
   // OutingRequestRepository: so ParentModule can create outing_request rows
   // (Gate Pass / Emergency Exit) in-process without a second copy of this query --

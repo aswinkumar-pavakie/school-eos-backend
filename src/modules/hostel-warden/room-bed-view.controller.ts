@@ -54,4 +54,11 @@ export class RoomBedViewController {
       data: await this.service.getStudentFees(studentId, actor.personId),
     };
   }
+
+  // Static route, registered alongside the other static routes above (not
+  // after any ':id'-shaped one) per this controller's own convention.
+  @Get('warden-roster')
+  async listWardenRoster(@CurrentActor() actor: AuthenticatedUser) {
+    return { data: await this.service.listWardenRoster(actor.personId) };
+  }
 }

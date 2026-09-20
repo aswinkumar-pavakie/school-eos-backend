@@ -18,6 +18,7 @@ import { AuthenticatedUser } from '../../common/auth/authenticated-user.interfac
 import { SPORTS_ERRORS } from '../../common/errors/error-codes';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { CreateSportsAchievementDto } from './dto/create-sports-achievement.dto';
+import { UpdateSportsAchievementDto } from './dto/update-sports-achievement.dto';
 import { isForeignKeyViolation } from './pg-error.util';
 import { AchievementRepository } from './repositories/achievement.repository';
 import {
@@ -133,5 +134,80 @@ export class SportsFacultyAchievementsService {
         );
       throw err;
     }
+  }
+
+  private async getAuthorizedOrThrow(
+    actor: AuthenticatedUser,
+    id: string,
+  ): Promise<SportsAchievementRow> {
+    const existing = await this.sportsAchievementRepo.findById(id);
+    if (!existing) throw new NotFoundException('Achievement not found');
+    const sportId = await this.sportsAchievementRepo.resolveSportId({
+      teamId: existing.teamId,
+      tournamentId: existing.tournamentId,
+    });
+    const authorized =
+      sportId && (await this.sportsFacultyRepo.isAuthorizedForSport(actor, sportId));
+    if (!authorized) throw new NotFoundException('Achievement not found');
+    return existing;
+  }
+
+  /** Edit/Delete for the Sports Admin console's own Achievements screen --
+   * genuinely unbuilt before this. Updates both the sport-specific
+   * sports_achievement row and the shared achievement row it links back to
+   * (see this service's own header comment on the two-table write). */
+  async update(
+    actor: AuthenticatedUser,
+    id: string,
+    dto: UpdateSportsAchievementDto,
+  ): Promise<SportsAchievementRow> {
+    await this.requireActiveFaculty(actor);
+    const existing = await this.getAuthorizedOrThrow(actor, id);
+
+    return this.unitOfWork.run(async (client) => {
+      await this.sportsAchievementRepo.update(id, { placement: dto.placement, awardedOn: dto.awardedOn }, client);
+      if (existing.achievementId) {
+        await this.achievementRepo.update(existing.achievementId, { title: dto.title, level: dto.level, awardedOn: dto.awardedOn }, client);
+      }
+      const final = (await this.sportsAchievementRepo.findById(id, client))!;
+      await this.audit.record(
+        {
+          actorPersonId: actor.personId,
+          actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
+          action: 'SPORTS_ACHIEVEMENT_UPDATED',
+          objectType: 'sports_achievement',
+          objectId: id,
+          outcome: 'SUCCESS',
+          beforeData: existing,
+          afterData: final,
+        },
+        client,
+      );
+      return final;
+    });
+  }
+
+  async delete(actor: AuthenticatedUser, id: string): Promise<void> {
+    await this.requireActiveFaculty(actor);
+    const existing = await this.getAuthorizedOrThrow(actor, id);
+
+    await this.unitOfWork.run(async (client) => {
+      await this.sportsAchievementRepo.delete(id, client);
+      if (existing.achievementId) {
+        await this.achievementRepo.delete(existing.achievementId, client);
+      }
+      await this.audit.record(
+        {
+          actorPersonId: actor.personId,
+          actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
+          action: 'SPORTS_ACHIEVEMENT_DELETED',
+          objectType: 'sports_achievement',
+          objectId: id,
+          outcome: 'SUCCESS',
+          beforeData: existing,
+        },
+        client,
+      );
+    });
   }
 }

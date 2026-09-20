@@ -15,6 +15,7 @@ import { SPORTS_ERRORS } from '../../common/errors/error-codes';
 import { AddTeamMemberDto } from './dto/add-team-member.dto';
 import { AssignCoachDto } from './dto/assign-coach.dto';
 import { CreateTeamDto } from './dto/create-team.dto';
+import { UpdateTeamDto } from './dto/update-team.dto';
 import { isForeignKeyViolation, isUniqueViolation } from './pg-error.util';
 import { CoachRepository } from './repositories/coach.repository';
 import { SportsFacultyRepository } from './repositories/sports-faculty.repository';
@@ -174,6 +175,30 @@ export class SportsFacultyTeamsService {
       objectId: memberId,
       outcome: 'SUCCESS',
     });
+  }
+
+  /** Core team fields -- Edit/Delete (as deactivate) for the Sports Admin
+   * console's own Teams & squads screen. Genuinely unbuilt before this: the
+   * only prior write path was assignCoach. */
+  async updateTeam(
+    actor: AuthenticatedUser,
+    teamId: string,
+    dto: UpdateTeamDto,
+  ): Promise<TeamRow> {
+    await this.requireActiveFaculty(actor);
+    const existing = await this.getAuthorizedTeamOrThrow(actor, teamId);
+    const updated = await this.teamRepo.update(teamId, dto);
+    await this.audit.record({
+      actorPersonId: actor.personId,
+      actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
+      action: 'SPORTS_TEAM_UPDATED',
+      objectType: 'team',
+      objectId: teamId,
+      outcome: 'SUCCESS',
+      beforeData: existing,
+      afterData: updated,
+    });
+    return updated!;
   }
 
   // ---- Feature #16 — coach-to-team assignment ------------------------------------------

@@ -1,10 +1,11 @@
-import { Body, ConflictException, Controller, Get, HttpCode, HttpStatus, Post, Query } from '@nestjs/common';
+import { Body, ConflictException, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
 import { StudentDevelopmentService } from './student-development.service';
 import { CreateAchievementDto } from './dto/create-achievement.dto';
 import { CreateMeritPointDto } from './dto/create-merit-point.dto';
+import { UpdateMeritPointDto } from './dto/update-merit-point.dto';
 import { CreateDisciplineIncidentDto } from './dto/create-discipline-incident.dto';
 import { ListByStudentQueryDto } from './dto/list-by-student.query.dto';
 import { ListDisciplineIncidentsQueryDto } from './dto/list-discipline-incidents.query.dto';
@@ -44,13 +45,21 @@ export class StudentDevelopmentController {
     }
   }
 
+  // SPORTS_ADMIN broadened onto these two only (not achievements/discipline-
+  // incidents/observations above) -- the Sports Admin console's own Houses &
+  // inter-house screen reuses this real, already-populated merit_point table
+  // (house_id + points + reason + awarded_at) for its "+ Record points"
+  // action and inter-house standings, the same "reuse the generic engine
+  // rather than invent a parallel one" pattern already used for Sports
+  // Admin's Budget & approvals (purchase_request/approval_policy).
   @Get('merit-points')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'SPORTS_ADMIN')
   async listMeritPoints(@Query() query: ListByStudentQueryDto) {
     return { data: await this.service.listMeritPoints(query.studentId) };
   }
 
   @Post('merit-points')
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'SPORTS_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async createMeritPoint(@Body() dto: CreateMeritPointDto, @CurrentActor() actor: AuthenticatedUser) {
     try {
@@ -59,6 +68,28 @@ export class StudentDevelopmentController {
       if (isForeignKeyViolation(err)) throw new ConflictException('studentId or houseId does not exist.');
       throw err;
     }
+  }
+
+  // Edit/Delete for the Sports Admin console's own Houses & inter-house
+  // screen -- genuinely unbuilt before this. ADMIN kept alongside
+  // SPORTS_ADMIN since the same table backs Admin's own Student Development
+  // module.
+  @Patch('merit-points/:id')
+  @Roles('ADMIN', 'SPORTS_ADMIN')
+  async updateMeritPoint(
+    @Param('id') id: string,
+    @Body() dto: UpdateMeritPointDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return { data: await this.service.updateMeritPoint(id, dto, actor.personId) };
+  }
+
+  @Delete('merit-points/:id')
+  @Roles('ADMIN', 'SPORTS_ADMIN')
+  @HttpCode(HttpStatus.OK)
+  async deleteMeritPoint(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+    await this.service.deleteMeritPoint(id, actor.personId);
+    return { data: { deleted: true } };
   }
 
   @Get('observations')
