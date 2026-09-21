@@ -17,7 +17,7 @@ import { UpdateSportsProfileDto } from './dto/update-sports-profile.dto';
 import { UpsertSportsProfileDto } from './dto/upsert-sports-profile.dto';
 import { SportsFacultyProfilesService } from './sports-faculty-profiles.service';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'SPORTS_ADMIN')
 @Controller('sports/:sportId/profiles')
 export class SportsFacultyProfilesController {
   constructor(private readonly service: SportsFacultyProfilesService) {}

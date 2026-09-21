@@ -11,6 +11,7 @@ import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { FinanceModule } from '../finance/finance.module';
 import { StudentEventsModule } from '../student-events/student-events.module';
+import { TimetableModule } from '../timetable/timetable.module';
 import { CoachesController } from './coaches.controller';
 import { CoachesService } from './coaches.service';
 import { EquipmentController } from './equipment.controller';
@@ -26,7 +27,9 @@ import { SportOdRequestRepository } from './repositories/sport-od-request.reposi
 import { SportRepository } from './repositories/sport.repository';
 import { SportsAchievementRepository } from './repositories/sports-achievement.repository';
 import { SportsFacultyRepository } from './repositories/sports-faculty.repository';
+import { SportsInjuryRepository } from './repositories/sports-injury.repository';
 import { SportsProfileRepository } from './repositories/sports-profile.repository';
+import { SportsTrialRepository } from './repositories/sports-trial.repository';
 import { StaffRepository } from './repositories/staff.repository';
 import { TeamMemberRepository } from './repositories/team-member.repository';
 import { TeamRepository } from './repositories/team.repository';
@@ -38,6 +41,7 @@ import { SportOdRequestService } from './sport-od-request.service';
 import { SportsAdminOverviewController } from './sports-admin-overview.controller';
 import { SportsAdminOverviewService } from './sports-admin-overview.service';
 import { SportsApprovalHandlers } from './sports-approval-handlers.service';
+import { SportsBudgetRequestsController } from './sports-budget-requests.controller';
 import { SportsEquipmentIndentsController } from './sports-equipment-indents.controller';
 import { SportsEquipmentOperationsController } from './sports-equipment-operations.controller';
 import { SportsEquipmentOperationsService } from './sports-equipment-operations.service';
@@ -56,7 +60,24 @@ import {
   SportsFacultyTournamentsController,
   SportsHousesController,
 } from './sports-faculty-tournaments.controller';
+import { SportsInjuriesController } from './sports-injuries.controller';
+import { SportsInjuriesService } from './sports-injuries.service';
+import { SportsPtController } from './sports-pt.controller';
+import { SportsTrialsController } from './sports-trials.controller';
+import { SportsTrialsService } from './sports-trials.service';
 import { SportsService } from './sports.service';
+import { SportsPracticePlansController } from './sports-practice-plans.controller';
+import { SportsPracticePlansService } from './sports-practice-plans.service';
+import { SportsPracticePlanRepository } from './repositories/sports-practice-plan.repository';
+import { SportsResultEntriesController } from './sports-result-entries.controller';
+import { SportsResultEntriesService } from './sports-result-entries.service';
+import { SportsResultEntryRepository } from './repositories/sports-result-entry.repository';
+import { SportsSelectionWindowsController } from './sports-selection-windows.controller';
+import { SportsSelectionWindowsService } from './sports-selection-windows.service';
+import { SportsSelectionWindowRepository } from './repositories/sports-selection-window.repository';
+import { SportsSubstituteCoachesController } from './sports-substitute-coaches.controller';
+import { SportsSubstituteCoachesService } from './sports-substitute-coaches.service';
+import { SportsSubstituteCoachRepository } from './repositories/sports-substitute-coach.repository';
 
 @Module({
   // ApprovalsModule: OD requests route through the generic approvals engine
@@ -66,7 +87,10 @@ import { SportsService } from './sports.service';
   // OD request becomes a real parent-facing consent request by reusing the
   // ALREADY-LIVE student_event/student_event_participant tables, not a new
   // parallel system.
-  imports: [ApprovalsModule, FinanceModule, StudentEventsModule],
+  // TimetableModule: PT / sports periods reuses the real, already-populated
+  // timetable_slot data for the "Physical Training" subject (see
+  // sports-pt.controller.ts's own header comment) -- no new schema at all.
+  imports: [ApprovalsModule, FinanceModule, StudentEventsModule, TimetableModule],
   // IMPORTANT — controller order matters here: Nest/Express match routes in
   // registration order, not by specificity (same trap PurchaseRequestsController's
   // own "summary before :id" comment documents). SportsController owns the
@@ -91,6 +115,14 @@ import { SportsService } from './sports.service';
     SportsFacultyFixturesController,
     SportsHousesController,
     SportsFacultyAchievementsController,
+    SportsTrialsController,
+    SportsInjuriesController,
+    SportsBudgetRequestsController,
+    SportsPtController,
+    SportsPracticePlansController,
+    SportsResultEntriesController,
+    SportsSelectionWindowsController,
+    SportsSubstituteCoachesController,
     SportsController,
   ],
   providers: [
@@ -126,6 +158,18 @@ import { SportsService } from './sports.service';
     SportsAchievementRepository,
     SportsFacultyAchievementsService,
     SportsAdminOverviewService,
+    SportsTrialRepository,
+    SportsTrialsService,
+    SportsInjuryRepository,
+    SportsInjuriesService,
+    SportsPracticePlanRepository,
+    SportsPracticePlansService,
+    SportsResultEntryRepository,
+    SportsResultEntriesService,
+    SportsSelectionWindowRepository,
+    SportsSelectionWindowsService,
+    SportsSubstituteCoachRepository,
+    SportsSubstituteCoachesService,
   ],
   // PrincipalDashboardService needs SportsAdminOverviewService directly for the
   // shared Principal/VP/Correspondent/Admin dashboard summary's real "upcoming

@@ -7,7 +7,7 @@ import { AuditService } from '../../common/audit/audit.service';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { isCheckViolation, isForeignKeyViolation } from './pg-error.util';
-import { EquipmentRepository } from './repositories/equipment.repository';
+import { EquipmentRepository, UpdateEquipmentInput } from './repositories/equipment.repository';
 
 @Injectable()
 export class EquipmentService {
@@ -16,8 +16,8 @@ export class EquipmentService {
     private readonly auditService: AuditService,
   ) {}
 
-  list() {
-    return this.equipmentRepo.findMany();
+  list(includeRetired?: boolean) {
+    return this.equipmentRepo.findMany({ includeRetired });
   }
 
   async get(id: string) {
@@ -56,7 +56,7 @@ export class EquipmentService {
   async update(id: string, dto: UpdateEquipmentDto, actorPersonId: string) {
     const existing = await this.get(id);
     try {
-      const updated = await this.equipmentRepo.update(id, dto);
+      const updated = await this.equipmentRepo.update(id, dto as UpdateEquipmentInput);
       if (!updated) throw new NotFoundException('Equipment not found');
       await this.auditService.record({
         actorPersonId,

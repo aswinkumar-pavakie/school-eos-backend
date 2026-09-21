@@ -41,8 +41,16 @@ export class AnnouncementsController {
   // dashboard's own real "Notices" card (SIS Transport mockup) reads
   // SCHOOL-wide + ROLE=TRANSPORT_MANAGER announcements via ?roleCode= --
   // still read-only, no create/edit/delete authority granted.
+  // SPORTS_ADMIN added the same way TRANSPORT_MANAGER was -- the Sports
+  // Staff mobile app's own real Notice screen (Sports Staff Mobile App.dc.html)
+  // reads SCHOOL-wide + ROLE=SPORTS_ADMIN announcements via ?roleCode=,
+  // read-only here too.
+  // HOSTEL_WARDEN added the same way -- the Warden mobile app's own real
+  // Home dashboard (Warden App.dc.html's own notice carousel + "View All"
+  // notices list) reads SCHOOL-wide + ROLE=HOSTEL_WARDEN announcements via
+  // ?roleCode=, read-only here too.
   @Get()
-  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER', 'SPORTS_ADMIN', 'HOSTEL_WARDEN')
   async list(@Query() query: AnnouncementQueryDto) {
     return { data: await this.announcementsService.list(query) };
   }
@@ -54,8 +62,14 @@ export class AnnouncementsController {
   // PostNoticeForm.tsx), so it only ever reaches the same real
   // SCHOOL+ROLE=TRANSPORT_MANAGER feed the Transport dashboard's own Notices
   // card already reads -- never a school-wide post from this role.
+  // SPORTS_ADMIN added, same real-write-scope pattern as TRANSPORT_MANAGER
+  // above -- posts here always use audienceType 'SCHOOL' or 'ROLE'/
+  // targetRoles ['SPORTS_ADMIN'] client-side (see sports-notices-api.ts),
+  // never a fabricated per-squad audience this system has no real concept
+  // of (confirmed: CreateAnnouncementDto's audienceType is SCHOOL/ROLE/
+  // SECTION only, no team/squad targeting exists).
   @Post()
-  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'TRANSPORT_MANAGER')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'TRANSPORT_MANAGER', 'SPORTS_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateAnnouncementDto,

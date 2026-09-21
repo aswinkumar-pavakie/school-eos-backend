@@ -64,13 +64,16 @@ export class MediaPostsController {
   }
 
   // Widened for Faculty's own Home feed (published social media posts
-  // alongside Announcements), and now Parent's own Home feed the same way --
-  // everyone else's existing behavior is untouched. A non-MEDIA_ROOM/ADMIN/
-  // PRINCIPAL caller (FACULTY or PARENT) always gets state forced to
-  // PUBLISHED regardless of what they ask for: drafts/scheduled/cancelled
-  // posts must never leak outside Media Room's own privileged callers.
+  // alongside Announcements), Parent's own Home feed the same way, Sports
+  // Admin's own mobile Home feed identically, and now Hostel Warden's own
+  // mobile Home feed the same way -- everyone else's existing behavior is
+  // untouched. A non-MEDIA_ROOM/ADMIN/PRINCIPAL/CORRESPONDENT caller
+  // (FACULTY, PARENT, SPORTS_ADMIN or HOSTEL_WARDEN) always gets state
+  // forced to PUBLISHED regardless of what they ask for: drafts/scheduled/
+  // cancelled posts must never leak outside Media Room's own privileged
+  // callers.
   @Get()
-  @Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'FACULTY', 'PARENT')
+  @Roles('MEDIA_ROOM', 'ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'FACULTY', 'PARENT', 'SPORTS_ADMIN', 'HOSTEL_WARDEN')
   async list(
     @Query() query: MediaPostQueryDto,
     @CurrentActor() actor: AuthenticatedUser,

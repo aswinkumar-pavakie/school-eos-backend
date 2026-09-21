@@ -40,13 +40,13 @@ export class CalendarEventsController {
   constructor(private readonly calendarEventsService: CalendarEventsService) {}
 
   @Get()
-  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'MEDIA_ROOM')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'MEDIA_ROOM', 'SPORTS_ADMIN')
   async list(@Query() query: CalendarEventQueryDto) {
     return { data: await this.calendarEventsService.list(query) };
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'MEDIA_ROOM')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'MEDIA_ROOM', 'SPORTS_ADMIN')
   async get(@Param('id') id: string) {
     return { data: await this.calendarEventsService.get(id) };
   }
@@ -60,7 +60,7 @@ export class CalendarEventsController {
   // all yet, so it can add new events but not edit/remove ones Admin (or
   // another Principal) created.
   @Post()
-  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'MEDIA_ROOM')
+  @Roles('ADMIN', 'MEDIA_ROOM', 'PRINCIPAL', 'CORRESPONDENT', 'SPORTS_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateCalendarEventDto,
@@ -84,7 +84,7 @@ export class CalendarEventsController {
   }
 
   @Patch(':id')
-  @Roles('ADMIN', 'MEDIA_ROOM')
+  @Roles('ADMIN', 'MEDIA_ROOM', 'SPORTS_ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateCalendarEventDto,
@@ -97,7 +97,7 @@ export class CalendarEventsController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN', 'MEDIA_ROOM')
+  @Roles('ADMIN', 'MEDIA_ROOM', 'SPORTS_ADMIN')
   @HttpCode(HttpStatus.OK)
   async delete(
     @Param('id') id: string,

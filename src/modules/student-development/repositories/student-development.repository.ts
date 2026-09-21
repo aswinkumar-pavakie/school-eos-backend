@@ -200,6 +200,49 @@ export class StudentDevelopmentRepository {
     return rows[0];
   }
 
+  async findMeritPointById(id: string, executor: Queryable = this.postgres): Promise<MeritPointRow | null> {
+    const { rows } = await executor.query<MeritPointRow>(
+      `SELECT mp.id::text, mp.student_id AS "studentId", p.first_name AS "studentFirstName",
+         p.last_name AS "studentLastName", s.admission_no AS "admissionNo",
+         g.name AS "gradeName", sec.name AS "sectionName",
+         mp.house_id AS "houseId", h.name AS "houseName",
+         mp.points, mp.reason,
+         ap.first_name AS "awardedByFirstName", ap.last_name AS "awardedByLastName",
+         mp.awarded_at AS "awardedAt"
+       FROM merit_point mp
+       JOIN student s ON s.id = mp.student_id
+       JOIN person p ON p.id = s.person_id
+       LEFT JOIN house h ON h.id = mp.house_id
+       LEFT JOIN person ap ON ap.id = mp.awarded_by
+       ${CURRENT_SECTION_JOIN}
+       WHERE mp.id = $1::bigint`,
+      [id],
+    );
+    return rows[0] ?? null;
+  }
+
+  // merit_point.id is bigint -- explicit ::bigint cast since the id arrives
+  // here as a string (the create/list methods above return/select it as
+  // id::text for JSON-safety, same reasoning).
+  async updateMeritPoint(
+    id: string,
+    input: { houseId?: string | null; points?: number; reason?: string },
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE merit_point SET
+         house_id = COALESCE($2, house_id),
+         points = COALESCE($3, points),
+         reason = COALESCE($4, reason)
+       WHERE id = $1::bigint`,
+      [id, input.houseId ?? null, input.points ?? null, input.reason ?? null],
+    );
+  }
+
+  async deleteMeritPoint(id: string, executor: Queryable = this.postgres): Promise<void> {
+    await executor.query(`DELETE FROM merit_point WHERE id = $1::bigint`, [id]);
+  }
+
   async findObservations(
     filter: { studentId?: string; limit?: number },
     executor: Queryable = this.postgres,

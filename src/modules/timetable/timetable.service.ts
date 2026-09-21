@@ -16,4 +16,8 @@ export class TimetableService {
   getForTeacher(teacherStaffId: string) {
     return this.timetableRepo.findByTeacher(teacherStaffId);
   }
+
+  getForSubject(subjectId: string) {
+    return this.timetableRepo.findBySubjectId(subjectId);
+  }
 }

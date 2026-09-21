@@ -10,6 +10,7 @@ import { HostelFloorRepository } from '../hostel/repositories/hostel-floor.repos
 import { HostelRoomRepository } from '../hostel/repositories/hostel-room.repository';
 import { StudentFeesService } from '../finance/student-fees.service';
 import { StudentGuardianRepository } from './repositories/student-guardian.repository';
+import { WardenAssignmentRepository } from './repositories/warden-assignment.repository';
 import { WardenContextService } from './warden-context.service';
 
 export interface HostelStructureRoom {
@@ -35,6 +36,7 @@ export class RoomBedViewService {
     private readonly hostelRoomRepo: HostelRoomRepository,
     private readonly studentGuardianRepo: StudentGuardianRepository,
     private readonly studentFeesService: StudentFeesService,
+    private readonly wardenAssignmentRepo: WardenAssignmentRepository,
   ) {}
 
   /** Blocks + rooms (flattened across floors) for the Warden's own hostel(s) --
@@ -105,5 +107,14 @@ export class RoomBedViewService {
   async getStudentFees(studentId: string, personId: string) {
     await this.getStudentRoom(studentId, personId);
     return this.studentFeesService.getSummaryForStudent(studentId);
+  }
+
+  /** Warden roster -- real co-wardens across exactly this caller's own
+   * hostel(s), backing the mobile app's own "Warden roster" screen (Warden
+   * App.dc.html's `staff` block). Scoped via WardenContextService the same
+   * way every other method here is; never a school-wide staff list. */
+  async listWardenRoster(personId: string) {
+    const ctx = await this.wardenContext.requireActiveWarden(personId);
+    return this.wardenAssignmentRepo.findRosterForHostels(ctx.hostelIds);
   }
 }

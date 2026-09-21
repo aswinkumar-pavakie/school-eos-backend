@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsISO8601,
   IsOptional,
   IsString,
@@ -6,6 +7,18 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+
+// Real tournament.level values (tournament_level_check) -- an out-of-range
+// value here used to fall through unvalidated (level had only @IsString) and
+// crash as an uncaught 500 when it hit the DB constraint. Confirmed live.
+export const TOURNAMENT_LEVELS = [
+  'INTER_HOUSE',
+  'INTER_SCHOOL',
+  'BLOCK',
+  'DISTRICT',
+  'STATE',
+  'NATIONAL',
+] as const;
 
 export class CreateTournamentDto {
   @IsUUID()
@@ -16,8 +29,7 @@ export class CreateTournamentDto {
   @MaxLength(200)
   name!: string;
 
-  @IsString()
-  @MaxLength(50)
+  @IsIn(TOURNAMENT_LEVELS)
   level!: string;
 
   @IsOptional()

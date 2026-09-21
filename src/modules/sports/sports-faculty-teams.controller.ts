@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
 } from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
@@ -17,9 +18,10 @@ import { Roles } from '../../common/auth/roles.decorator';
 import { AddTeamMemberDto } from './dto/add-team-member.dto';
 import { AssignCoachDto } from './dto/assign-coach.dto';
 import { CreateTeamDto } from './dto/create-team.dto';
+import { UpdateTeamDto } from './dto/update-team.dto';
 import { SportsFacultyTeamsService } from './sports-faculty-teams.service';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'SPORTS_ADMIN')
 @Controller('sports/teams')
 export class SportsFacultyTeamsController {
   constructor(private readonly service: SportsFacultyTeamsService) {}
@@ -41,6 +43,18 @@ export class SportsFacultyTeamsController {
     @CurrentActor() actor: AuthenticatedUser,
   ) {
     return { data: await this.service.createTeam(actor, dto) };
+  }
+
+  // Edit/Delete for the Sports Admin console's own Teams & squads screen --
+  // genuinely unbuilt before this. "Delete" sets status='INACTIVE' (no
+  // hard-delete route: rosters/fixtures/sessions reference this team).
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateTeamDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return { data: await this.service.updateTeam(actor, id, dto) };
   }
 
   @Get(':id/roster')

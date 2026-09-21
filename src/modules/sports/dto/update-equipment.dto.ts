@@ -34,4 +34,10 @@ export class UpdateEquipmentDto {
   @IsOptional()
   @IsIn(['NEW', 'GOOD', 'FAIR', 'POOR', 'DAMAGED'])
   condition?: string;
+
+  // Real soft-delete path -- see migration 0025_equipment_status.sql and
+  // equipment.repository.ts's own comment; there is no hard-delete route.
+  @IsOptional()
+  @IsIn(['ACTIVE', 'RETIRED'])
+  status?: string;
 }

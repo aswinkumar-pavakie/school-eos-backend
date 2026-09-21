@@ -35,6 +35,7 @@ export class SportsFacultyTrainingService {
   ) {}
 
   private async requireActiveFaculty(actor: AuthenticatedUser): Promise<void> {
+    if (actor.roles.includes('SPORTS_ADMIN')) return; // school-wide login, no staff/SPORTS_FACULTY scope required
     const staff = await this.staffRepo.findByPersonId(actor.personId);
     if (!staff || staff.status !== 'ACTIVE')
       throw new ForbiddenException(SPORTS_ERRORS.NOT_ACTIVE_FACULTY);
@@ -43,7 +44,7 @@ export class SportsFacultyTrainingService {
   async list(actor: AuthenticatedUser): Promise<TrainingSessionRow[]> {
     await this.requireActiveFaculty(actor);
     const sportIds = await this.sportsFacultyRepo.findActiveSportIdsForFaculty(
-      actor.personId,
+      actor,
     );
     return this.sessionRepo.findBySportIds(sportIds);
   }
@@ -55,7 +56,7 @@ export class SportsFacultyTrainingService {
     const session = await this.sessionRepo.findById(sessionId);
     if (!session) throw new NotFoundException('Training session not found');
     const authorized = await this.sportsFacultyRepo.isAuthorizedForSport(
-      actor.personId,
+      actor,
       session.sportId,
     );
     if (!authorized) throw new NotFoundException('Training session not found');
@@ -68,7 +69,7 @@ export class SportsFacultyTrainingService {
   ): Promise<TrainingSessionRow> {
     await this.requireActiveFaculty(actor);
     const authorized = await this.sportsFacultyRepo.isAuthorizedForTeam(
-      actor.personId,
+      actor,
       dto.teamId,
     );
     if (!authorized) throw new NotFoundException(SPORTS_ERRORS.TEAM_NOT_FOUND);
@@ -77,7 +78,7 @@ export class SportsFacultyTrainingService {
       const session = await this.sessionRepo.create(dto);
       await this.audit.record({
         actorPersonId: actor.personId,
-        actorRoleCode: 'FACULTY',
+        actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
         action: 'SPORTS_TRAINING_SESSION_CREATED',
         objectType: 'training_session',
         objectId: session.id,
@@ -104,7 +105,7 @@ export class SportsFacultyTrainingService {
     const updated = await this.sessionRepo.update(sessionId, dto);
     await this.audit.record({
       actorPersonId: actor.personId,
-      actorRoleCode: 'FACULTY',
+      actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
       action: 'SPORTS_TRAINING_SESSION_UPDATED',
       objectType: 'training_session',
       objectId: sessionId,
@@ -131,7 +132,7 @@ export class SportsFacultyTrainingService {
       );
       await this.audit.record({
         actorPersonId: actor.personId,
-        actorRoleCode: 'FACULTY',
+        actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
         action: 'SPORTS_TRAINING_ATTENDANCE_RECORDED',
         objectType: 'training_session',
         objectId: sessionId,

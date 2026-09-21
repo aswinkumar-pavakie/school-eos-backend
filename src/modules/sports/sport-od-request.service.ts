@@ -41,6 +41,7 @@ export class SportOdRequestService {
   ) {}
 
   private async requireActiveFaculty(actor: AuthenticatedUser): Promise<void> {
+    if (actor.roles.includes('SPORTS_ADMIN')) return; // school-wide login, no staff/SPORTS_FACULTY scope required
     const staff = await this.staffRepo.findByPersonId(actor.personId);
     if (!staff || staff.status !== 'ACTIVE') {
       throw new ForbiddenException(SPORTS_ERRORS.NOT_ACTIVE_FACULTY);
@@ -56,7 +57,7 @@ export class SportOdRequestService {
     const team = await this.teamRepo.findById(dto.teamId);
     if (!team) throw new NotFoundException(SPORTS_ERRORS.TEAM_NOT_FOUND);
     const authorized = await this.sportsFacultyRepo.isAuthorizedForSport(
-      actor.personId,
+      actor,
       team.sportId,
     );
     if (!authorized) throw new NotFoundException(SPORTS_ERRORS.TEAM_NOT_FOUND);
@@ -104,7 +105,7 @@ export class SportOdRequestService {
       await this.audit.record(
         {
           actorPersonId: actor.personId,
-          actorRoleCode: 'FACULTY',
+          actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
           action: 'SPORTS_OD_REQUEST_CREATED',
           objectType: 'sport_od_request',
           objectId: request.id,
@@ -121,7 +122,7 @@ export class SportOdRequestService {
   async list(actor: AuthenticatedUser): Promise<SportOdRequestRow[]> {
     await this.requireActiveFaculty(actor);
     const sportIds = await this.sportsFacultyRepo.findActiveSportIdsForFaculty(
-      actor.personId,
+      actor,
     );
     return this.odRequestRepo.findBySportIds(sportIds);
   }
@@ -132,7 +133,7 @@ export class SportOdRequestService {
     if (!request)
       throw new NotFoundException(SPORTS_ERRORS.OD_REQUEST_NOT_FOUND);
     const authorized = await this.sportsFacultyRepo.isAuthorizedForSport(
-      actor.personId,
+      actor,
       request.sportId,
     );
     if (!authorized)

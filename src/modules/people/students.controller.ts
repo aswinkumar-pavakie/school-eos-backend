@@ -59,7 +59,7 @@ export class StudentsController {
   ) {}
 
   @Get()
-  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'SPORTS_ADMIN')
   async list(@Query() query: StudentQueryDto) {
     const result = await this.studentsService.list(query);
     return { data: result.data, meta: result.meta };
@@ -92,7 +92,7 @@ export class StudentsController {
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'SPORTS_ADMIN')
   async get(@Param('id') id: string) {
     return { data: await this.studentsService.get(id) };
   }

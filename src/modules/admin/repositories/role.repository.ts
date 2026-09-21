@@ -94,6 +94,7 @@ export const ROLE_MODULE_ACCESS: Record<string, string[]> = {
   COMMUNITY_INCHARGE: ['Communities (own community)'],
   HEALTH_INCHARGE: ['Health & Infirmary'],
   SPORTS_FACULTY: ['Sports (own team)'],
+  SPORTS_ADMIN: ['Sports (school-wide)'],
   PARENT: [
     'Dashboard',
     'Attendance',

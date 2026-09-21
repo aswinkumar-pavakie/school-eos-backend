@@ -15,6 +15,7 @@ import { SPORTS_ERRORS } from '../../common/errors/error-codes';
 import { AddTeamMemberDto } from './dto/add-team-member.dto';
 import { AssignCoachDto } from './dto/assign-coach.dto';
 import { CreateTeamDto } from './dto/create-team.dto';
+import { UpdateTeamDto } from './dto/update-team.dto';
 import { isForeignKeyViolation, isUniqueViolation } from './pg-error.util';
 import { CoachRepository } from './repositories/coach.repository';
 import { SportsFacultyRepository } from './repositories/sports-faculty.repository';
@@ -39,6 +40,13 @@ export class SportsFacultyTeamsService {
   private async requireActiveFaculty(
     actor: AuthenticatedUser,
   ): Promise<{ id: string; personId: string }> {
+    // Sports Admin is a school-wide login (see 0019_sports_admin_role.sql) --
+    // no staff/SPORTS_FACULTY scope row required, and no caller here actually
+    // uses the returned staff row's id, only that this resolves without
+    // throwing.
+    if (actor.roles.includes('SPORTS_ADMIN')) {
+      return { id: '', personId: actor.personId };
+    }
     const staff = await this.staffRepo.findByPersonId(actor.personId);
     if (!staff || staff.status !== 'ACTIVE') {
       throw new ForbiddenException(SPORTS_ERRORS.NOT_ACTIVE_FACULTY);
@@ -49,7 +57,7 @@ export class SportsFacultyTeamsService {
   async listMyTeams(actor: AuthenticatedUser): Promise<TeamRow[]> {
     await this.requireActiveFaculty(actor);
     const sportIds = await this.sportsFacultyRepo.findActiveSportIdsForFaculty(
-      actor.personId,
+      actor,
     );
     return this.teamRepo.findBySportIds(sportIds);
   }
@@ -61,7 +69,7 @@ export class SportsFacultyTeamsService {
     const team = await this.teamRepo.findById(teamId);
     if (!team) throw new NotFoundException(SPORTS_ERRORS.TEAM_NOT_FOUND);
     const authorized = await this.sportsFacultyRepo.isAuthorizedForSport(
-      actor.personId,
+      actor,
       team.sportId,
     );
     if (!authorized) throw new NotFoundException(SPORTS_ERRORS.TEAM_NOT_FOUND);
@@ -79,7 +87,7 @@ export class SportsFacultyTeamsService {
   ): Promise<TeamRow> {
     await this.requireActiveFaculty(actor);
     const authorized = await this.sportsFacultyRepo.isAuthorizedForSport(
-      actor.personId,
+      actor,
       dto.sportId,
     );
     if (!authorized) throw new NotFoundException(SPORTS_ERRORS.SPORT_NOT_FOUND);
@@ -88,7 +96,7 @@ export class SportsFacultyTeamsService {
       const team = await this.teamRepo.create(dto);
       await this.audit.record({
         actorPersonId: actor.personId,
-        actorRoleCode: 'FACULTY',
+        actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
         action: 'SPORTS_TEAM_CREATED',
         objectType: 'team',
         objectId: team.id,
@@ -127,7 +135,7 @@ export class SportsFacultyTeamsService {
       const member = await this.teamMemberRepo.add({ teamId, ...dto });
       await this.audit.record({
         actorPersonId: actor.personId,
-        actorRoleCode: 'FACULTY',
+        actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
         action: 'SPORTS_ROSTER_MEMBER_ADDED',
         objectType: 'team_member',
         objectId: member.id,
@@ -161,12 +169,36 @@ export class SportsFacultyTeamsService {
       throw new NotFoundException(SPORTS_ERRORS.ROSTER_MEMBER_NOT_FOUND);
     await this.audit.record({
       actorPersonId: actor.personId,
-      actorRoleCode: 'FACULTY',
+      actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
       action: 'SPORTS_ROSTER_MEMBER_ENDED',
       objectType: 'team_member',
       objectId: memberId,
       outcome: 'SUCCESS',
     });
+  }
+
+  /** Core team fields -- Edit/Delete (as deactivate) for the Sports Admin
+   * console's own Teams & squads screen. Genuinely unbuilt before this: the
+   * only prior write path was assignCoach. */
+  async updateTeam(
+    actor: AuthenticatedUser,
+    teamId: string,
+    dto: UpdateTeamDto,
+  ): Promise<TeamRow> {
+    await this.requireActiveFaculty(actor);
+    const existing = await this.getAuthorizedTeamOrThrow(actor, teamId);
+    const updated = await this.teamRepo.update(teamId, dto);
+    await this.audit.record({
+      actorPersonId: actor.personId,
+      actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
+      action: 'SPORTS_TEAM_UPDATED',
+      objectType: 'team',
+      objectId: teamId,
+      outcome: 'SUCCESS',
+      beforeData: existing,
+      afterData: updated,
+    });
+    return updated!;
   }
 
   // ---- Feature #16 — coach-to-team assignment ------------------------------------------
@@ -188,7 +220,7 @@ export class SportsFacultyTeamsService {
     const updated = await this.teamRepo.updateCoach(teamId, dto.coachId);
     await this.audit.record({
       actorPersonId: actor.personId,
-      actorRoleCode: 'FACULTY',
+      actorRoleCode: actor.roles.includes('SPORTS_ADMIN') ? 'SPORTS_ADMIN' : 'FACULTY',
       action: 'SPORTS_TEAM_COACH_ASSIGNED',
       objectType: 'team',
       objectId: teamId,

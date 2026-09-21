@@ -76,6 +76,10 @@ function buildService(
     ),
   } as any;
 
+  const wardenAssignmentRepo = {
+    findRosterForHostels: jest.fn().mockResolvedValue([]),
+  } as any;
+
   const service = new RoomBedViewService(
     wardenContext,
     hostelAllocationRepo,
@@ -84,6 +88,7 @@ function buildService(
     hostelRoomRepo,
     studentGuardianRepo,
     studentFeesService,
+    wardenAssignmentRepo,
   );
   return {
     service,

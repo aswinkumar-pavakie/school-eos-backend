@@ -90,4 +90,21 @@ export class TimetableRepository {
     );
     return rows;
   }
+
+  /** Every real, scheduled slot for one subject across every section --
+   * backs the Sports Admin "PT / sports periods" screen (Physical Training
+   * is a real subject in the catalog, so its periods are already real
+   * timetable_slot rows; no new schema needed at all). */
+  async findBySubjectId(
+    subjectId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<TimetableSlotRow[]> {
+    const { rows } = await executor.query<TimetableSlotRow>(
+      `SELECT ${SLOT_COLUMNS} ${SLOT_JOINS}
+       WHERE so.subject_id = $1 AND ts.status = 'ACTIVE'
+       ORDER BY g.name, sec.name, ts.day_of_week, tp.period_no`,
+      [subjectId],
+    );
+    return rows;
+  }
 }

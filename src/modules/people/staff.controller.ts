@@ -47,8 +47,12 @@ export class StaffController {
     private readonly approvalsService: ApprovalsService,
   ) {}
 
+  // SPORTS_ADMIN added for real read-only lookup only (see coaches.service.ts:
+  // creating a non-external coach requires an existing person's UUID, and
+  // Sports Admin had no way to find one -- confirmed as a real gap during live
+  // testing, not a guess).
   @Get()
-  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'SPORTS_ADMIN')
   async list(@Query() query: StaffQueryDto) {
     const result = await this.staffService.list(query);
     return { data: result.data, meta: result.meta };
@@ -82,8 +86,13 @@ export class StaffController {
   // exactly VICE_PRINCIPAL added, for its own mobile Profile screen (Phase
   // 25) -- not opened to every authenticated role, since no other role
   // currently needs it.
+  // SPORTS_ADMIN added, same self-scoped reason -- the Sports Staff mobile
+  // app's own real Profile screen (Sports Staff Mobile App.dc.html's own
+  // isProfile block: designation/employee no./join date under "Professional
+  // information") needs its own staff record the same way VICE_PRINCIPAL's
+  // does.
   @Get('me')
-  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'SPORTS_ADMIN')
   async getMine(@CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.staffService.getMine(actor.personId) };
   }

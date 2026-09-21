@@ -14,7 +14,11 @@ import { Roles } from '../../common/auth/roles.decorator';
 import { RequestPayslipAccessDto } from './dto/request-payslip-access.dto';
 import { FacultyPayslipService } from './faculty-payslip.service';
 
-@Roles('FACULTY')
+// Broadened to PRINCIPAL (2026-09) -- same generic staff self-service
+// capability as faculty-hr-requests.controller.ts / faculty-appraisal.
+// controller.ts (identical FacultyScopeRepository.getStaffId() lookup, not
+// Faculty-specific).
+@Roles('FACULTY', 'PRINCIPAL')
 @Controller('faculty/payslip')
 export class FacultyPayslipController {
   constructor(private readonly service: FacultyPayslipService) {}
@@ -32,7 +36,9 @@ export class FacultyPayslipController {
     @Body() dto: RequestPayslipAccessDto,
     @CurrentActor() actor: AuthenticatedUser,
   ) {
-    return { data: await this.service.requestAccess(actor.personId, dto.note) };
+    return {
+      data: await this.service.requestAccess(actor.personId, dto.note, actor.roles[0]),
+    };
   }
 
   @Get()
