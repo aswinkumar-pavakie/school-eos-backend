@@ -63,6 +63,7 @@ import { StudentEventsModule } from './modules/student-events/student-events.mod
 import { TimetableModule } from './modules/timetable/timetable.module';
 import { TransportModule } from './modules/transport/transport.module';
 import { TransportOpsModule } from './modules/transport-ops/transport-ops.module';
+import { DriverAppModule } from './modules/driver-app/driver-app.module';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { TransportOpsModule } from './modules/transport-ops/transport-ops.module
     AcademicModule,
     PeopleModule,
     TransportModule,
+    DriverAppModule,
     TransportOpsModule,
     HostelModule,
     HostelWardenModule,
