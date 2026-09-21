@@ -80,12 +80,18 @@ import { TransportApprovalHandlers } from './transport-approval-handlers.service
   // driver/current-assignment through the real existing services instead of a
   // second copy of these queries -- same cross-module reuse pattern used
   // throughout this codebase.
+  // DriverRepository/VehicleRouteAssignmentRepository: driver-app module needs
+  // findByPersonId (resolve the authenticated DRIVER caller's own driver row --
+  // never trust a client-supplied driver id) and the new driverId filter on
+  // vehicle_route_assignment, neither of which any existing service exposes.
   exports: [
     StudentTransportAllocationsService,
     VehiclesService,
     RoutesService,
     DriversService,
     VehicleRouteAssignmentsService,
+    DriverRepository,
+    VehicleRouteAssignmentRepository,
   ],
 })
 export class TransportModule {}
