@@ -1,13 +1,12 @@
-// Faculty schedules/manages their own online classes. Phase 7 added Google Calendar +
-// Meet creation immediately after a DRAFT row is created (or replayed via the same
-// Idempotency-Key) — see ensureMeetingCreated(). This phase adds: reschedule/cancel
-// syncing to the already-existing Google Calendar event (never creating a new one),
-// and the SCHEDULED -> LIVE -> COMPLETED state transitions the recording API depends
-// on. Every Google call still happens AFTER any DB transaction commits — never inside
-// one — and a Google failure never blocks or misrepresents the EOS-side operation,
-// which already succeeded by that point; it's recorded via
-// meeting_creation_status/meeting_creation_error instead, exactly like Phase 7's
-// creation flow already does.
+// Faculty schedules/manages their own online classes. A scheduled class no longer
+// waits on Google Calendar/Meet creation -- it goes straight to SCHEDULED at creation
+// (see OnlineClassRepository.create), and the actual call is an in-app LiveKit room,
+// lazily created on the first call-token request (faculty Start/Resume, or a
+// parent/student Join) via requestFacultyCallToken/endClass below. The Google
+// Calendar/Meet integration (GoogleCalendarService, GoogleAccountConnectionRepository)
+// is kept in the codebase and still wired into reschedule()/cancel()'s sync-to-Google
+// branches for any historical row that still has a googleCalendarEventId, but nothing
+// in this module calls Google for a NEW online class anymore.
 
 import {
   BadRequestException,
@@ -17,11 +16,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
+import { AuditService } from '../../common/audit/audit.service';
 import {
   GOOGLE_OAUTH_ERRORS,
   ONLINE_CLASS_ERRORS,
 } from '../../common/errors/error-codes';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
+import { JoinCredentials, LiveKitService } from '../livekit/livekit.service';
 import { AddRecordingDto } from './dto/add-recording.dto';
 import { CancelOnlineClassDto } from './dto/cancel-online-class.dto';
 import { RescheduleOnlineClassDto } from './dto/reschedule-online-class.dto';
@@ -70,6 +71,8 @@ export class OnlineClassesService {
     private readonly googleConnectionRepo: GoogleAccountConnectionRepository,
     private readonly googleCalendarService: GoogleCalendarService,
     private readonly schoolRepo: SchoolRepository,
+    private readonly liveKit: LiveKitService,
+    private readonly audit: AuditService,
   ) {}
 
   async schedule(
@@ -80,14 +83,13 @@ export class OnlineClassesService {
     const staff = await this.requireActiveFaculty(actor.personId);
 
     // Idempotent replay: the same faculty retrying with the same key gets the original
-    // record back, never a duplicate — and if Google creation failed or is still
-    // pending from the first attempt, this replay is also how it gets retried.
+    // record back, never a duplicate.
     const existing = await this.onlineClassRepo.findByFacultyAndIdempotencyKey(
       staff.id,
       idempotencyKey,
     );
     if (existing) {
-      return this.ensureMeetingCreated(existing.id, staff.id);
+      return this.getOwnedDetailOrThrow(existing.id, staff.id);
     }
 
     // Faculty authorization must use the actual staff.id resolved above — never the
@@ -120,8 +122,8 @@ export class OnlineClassesService {
 
     let id: string;
     try {
-      // status='DRAFT' and meeting_creation_status='PENDING' are the table's own
-      // defaults — no Google call happens here.
+      // Goes straight to status='SCHEDULED' (see OnlineClassRepository.create) — no
+      // external call to wait on before it's ready to be started.
       id = await this.onlineClassRepo.create({
         subjectOfferingId: offering.id,
         facultyStaffId: staff.id,
@@ -140,13 +142,13 @@ export class OnlineClassesService {
           idempotencyKey,
         );
         if (raced) {
-          return this.ensureMeetingCreated(raced.id, staff.id);
+          return this.getOwnedDetailOrThrow(raced.id, staff.id);
         }
       }
       throw err;
     }
 
-    return this.ensureMeetingCreated(id, staff.id);
+    return this.getOwnedDetailOrThrow(id, staff.id);
   }
 
   async list(
@@ -420,6 +422,133 @@ export class OnlineClassesService {
     }
 
     return this.getOwnedDetailOrThrow(id, staff.id);
+  }
+
+  /** Faculty "Start"/"Resume" — mints a moderator LiveKit token, transitioning
+   * SCHEDULED -> LIVE on first call (Start) or leaving an already-LIVE class alone
+   * (Resume just re-joins the same room). Lazily persists the room name on first
+   * call, exactly like FacultyParentMeetingsService's ensureRoomName. */
+  async requestFacultyCallToken(
+    actor: AuthenticatedUser,
+    id: string,
+  ): Promise<JoinCredentials> {
+    const staff = await this.requireActiveFaculty(actor.personId);
+    let current = await this.getOwnedDetailOrThrow(id, staff.id);
+
+    if (current.status === 'SCHEDULED' || current.status === 'DRAFT') {
+      // DRAFT is included here too -- see markLive's own comment: a historical
+      // pre-LiveKit-migration row can be stuck in DRAFT forever otherwise.
+      const applied = await this.onlineClassRepo.markLive(id, {
+        updatedBy: actor.personId,
+      });
+      if (applied) {
+        current = await this.getOwnedDetailOrThrow(id, staff.id);
+      }
+    } else if (current.status !== 'LIVE') {
+      throw new ConflictException(ONLINE_CLASS_ERRORS.NOT_SCHEDULED);
+    }
+
+    const roomName = await this.ensureRoomName(id, current.livekitRoomName);
+    const credentials = await this.liveKit.mintJoinToken({
+      roomName,
+      identity: `faculty:${staff.id}`,
+      name: staff.displayName,
+      canPublish: true,
+      canSubscribe: true,
+      canUpdateOwnMetadata: true,
+    });
+
+    await this.audit.record({
+      actorPersonId: actor.personId,
+      actorRoleCode: 'FACULTY',
+      action: 'ONLINE_CLASS_CALL_TOKEN_ISSUED',
+      objectType: 'online_class',
+      objectId: id,
+      outcome: 'SUCCESS',
+    });
+
+    return credentials;
+  }
+
+  /** Faculty "End" — ends the call for everyone (LiveKit room deleted, every
+   * participant disconnected) and transitions LIVE -> COMPLETED. The LiveKit call
+   * happens after the DB write, and never blocks or reverses it -- same
+   * non-throwing-on-external-failure philosophy as the Google sync methods above; a
+   * room that fails to delete cleanly (or was never created, e.g. nobody joined)
+   * still leaves the class correctly COMPLETED. */
+  async endClass(
+    actor: AuthenticatedUser,
+    id: string,
+  ): Promise<OnlineClassDetail> {
+    const staff = await this.requireActiveFaculty(actor.personId);
+    const current = await this.getOwnedDetailOrThrow(id, staff.id);
+
+    if (current.status !== 'LIVE') {
+      throw new ConflictException(ONLINE_CLASS_ERRORS.NOT_LIVE);
+    }
+
+    const applied = await this.onlineClassRepo.markCompleted(id, {
+      updatedBy: actor.personId,
+    });
+    if (!applied) {
+      throw new ConflictException(ONLINE_CLASS_ERRORS.NOT_LIVE);
+    }
+
+    if (current.livekitRoomName) {
+      await this.onlineClassRepo.recordCallEnd(id);
+      try {
+        await this.liveKit.endRoom(current.livekitRoomName);
+      } catch {
+        // Never block "class completed" on a LiveKit-side cleanup problem — the room
+        // times out and closes on its own even if this call fails.
+      }
+    }
+
+    await this.audit.record({
+      actorPersonId: actor.personId,
+      actorRoleCode: 'FACULTY',
+      action: 'ONLINE_CLASS_ENDED',
+      objectType: 'online_class',
+      objectId: id,
+      outcome: 'SUCCESS',
+    });
+
+    return this.getOwnedDetailOrThrow(id, staff.id);
+  }
+
+  /** Faculty roster moderation — remote-mutes a participant's mic. identity is
+   * whatever the client reports from LiveKit's own participant list (e.g.
+   * "parent:<personId>:student:<studentId>" or "faculty:<staffId>") -- this method
+   * doesn't need to parse it, only confirm the caller owns the class the room
+   * belongs to before touching LiveKit. */
+  async muteParticipant(
+    actor: AuthenticatedUser,
+    id: string,
+    identity: string,
+    muted: boolean,
+  ): Promise<void> {
+    const staff = await this.requireActiveFaculty(actor.personId);
+    const current = await this.getOwnedDetailOrThrow(id, staff.id);
+
+    if (current.status !== 'LIVE' || !current.livekitRoomName) {
+      throw new ConflictException(ONLINE_CLASS_ERRORS.NOT_LIVE);
+    }
+
+    await this.liveKit.muteParticipantAudio(
+      current.livekitRoomName,
+      identity,
+      muted,
+    );
+  }
+
+  private async ensureRoomName(
+    id: string,
+    existingRoomName: string | null,
+  ): Promise<string> {
+    if (existingRoomName) return existingRoomName;
+    const roomName = this.liveKit.roomNameForOnlineClass(id);
+    await this.onlineClassRepo.setLivekitRoom(id, roomName);
+    return roomName;
   }
 
   async addRecording(

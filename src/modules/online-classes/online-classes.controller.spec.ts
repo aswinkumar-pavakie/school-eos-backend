@@ -22,8 +22,13 @@ describe('OnlineClassesController — route roles', () => {
     expect(rolesFor('detail')).toEqual(['FACULTY', 'PARENT']);
   });
 
-  it('join is PARENT-only — FACULTY has no use for it and must not reach it', () => {
-    expect(rolesFor('join')).toEqual(['PARENT']);
+  it('requestCallToken accepts both FACULTY (Start/Resume) and PARENT (Join) — Nest can only register one handler per path+method, so this single handler must branch on role internally, same as list/detail', () => {
+    expect(rolesFor('requestCallToken')).toEqual(['FACULTY', 'PARENT']);
+  });
+
+  it('endCall and muteParticipant remain FACULTY-only', () => {
+    expect(rolesFor('endCall')).toEqual(['FACULTY']);
+    expect(rolesFor('muteParticipant')).toEqual(['FACULTY']);
   });
 
   it('myTeachingOfferings is FACULTY-only — PARENT must never reach it', () => {

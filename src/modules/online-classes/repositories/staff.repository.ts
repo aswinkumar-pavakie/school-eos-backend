@@ -13,6 +13,7 @@ export interface StaffIdentityView {
   id: string;
   personId: string;
   status: string;
+  displayName: string;
 }
 
 @Injectable()
@@ -27,14 +28,21 @@ export class StaffRepository {
       id: string;
       person_id: string;
       status: string;
+      display_name: string;
     }>(
-      `SELECT id, person_id, status
-       FROM staff
-       WHERE person_id = $1`,
+      `SELECT st.id, st.person_id, st.status, p.display_name
+       FROM staff st
+       JOIN person p ON p.id = st.person_id
+       WHERE st.person_id = $1`,
       [personId],
     );
     if (rows.length === 0) return null;
     const row = rows[0];
-    return { id: row.id, personId: row.person_id, status: row.status };
+    return {
+      id: row.id,
+      personId: row.person_id,
+      status: row.status,
+      displayName: row.display_name,
+    };
   }
 }

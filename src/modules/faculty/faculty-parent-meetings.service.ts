@@ -13,13 +13,27 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
+import { OutboxService } from '../../common/outbox/outbox.service';
 import { PostgresService } from '../../infrastructure/postgres/postgres.service';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
+import {
+  JoinCredentials,
+  LiveKitService,
+} from '../livekit/livekit.service';
 import { CreateMeetingBookingDto } from './dto/create-meeting-booking.dto';
 import { CreateMeetingSlotDto } from './dto/create-meeting-slot.dto';
 import { UpdateMeetingSlotDto } from './dto/update-meeting-slot.dto';
 import { FacultyScopeRepository } from './repositories/faculty-scope.repository';
 import { StaffMeetingRepository } from './repositories/staff-meeting.repository';
+
+// Join window: open 5 minutes before the slot's own start time, closes 10
+// minutes after its own end time -- a real grace window, not an arbitrary
+// guess: early enough that neither party is stuck waiting at the exact
+// second, generous enough at the end that a call running slightly over
+// doesn't get cut off by this check (LiveKit itself, not this window, is
+// what actually ends the call).
+const JOIN_WINDOW_BEFORE_MINUTES = 5;
+const JOIN_WINDOW_AFTER_MINUTES = 10;
 
 @Injectable()
 export class FacultyParentMeetingsService {
@@ -29,6 +43,8 @@ export class FacultyParentMeetingsService {
     private readonly postgres: PostgresService,
     private readonly unitOfWork: UnitOfWork,
     private readonly audit: AuditService,
+    private readonly liveKit: LiveKitService,
+    private readonly outbox: OutboxService,
   ) {}
 
   async listSlots(personId: string) {
@@ -222,5 +238,171 @@ export class FacultyParentMeetingsService {
       );
       return this.meetingRepo.findBookingById(id, client);
     });
+  }
+
+  private assertWithinJoinWindow(slot: {
+    meetingDate: string;
+    fromTime: string;
+    toTime: string;
+  }): void {
+    const start = new Date(`${slot.meetingDate}T${slot.fromTime}`);
+    const end = new Date(`${slot.meetingDate}T${slot.toTime}`);
+    const windowOpensAt = new Date(
+      start.getTime() - JOIN_WINDOW_BEFORE_MINUTES * 60_000,
+    );
+    const windowClosesAt = new Date(
+      end.getTime() + JOIN_WINDOW_AFTER_MINUTES * 60_000,
+    );
+    const now = new Date();
+    if (now < windowOpensAt) {
+      throw new ForbiddenException(
+        `This call is not open yet -- it opens ${JOIN_WINDOW_BEFORE_MINUTES} minutes before the slot's start time.`,
+      );
+    }
+    if (now > windowClosesAt) {
+      throw new ForbiddenException('This meeting slot has already ended.');
+    }
+  }
+
+  /** Loads the booking and checks it's actually in a callable state+window.
+   * Deliberately does NOT touch livekit_room_name -- that write only ever
+   * happens after the CALLER-SPECIFIC ownership check has already passed,
+   * so an unauthorized caller who merely guesses a bookingId can never
+   * trigger it (see requestFacultyCallToken/requestParentCallToken, which
+   * check ownership BEFORE calling ensureRoomName). */
+  private async loadCallableBooking(bookingId: string) {
+    const booking = await this.meetingRepo.findBookingById(bookingId);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.state !== 'APPROVED')
+      throw new ForbiddenException('This meeting has not been approved yet.');
+
+    const slot = await this.meetingRepo.findSlotById(booking.slotId);
+    if (!slot) throw new NotFoundException('Meeting slot not found');
+    this.assertWithinJoinWindow(slot);
+
+    return booking;
+  }
+
+  private async ensureRoomName(booking: {
+    id: string;
+    livekitRoomName: string | null;
+  }): Promise<string> {
+    if (booking.livekitRoomName) return booking.livekitRoomName;
+    const roomName = this.liveKit.roomNameForBooking(booking.id);
+    await this.meetingRepo.setLivekitRoom(booking.id, roomName);
+    return roomName;
+  }
+
+  /** FACULTY side -- caller must own the slot this booking belongs to.
+   * Ownership is checked BEFORE any state is written (see loadCallableBooking's
+   * own comment on why ensureRoomName only runs after this). */
+  async requestFacultyCallToken(
+    personId: string,
+    bookingId: string,
+  ): Promise<JoinCredentials> {
+    const booking = await this.loadCallableBooking(bookingId);
+    await this.assertOwnsSlot(personId, booking.slotId);
+    const roomName = await this.ensureRoomName(booking);
+
+    const credentials = await this.liveKit.mintJoinToken({
+      roomName,
+      identity: `faculty:${personId}`,
+      canPublish: true,
+      canSubscribe: true,
+    });
+    await this.audit.record({
+      actorPersonId: personId,
+      actorRoleCode: 'FACULTY',
+      action: 'MEETING_CALL_TOKEN_ISSUED',
+      objectType: 'staff_meeting_booking',
+      objectId: bookingId,
+      outcome: 'SUCCESS',
+    });
+    return credentials;
+  }
+
+  /** PARENT side -- caller must be the guardian who actually requested this
+   * exact booking (not just any guardian of the student -- this mirrors how
+   * only the requester's own booking shows up as "theirs" elsewhere). Same
+   * ownership-before-write ordering as the faculty side above. */
+  async requestParentCallToken(
+    personId: string,
+    bookingId: string,
+  ): Promise<JoinCredentials> {
+    const booking = await this.loadCallableBooking(bookingId);
+    if (booking.requestedBy !== personId)
+      throw new ForbiddenException('This is not your meeting booking.');
+    const roomName = await this.ensureRoomName(booking);
+
+    const credentials = await this.liveKit.mintJoinToken({
+      roomName,
+      identity: `parent:${personId}`,
+      canPublish: true,
+      canSubscribe: true,
+    });
+    await this.audit.record({
+      actorPersonId: personId,
+      actorRoleCode: 'PARENT',
+      action: 'MEETING_CALL_TOKEN_ISSUED',
+      objectType: 'staff_meeting_booking',
+      objectId: bookingId,
+      outcome: 'SUCCESS',
+    });
+    return credentials;
+  }
+
+  /** Webhook-driven only (see parent-meeting-call-webhook.controller.ts) --
+   * this is the AUTHORITATIVE "the call actually started" signal, unlike the
+   * token-mint calls above which only mean "a screen opened". Idempotent:
+   * a redelivered webhook or a second participant joining an already-started
+   * call is a silent no-op (recordCallStart's own WHERE call_started_at IS
+   * NULL guards the write; this early return avoids a wasted duplicate
+   * notification on top of that). `joinedIdentity` is whatever this module's
+   * own token minting set it to (`faculty:{personId}` / `parent:{personId}`)
+   * -- self-describing so no extra lookup is needed to know who joined. */
+  async handleCallStarted(
+    roomName: string,
+    joinedIdentity: string,
+  ): Promise<void> {
+    const booking = await this.meetingRepo.findBookingByRoomName(roomName);
+    if (!booking || booking.callStartedAt) return;
+
+    const slot = await this.meetingRepo.findSlotById(booking.slotId);
+    if (!slot) return;
+    const { rows } = await this.postgres.query(
+      `SELECT person_id FROM staff WHERE id = $1`,
+      [slot.staffId],
+    );
+    const facultyPersonId: string | undefined = rows[0]?.person_id;
+    if (!facultyPersonId) return;
+
+    const facultyJoined = joinedIdentity.startsWith('faculty:');
+    const notifyPersonId = facultyJoined ? booking.requestedBy : facultyPersonId;
+
+    await this.unitOfWork.run(async (client) => {
+      await this.meetingRepo.recordCallStart(booking.id, client);
+      await this.outbox.enqueue(
+        {
+          personId: notifyPersonId,
+          aboutStudentId: booking.studentId,
+          notificationType: 'MEETING_CALL_STARTED',
+          title: 'Video call started',
+          body: facultyJoined
+            ? "Your child's teacher has started the meeting call."
+            : 'The parent has joined the meeting call.',
+          relatedObjectType: 'staff_meeting_booking',
+          relatedObjectId: booking.id,
+          deepLink: `app://meeting-call/${booking.id}`,
+        },
+        client,
+      );
+    });
+  }
+
+  /** Webhook-driven only, same reasoning as handleCallStarted above. */
+  async handleCallEnded(roomName: string): Promise<void> {
+    const booking = await this.meetingRepo.findBookingByRoomName(roomName);
+    if (!booking) return;
+    await this.meetingRepo.recordCallEnd(booking.id);
   }
 }

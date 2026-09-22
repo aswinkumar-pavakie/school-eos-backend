@@ -45,6 +45,9 @@ export interface OnlineClassDetail {
   recordingAddedAt: Date | null;
   cancelledAt: Date | null;
   cancellationReason: string | null;
+  livekitRoomName: string | null;
+  callStartedAt: Date | null;
+  callEndedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   version: number;
@@ -73,6 +76,9 @@ interface DetailRow {
   recording_added_at: Date | null;
   cancelled_at: Date | null;
   cancellation_reason: string | null;
+  livekit_room_name: string | null;
+  call_started_at: Date | null;
+  call_ended_at: Date | null;
   created_at: Date;
   updated_at: Date;
   version: number;
@@ -86,6 +92,7 @@ const DETAIL_SELECT = `
          oc.google_calendar_event_id, oc.google_meet_id, oc.meeting_url,
          oc.recording_url, oc.recording_added_at,
          oc.cancelled_at, oc.cancellation_reason,
+         oc.livekit_room_name, oc.call_started_at, oc.call_ended_at,
          oc.created_at, oc.updated_at, oc.version
   FROM online_class oc
   JOIN subject_offering so ON so.id = oc.subject_offering_id
@@ -118,6 +125,9 @@ function toDetail(row: DetailRow): OnlineClassDetail {
     recordingAddedAt: row.recording_added_at,
     cancelledAt: row.cancelled_at,
     cancellationReason: row.cancellation_reason,
+    livekitRoomName: row.livekit_room_name,
+    callStartedAt: row.call_started_at,
+    callEndedAt: row.call_ended_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     version: row.version,
@@ -142,6 +152,7 @@ export interface ParentOnlineClassView {
   meetingUrl: string | null;
   recordingUrl: string | null;
   cancellationReason: string | null;
+  livekitRoomName: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -160,8 +171,19 @@ interface ParentDetailRow {
   meeting_url: string | null;
   recording_url: string | null;
   cancellation_reason: string | null;
+  livekit_room_name: string | null;
   created_at: Date;
   updated_at: Date;
+}
+
+/** Resolves which of a parent's wards this online class is actually for — needed
+ * because the in-app call identifies a joining participant by the STUDENT's name
+ * (matching the roster the faculty sees), not the parent's own name. A parent with
+ * more than one child in the same section (e.g. twins) can disambiguate via
+ * studentId; omitted, the first match wins. */
+export interface WardForOnlineClass {
+  studentId: string;
+  studentName: string;
 }
 
 // The authorization relationship IS the query: online_class is only reachable through
@@ -176,6 +198,7 @@ const PARENT_SELECT = `
          subj.name AS subject_name, g.name AS grade_name, sec.name AS section_name,
          oc.topic, oc.description, oc.scheduled_date, oc.start_time, oc.end_time,
          oc.status, oc.meeting_url, oc.recording_url, oc.cancellation_reason,
+         oc.livekit_room_name,
          oc.created_at, oc.updated_at
   FROM online_class oc
   JOIN subject_offering so ON so.id = oc.subject_offering_id
@@ -206,6 +229,7 @@ function toParentView(row: ParentDetailRow): ParentOnlineClassView {
     meetingUrl: row.meeting_url,
     recordingUrl: row.recording_url,
     cancellationReason: row.cancellation_reason,
+    livekitRoomName: row.livekit_room_name,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -232,10 +256,15 @@ export class OnlineClassRepository {
     executor: Queryable = this.postgres,
   ): Promise<string> {
     const { rows } = await executor.query<{ id: string }>(
+      // status is set to SCHEDULED directly at creation, not the table's own DRAFT
+      // default -- there is no external Google Meet call to wait on anymore before a
+      // scheduled class is ready to be started (see LiveKit's lazy room creation in
+      // the service layer instead).
       `INSERT INTO online_class
          (subject_offering_id, faculty_staff_id, topic, description,
-          scheduled_date, start_time, end_time, idempotency_key, created_by, updated_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+          scheduled_date, start_time, end_time, idempotency_key, created_by, updated_by,
+          status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9, 'SCHEDULED')
        RETURNING id`,
       [
         params.subjectOfferingId,
@@ -457,6 +486,12 @@ export class OnlineClassRepository {
    * the only way this transition can ever apply. Returns false if the row wasn't
    * SCHEDULED, so the caller can report the correct current state rather than a
    * generic error. */
+  /** Also accepts DRAFT, not just SCHEDULED -- a historical row from before the
+   * LiveKit migration (created under the old Google-Meet-pending flow, which used to
+   * flip DRAFT -> SCHEDULED only once a Meet link was confirmed) would otherwise be
+   * permanently stuck: nothing calls Google anymore, so nothing else ever moves it out
+   * of DRAFT. DRAFT has no other special meaning post-migration -- a class is
+   * startable as soon as it exists. */
   async markLive(
     id: string,
     params: { updatedBy: string },
@@ -465,7 +500,7 @@ export class OnlineClassRepository {
     const { rowCount } = await executor.query(
       `UPDATE online_class
        SET status = 'LIVE', updated_by = $2, updated_at = now(), version = version + 1
-       WHERE id = $1 AND status = 'SCHEDULED'`,
+       WHERE id = $1 AND status IN ('SCHEDULED', 'DRAFT')`,
       [id, params.updatedBy],
     );
     return (rowCount ?? 0) > 0;
@@ -484,6 +519,86 @@ export class OnlineClassRepository {
       [id, params.updatedBy],
     );
     return (rowCount ?? 0) > 0;
+  }
+
+  /** Lazily persists the deterministic LiveKit room name on first call-token request
+   * (faculty starting, or a parent/student joining) — never at schedule time, so a
+   * class nobody ever starts never creates a room reference. A no-op if already set
+   * (idempotent via the WHERE clause, same pattern as recordCallStart below). */
+  async setLivekitRoom(
+    id: string,
+    roomName: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE online_class
+       SET livekit_room_name = $2, updated_at = now()
+       WHERE id = $1 AND livekit_room_name IS NULL`,
+      [id, roomName],
+    );
+  }
+
+  async recordCallStart(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE online_class
+       SET call_started_at = now(), updated_at = now()
+       WHERE id = $1 AND call_started_at IS NULL`,
+      [id],
+    );
+  }
+
+  async recordCallEnd(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE online_class
+       SET call_ended_at = now(), updated_at = now()
+       WHERE id = $1 AND call_ended_at IS NULL`,
+      [id],
+    );
+  }
+
+  /** Resolves the specific ward (of this parent) this online class is for, joining
+   * through the same section+academic_year+guardian_link chain as PARENT_SELECT —
+   * never a separate/looser lookup. Returns null if this parent has no active ward in
+   * this class's section (mirrors findParentDetailById's "not found" contract; the
+   * caller is expected to have already confirmed authorization via detail()). */
+  async findWardForOnlineClass(
+    id: string,
+    parentPersonId: string,
+    studentId: string | null,
+    executor: Queryable = this.postgres,
+  ): Promise<WardForOnlineClass | null> {
+    const { rows } = await executor.query<{
+      student_id: string;
+      student_name: string;
+    }>(
+      `SELECT se.student_id, p.display_name AS student_name
+       FROM online_class oc
+       JOIN subject_offering so ON so.id = oc.subject_offering_id
+       JOIN student_enrolment se
+         ON se.section_id = so.section_id
+        AND se.academic_year_id = so.academic_year_id
+        AND se.status = 'ACTIVE'
+       JOIN guardian_link gl
+         ON gl.student_id = se.student_id
+        AND gl.status = 'ACTIVE'
+       JOIN student s ON s.id = se.student_id
+       JOIN person p ON p.id = s.person_id
+       WHERE oc.id = $1
+         AND gl.person_id = $2
+         AND ($3::uuid IS NULL OR se.student_id = $3)
+       ORDER BY se.student_id
+       LIMIT 1`,
+      [id, parentPersonId, studentId],
+    );
+    return rows.length === 0
+      ? null
+      : { studentId: rows[0].student_id, studentName: rows[0].student_name };
   }
 
   /** Parent-scoped list — deliberately NOT a filtered call to
