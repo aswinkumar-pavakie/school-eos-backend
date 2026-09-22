@@ -38,10 +38,14 @@ export interface MeetingBookingRow {
   decidedBy: string | null;
   decidedAt: Date | null;
   createdAt: Date;
+  livekitRoomName: string | null;
+  callStartedAt: Date | null;
+  callEndedAt: Date | null;
 }
 
 const BOOKING_COLUMNS = `
   b.id, b.slot_id, b.student_id, b.requested_by, b.notes, b.state, b.decided_by, b.decided_at, b.created_at,
+  b.livekit_room_name, b.call_started_at, b.call_ended_at,
   sp.first_name, sp.last_name, s.admission_no, se.roll_no, g.name AS grade_name, sec.name AS section_name,
   pp.first_name AS parent_first_name, pp.last_name AS parent_last_name, pp.mobile AS parent_phone`;
 
@@ -75,6 +79,9 @@ function mapBooking(row: any): MeetingBookingRow {
     decidedBy: row.decided_by,
     decidedAt: row.decided_at,
     createdAt: row.created_at,
+    livekitRoomName: row.livekit_room_name,
+    callStartedAt: row.call_started_at,
+    callEndedAt: row.call_ended_at,
   };
 }
 
@@ -274,5 +281,56 @@ export class StaffMeetingRepository {
       [input.slotId, input.studentId, input.requestedBy, input.notes],
     );
     return rows[0].id;
+  }
+
+  /** Lazily assigns this booking's LiveKit room name -- only ever set once
+   * (the call-token endpoints only call this when livekit_room_name is still
+   * null), so a plain UPDATE is enough; no race-guarding needed beyond that
+   * check happening in the same request that computed the deterministic
+   * name (LiveKitService.roomNameForBooking is pure/deterministic, so two
+   * concurrent callers would compute and set the SAME value anyway). */
+  async setLivekitRoom(
+    id: string,
+    roomName: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE staff_meeting_booking SET livekit_room_name = $2, updated_at = now() WHERE id = $1`,
+      [id, roomName],
+    );
+  }
+
+  /** Webhook-driven only (see parent-meeting-call-webhook.controller.ts) --
+   * never called from the token-mint endpoints, which only mean "a screen
+   * opened", not "the call actually started". */
+  async findBookingByRoomName(
+    roomName: string,
+    executor: Queryable = this.postgres,
+  ): Promise<MeetingBookingRow | null> {
+    const { rows } = await executor.query(
+      `SELECT ${BOOKING_COLUMNS} ${BOOKING_FROM} WHERE b.livekit_room_name = $1`,
+      [roomName],
+    );
+    return rows.length ? mapBooking(rows[0]) : null;
+  }
+
+  async recordCallStart(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE staff_meeting_booking SET call_started_at = now(), updated_at = now() WHERE id = $1 AND call_started_at IS NULL`,
+      [id],
+    );
+  }
+
+  async recordCallEnd(
+    id: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE staff_meeting_booking SET call_ended_at = now(), updated_at = now() WHERE id = $1`,
+      [id],
+    );
   }
 }

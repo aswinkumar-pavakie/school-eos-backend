@@ -23,7 +23,7 @@ const DTO: ScheduleOnlineClassDto = {
   subjectOfferingId: 'offering-1',
   topic: 'Introduction to Probability',
   description: 'Chapter 5',
-  scheduledDate: '2026-09-20',
+  scheduledDate: '2027-01-20',
   startTime: '10:00',
   endTime: '11:00',
 };
@@ -40,7 +40,7 @@ function makeRow(
     sectionName: 'A',
     topic: 'Introduction to Probability',
     description: 'Chapter 5',
-    scheduledDate: '2026-09-20',
+    scheduledDate: '2027-01-20',
     startTime: '10:00:00',
     endTime: '11:00:00',
     status: 'DRAFT',
@@ -54,6 +54,9 @@ function makeRow(
     recordingAddedAt: null,
     cancelledAt: null,
     cancellationReason: null,
+    livekitRoomName: null,
+    callStartedAt: null,
+    callEndedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     version: 1,
@@ -112,7 +115,12 @@ function buildService(initialRow: OnlineClassDetail, opts: BuildOptions = {}) {
           ? { id: opts.existingIdempotencyMatch }
           : null,
       ),
-    create: jest.fn().mockResolvedValue(current.id),
+    // Mirrors the real repository: a freshly created row goes straight to SCHEDULED,
+    // never DRAFT — there's no external call left to wait on before it's startable.
+    create: jest.fn().mockImplementation(() => {
+      current = { ...current, status: 'SCHEDULED' };
+      return Promise.resolve(current.id);
+    }),
     findDetailById: jest
       .fn()
       .mockImplementation(() => Promise.resolve({ ...current })),
@@ -185,7 +193,7 @@ function buildService(initialRow: OnlineClassDetail, opts: BuildOptions = {}) {
         return Promise.resolve();
       }),
     markLive: jest.fn().mockImplementation(() => {
-      if (current.status !== 'SCHEDULED') return Promise.resolve(false);
+      if (current.status !== 'SCHEDULED' && current.status !== 'DRAFT') return Promise.resolve(false);
       current = { ...current, status: 'LIVE', version: current.version + 1 };
       return Promise.resolve(true);
     }),
@@ -197,6 +205,15 @@ function buildService(initialRow: OnlineClassDetail, opts: BuildOptions = {}) {
         version: current.version + 1,
       };
       return Promise.resolve(true);
+    }),
+    setLivekitRoom: jest.fn().mockImplementation((_id: string, roomName: string) => {
+      current = { ...current, livekitRoomName: roomName };
+      return Promise.resolve();
+    }),
+    recordCallStart: jest.fn().mockResolvedValue(undefined),
+    recordCallEnd: jest.fn().mockImplementation(() => {
+      current = { ...current, callEndedAt: new Date() };
+      return Promise.resolve();
     }),
   } as any;
 
@@ -276,6 +293,21 @@ function buildService(initialRow: OnlineClassDetail, opts: BuildOptions = {}) {
     getTimezone: jest.fn().mockResolvedValue('Asia/Kolkata'),
   } as any;
 
+  const liveKit = {
+    roomNameForOnlineClass: jest.fn((id: string) => `online-class-${id}`),
+    mintJoinToken: jest.fn().mockResolvedValue({
+      url: 'ws://localhost:7880',
+      token: 'fake-jwt',
+      roomName: `online-class-${initialRow.id}`,
+    }),
+    muteParticipantAudio: jest.fn().mockResolvedValue(undefined),
+    endRoom: jest.fn().mockResolvedValue(undefined),
+  } as any;
+
+  const audit = {
+    record: jest.fn().mockResolvedValue(undefined),
+  } as any;
+
   const service = new OnlineClassesService(
     onlineClassRepo,
     rescheduleRepo,
@@ -285,6 +317,8 @@ function buildService(initialRow: OnlineClassDetail, opts: BuildOptions = {}) {
     googleConnectionRepo,
     googleCalendarService,
     schoolRepo,
+    liveKit,
+    audit,
   );
 
   return {
@@ -294,224 +328,53 @@ function buildService(initialRow: OnlineClassDetail, opts: BuildOptions = {}) {
     googleConnectionRepo,
     googleCalendarService,
     staffRepo,
+    liveKit,
+    audit,
     getCurrent: () => current,
   };
 }
 
 const RESCHEDULE_DTO: RescheduleOnlineClassDto = {
-  scheduledDate: '2026-09-25',
+  scheduledDate: '2027-01-25',
   startTime: '14:00',
   endTime: '15:00',
   reason: 'Clash with staff meeting',
 };
 
-describe('OnlineClassesService — Phase 7 Google Calendar/Meet creation orchestration', () => {
-  it('SUCCESS: creates the event, persists event/meet ids and URL, flips to SCHEDULED', async () => {
+describe('OnlineClassesService — schedule (in-app LiveKit call, no Google)', () => {
+  it('goes straight to SCHEDULED at creation — no Google call, no DRAFT/PENDING wait', async () => {
     const row = makeRow();
-    const {
-      service,
-      onlineClassRepo,
-      googleCalendarService,
-      googleConnectionRepo,
-    } = buildService(row);
+    const { service, onlineClassRepo, googleCalendarService } =
+      buildService(row);
 
     const result = await service.schedule(ACTOR, DTO, 'key-success');
 
-    expect(googleCalendarService.createOrCheckMeeting).toHaveBeenCalledTimes(1);
-    expect(googleConnectionRepo.findByStaffId).toHaveBeenCalledWith(
-      row.facultyStaffId,
-    );
-    expect(onlineClassRepo.markMeetingSucceeded).toHaveBeenCalledWith(row.id, {
-      googleCalendarEventId: 'evt-1',
-      googleMeetId: 'abc-defg-hij',
-      meetingUrl: 'https://meet.google.com/abc-defg-hij',
-    });
+    expect(googleCalendarService.createOrCheckMeeting).not.toHaveBeenCalled();
     expect(result.status).toBe('SCHEDULED');
-    expect(result.meetingCreationStatus).toBe('SUCCEEDED');
-    expect(result.meetingUrl).toBe('https://meet.google.com/abc-defg-hij');
-    expect(result.meetingCreationError).toBeNull();
+    expect(result.livekitRoomName).toBeNull();
   });
 
-  it('GOOGLE FAILURE: stays DRAFT, meeting_creation_status FAILED, never marked SCHEDULED', async () => {
-    const row = makeRow();
-    const { service, onlineClassRepo } = buildService(row, {
-      googleOutcome: {
-        outcome: 'FAILED',
-        message: 'Could not reach Google Calendar',
-      },
-    });
-
-    const result = await service.schedule(ACTOR, DTO, 'key-failure');
-
-    expect(onlineClassRepo.markMeetingSucceeded).not.toHaveBeenCalled();
-    expect(onlineClassRepo.markMeetingFailed).toHaveBeenCalledWith(row.id, {
-      errorMessage: 'Could not reach Google Calendar',
-    });
-    expect(result.status).toBe('DRAFT');
-    expect(result.meetingCreationStatus).toBe('FAILED');
-    expect(result.meetingCreationError).toBe('Could not reach Google Calendar');
-  });
-
-  it('EXPIRED/REVOKED AUTHORIZATION: marks the connection NEEDS_REAUTH and the class FAILED, cleanly', async () => {
-    const row = makeRow();
-    const { service, onlineClassRepo, googleConnectionRepo } = buildService(
-      row,
-      {
-        googleOutcome: { outcome: 'NEEDS_REAUTH' },
-      },
-    );
-
-    const result = await service.schedule(ACTOR, DTO, 'key-reauth');
-
-    expect(googleConnectionRepo.markNeedsReauth).toHaveBeenCalledWith(
-      row.facultyStaffId,
-    );
-    expect(onlineClassRepo.markMeetingFailed).toHaveBeenCalledWith(
-      row.id,
-      expect.objectContaining({
-        errorMessage: expect.stringMatching(/reconnect/i),
-      }),
-    );
-    expect(result.status).toBe('DRAFT');
-    expect(result.meetingCreationStatus).toBe('FAILED');
-  });
-
-  it('NOT CONNECTED: fails without ever calling Google at all', async () => {
-    const row = makeRow();
-    const { service, googleCalendarService, onlineClassRepo } = buildService(
-      row,
-      { connection: null },
-    );
-
-    const result = await service.schedule(ACTOR, DTO, 'key-not-connected');
-
-    expect(googleCalendarService.createOrCheckMeeting).not.toHaveBeenCalled();
-    expect(onlineClassRepo.markMeetingFailed).toHaveBeenCalledWith(
-      row.id,
-      expect.objectContaining({
-        errorMessage: expect.stringMatching(/connect your google account/i),
-      }),
-    );
-    expect(result.status).toBe('DRAFT');
-  });
-
-  it('PENDING (Google async conference): does not assume the Meet URL is ready — stays CREATING/DRAFT, stores the event id', async () => {
-    const row = makeRow();
-    const { service, onlineClassRepo } = buildService(row, {
-      googleOutcome: {
-        outcome: 'PENDING',
-        googleCalendarEventId: 'evt-pending-1',
-      },
-    });
-
-    const result = await service.schedule(ACTOR, DTO, 'key-pending');
-
-    expect(onlineClassRepo.markMeetingStillPending).toHaveBeenCalledWith(
-      row.id,
-      {
-        googleCalendarEventId: 'evt-pending-1',
-      },
-    );
-    expect(onlineClassRepo.markMeetingSucceeded).not.toHaveBeenCalled();
-    expect(result.status).toBe('DRAFT');
-    expect(result.meetingCreationStatus).toBe('CREATING');
-    expect(result.googleCalendarEventId).toBe('evt-pending-1');
-    expect(result.meetingUrl).toBeNull();
-  });
-
-  it('DUPLICATE/RETRY — concurrent in-flight attempt: a row already CREATING is not re-claimed, Google is never called twice', async () => {
-    const row = makeRow({ meetingCreationStatus: 'CREATING' });
-    const { service, googleCalendarService, onlineClassRepo } = buildService(
-      row,
-      {
-        claimSucceeds: false,
-        existingIdempotencyMatch: row.id,
-      },
-    );
-
-    const result = await service.schedule(ACTOR, DTO, 'key-duplicate');
-
-    expect(onlineClassRepo.create).not.toHaveBeenCalled();
-    expect(onlineClassRepo.claimForMeetingCreation).toHaveBeenCalledWith(
-      row.id,
-    );
-    expect(googleCalendarService.createOrCheckMeeting).not.toHaveBeenCalled();
-    expect(result.meetingCreationStatus).toBe('CREATING');
-  });
-
-  it('DUPLICATE/RETRY — already SUCCEEDED: idempotent replay never re-claims or re-calls Google', async () => {
-    const row = makeRow({
-      status: 'SCHEDULED',
-      meetingCreationStatus: 'SUCCEEDED',
-      googleCalendarEventId: 'evt-x',
-      googleMeetId: 'xyz-meet',
-      meetingUrl: 'https://meet.google.com/xyz-meet',
-    });
+  it('idempotent replay returns the original record, never a duplicate, never calling Google', async () => {
+    const row = makeRow({ status: 'SCHEDULED' });
     const { service, onlineClassRepo, googleCalendarService } = buildService(
       row,
-      {
-        existingIdempotencyMatch: row.id,
-      },
+      { existingIdempotencyMatch: row.id },
     );
 
-    const result = await service.schedule(ACTOR, DTO, 'key-already-succeeded');
+    const result = await service.schedule(ACTOR, DTO, 'key-replay');
 
     expect(onlineClassRepo.create).not.toHaveBeenCalled();
-    expect(onlineClassRepo.claimForMeetingCreation).not.toHaveBeenCalled();
     expect(googleCalendarService.createOrCheckMeeting).not.toHaveBeenCalled();
-    expect(result.meetingUrl).toBe('https://meet.google.com/xyz-meet');
-  });
-
-  it('PERSISTENCE — a subsequent retry of a FAILED class re-checks the existing Google event instead of creating a new one', async () => {
-    const row = makeRow({
-      meetingCreationStatus: 'FAILED',
-      meetingCreationError: 'Could not reach Google Calendar',
-      googleCalendarEventId: 'evt-from-first-attempt',
-    });
-    const { service, onlineClassRepo, googleCalendarService } = buildService(
-      row,
-      {
-        existingIdempotencyMatch: row.id,
-        googleOutcome: {
-          outcome: 'SUCCEEDED',
-          googleCalendarEventId: 'evt-from-first-attempt',
-          googleMeetId: 'abc-defg-hij',
-          meetingUrl: 'https://meet.google.com/abc-defg-hij',
-        },
-      },
-    );
-
-    const result = await service.schedule(
-      ACTOR,
-      DTO,
-      'key-retry-after-failure',
-    );
-
-    expect(googleCalendarService.createOrCheckMeeting).toHaveBeenCalledWith(
-      expect.objectContaining({
-        existingEventId: 'evt-from-first-attempt',
-        requestId: row.id,
-      }),
-    );
-    expect(onlineClassRepo.markMeetingSucceeded).toHaveBeenCalledWith(
-      row.id,
-      expect.objectContaining({
-        googleCalendarEventId: 'evt-from-first-attempt',
-      }),
-    );
-    expect(result.status).toBe('SCHEDULED');
+    expect(result.id).toBe(row.id);
   });
 
   it('never trusts a client-supplied faculty/staff id — always resolves it from the authenticated person', async () => {
     const row = makeRow();
-    const { service, staffRepo, googleConnectionRepo } = buildService(row);
+    const { service, staffRepo } = buildService(row);
 
     await service.schedule(ACTOR, DTO, 'key-authz');
 
     expect(staffRepo.findByPersonId).toHaveBeenCalledWith(ACTOR.personId);
-    expect(googleConnectionRepo.findByStaffId).toHaveBeenCalledWith(
-      row.facultyStaffId,
-    );
   });
 });
 
@@ -532,7 +395,7 @@ describe('OnlineClassesService — Google Calendar reschedule sync', () => {
         onlineClassId: row.id,
         previousStartTime: '10:00:00',
         previousEndTime: '11:00:00',
-        newScheduledDate: '2026-09-25',
+        newScheduledDate: '2027-01-25',
         newStartTime: '14:00',
         newEndTime: '15:00',
         reason: 'Clash with staff meeting',
@@ -847,12 +710,11 @@ describe('OnlineClassesService — SCHEDULED -> LIVE -> COMPLETED', () => {
     ).rejects.toMatchObject({ status: 404 });
   });
 
-  it('4: DRAFT cannot become LIVE', async () => {
+  it('4: DRAFT CAN become LIVE (revised) -- a historical pre-LiveKit-migration row must stay startable, see markLive\'s own comment', async () => {
     const row = makeRow({ status: 'DRAFT' });
     const { service } = buildService(row);
-    await expect(service.startClass(ACTOR, row.id)).rejects.toMatchObject({
-      status: 409,
-    });
+    const result = await service.startClass(ACTOR, row.id);
+    expect(result.status).toBe('LIVE');
   });
 
   it('5: DRAFT cannot become COMPLETED', async () => {
@@ -954,5 +816,155 @@ describe('OnlineClassesService — SCHEDULED -> LIVE -> COMPLETED', () => {
     await service.startClass(ACTOR, row.id);
 
     expect(staffRepo.findByPersonId).toHaveBeenCalledWith(ACTOR.personId);
+  });
+});
+
+describe('OnlineClassesService — requestFacultyCallToken / endClass / muteParticipant', () => {
+  it('SCHEDULED -> Start mints a moderator token, transitions to LIVE, lazily persists the room name', async () => {
+    const row = makeScheduledRow();
+    const { service, liveKit, onlineClassRepo, staffRepo } = buildService(row);
+    staffRepo.findByPersonId.mockResolvedValue({
+      id: row.facultyStaffId,
+      personId: ACTOR.personId,
+      status: 'ACTIVE',
+      displayName: 'Mrs. Meenakshi R',
+    });
+
+    const result = await service.requestFacultyCallToken(ACTOR, row.id);
+
+    expect(onlineClassRepo.markLive).toHaveBeenCalled();
+    expect(onlineClassRepo.setLivekitRoom).toHaveBeenCalledWith(
+      row.id,
+      `online-class-${row.id}`,
+    );
+    expect(liveKit.mintJoinToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        identity: `faculty:${row.facultyStaffId}`,
+        name: 'Mrs. Meenakshi R',
+        canPublish: true,
+        canSubscribe: true,
+      }),
+    );
+    expect(result.roomName).toBe(`online-class-${row.id}`);
+  });
+
+  it('Resume on an already-LIVE class re-mints a token for the same room, without transitioning again', async () => {
+    const row = makeScheduledRow({
+      status: 'LIVE',
+      livekitRoomName: 'online-class-oc-1',
+    });
+    const { service, liveKit, onlineClassRepo } = buildService(row);
+
+    await service.requestFacultyCallToken(ACTOR, row.id);
+
+    expect(onlineClassRepo.markLive).not.toHaveBeenCalled();
+    expect(onlineClassRepo.setLivekitRoom).not.toHaveBeenCalled();
+    expect(liveKit.mintJoinToken).toHaveBeenCalledWith(
+      expect.objectContaining({ roomName: 'online-class-oc-1' }),
+    );
+  });
+
+  it('cannot start a COMPLETED/CANCELLED class — 409, never mints a token', async () => {
+    const row = makeScheduledRow({ status: 'COMPLETED' });
+    const { service, liveKit } = buildService(row);
+
+    await expect(
+      service.requestFacultyCallToken(ACTOR, row.id),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(liveKit.mintJoinToken).not.toHaveBeenCalled();
+  });
+
+  it('a historical DRAFT row (pre-LiveKit-migration, never confirmed a Google Meet) can still be started -- DRAFT -> LIVE directly, never stuck', async () => {
+    const row = makeScheduledRow({ status: 'DRAFT', meetingCreationStatus: 'PENDING' });
+    const { service, onlineClassRepo, liveKit } = buildService(row);
+
+    const result = await service.requestFacultyCallToken(ACTOR, row.id);
+
+    expect(onlineClassRepo.markLive).toHaveBeenCalled();
+    expect(liveKit.mintJoinToken).toHaveBeenCalled();
+    expect(result.roomName).toBe(`online-class-${row.id}`);
+  });
+
+  it('endClass: LIVE -> COMPLETED, ends the LiveKit room, records call end', async () => {
+    const row = makeScheduledRow({
+      status: 'LIVE',
+      livekitRoomName: 'online-class-oc-1',
+    });
+    const { service, liveKit, onlineClassRepo } = buildService(row);
+
+    const result = await service.endClass(ACTOR, row.id);
+
+    expect(onlineClassRepo.markCompleted).toHaveBeenCalled();
+    expect(onlineClassRepo.recordCallEnd).toHaveBeenCalledWith(row.id);
+    expect(liveKit.endRoom).toHaveBeenCalledWith('online-class-oc-1');
+    expect(result.status).toBe('COMPLETED');
+  });
+
+  it('endClass never blocks on a LiveKit-side cleanup failure — the class still ends up COMPLETED', async () => {
+    const row = makeScheduledRow({
+      status: 'LIVE',
+      livekitRoomName: 'online-class-oc-1',
+    });
+    const { service, liveKit } = buildService(row);
+    liveKit.endRoom.mockRejectedValue(new Error('room already gone'));
+
+    const result = await service.endClass(ACTOR, row.id);
+
+    expect(result.status).toBe('COMPLETED');
+  });
+
+  it('endClass on a non-LIVE class -> 409', async () => {
+    const row = makeScheduledRow({ status: 'SCHEDULED' });
+    const { service } = buildService(row);
+
+    await expect(service.endClass(ACTOR, row.id)).rejects.toMatchObject({
+      status: 409,
+    });
+  });
+
+  it('muteParticipant: faculty owning the class can remote-mute a participant by identity', async () => {
+    const row = makeScheduledRow({
+      status: 'LIVE',
+      livekitRoomName: 'online-class-oc-1',
+    });
+    const { service, liveKit } = buildService(row);
+
+    await service.muteParticipant(
+      ACTOR,
+      row.id,
+      'parent:person-2:student:student-1',
+      true,
+    );
+
+    expect(liveKit.muteParticipantAudio).toHaveBeenCalledWith(
+      'online-class-oc-1',
+      'parent:person-2:student:student-1',
+      true,
+    );
+  });
+
+  it('muteParticipant on a non-LIVE class -> 409, never calls LiveKit', async () => {
+    const row = makeScheduledRow({ status: 'SCHEDULED' });
+    const { service, liveKit } = buildService(row);
+
+    await expect(
+      service.muteParticipant(ACTOR, row.id, 'faculty:staff-1', true),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(liveKit.muteParticipantAudio).not.toHaveBeenCalled();
+  });
+
+  it("a faculty who doesn't own the class gets 404 on every call-related action, never 403", async () => {
+    const row = makeScheduledRow({ status: 'LIVE' });
+    const { service } = buildService(row, { actorStaffId: 'someone-elses-staff-id' });
+
+    await expect(
+      service.requestFacultyCallToken(ACTOR, row.id),
+    ).rejects.toMatchObject({ status: 404 });
+    await expect(service.endClass(ACTOR, row.id)).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(
+      service.muteParticipant(ACTOR, row.id, 'faculty:staff-1', true),
+    ).rejects.toMatchObject({ status: 404 });
   });
 });

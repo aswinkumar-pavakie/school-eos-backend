@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { LiveKitModule } from '../livekit/livekit.module';
 import { GoogleCalendarService } from './google/google-calendar.service';
 import { GoogleOAuthController } from './google/google-oauth.controller';
 import { GoogleOAuthService } from './google/google-oauth.service';
@@ -14,6 +15,7 @@ import { StaffRepository } from './repositories/staff.repository';
 import { SubjectOfferingRepository } from './repositories/subject-offering.repository';
 
 @Module({
+  imports: [LiveKitModule],
   controllers: [OnlineClassesController, GoogleOAuthController],
   providers: [
     OnlineClassesService,

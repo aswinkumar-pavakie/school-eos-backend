@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
+import { OutboxService } from '../../common/outbox/outbox.service';
 import { AnnouncementsModule } from '../announcements/announcements.module';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { AttendanceModule } from '../attendance/attendance.module';
+import { LiveKitModule } from '../livekit/livekit.module';
 import { FacultyAcademicCoordinatorController } from './faculty-academic-coordinator.controller';
 import { FacultyAcademicCoordinatorService } from './faculty-academic-coordinator.service';
 import { FacultyAnnouncementsController } from './faculty-announcements.controller';
@@ -44,6 +46,7 @@ import {
   ParentMeetingSlotsController,
 } from './faculty-parent-meetings.controller';
 import { FacultyParentMeetingsService } from './faculty-parent-meetings.service';
+import { ParentMeetingCallWebhookController } from './parent-meeting-call-webhook.controller';
 import { FacultyPayslipController } from './faculty-payslip.controller';
 import { FacultyPayslipService } from './faculty-payslip.service';
 import { FacultyScopeController } from './faculty-scope.controller';
@@ -109,6 +112,7 @@ import { MarkCorrectionRepository } from './repositories/mark-correction.reposit
     PeopleModule,
     AdminFinanceModule,
     TimetableModule,
+    LiveKitModule,
   ],
   controllers: [
     FacultyScopeController,
@@ -136,6 +140,7 @@ import { MarkCorrectionRepository } from './repositories/mark-correction.reposit
     FacultyParentMeetingsController,
     ParentMeetingBookingController,
     ParentMeetingSlotsController,
+    ParentMeetingCallWebhookController,
     FacultyAcademicCoordinatorController,
     FacultyStudentDetailController,
   ],
@@ -179,6 +184,7 @@ import { MarkCorrectionRepository } from './repositories/mark-correction.reposit
     FacultyLmsService,
     StaffMeetingRepository,
     FacultyParentMeetingsService,
+    OutboxService,
     AcademicCoordinatorRepository,
     AcademicCoordinatorTimetableRepository,
     AcademicCoordinatorExamRepository,

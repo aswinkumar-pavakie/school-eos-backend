@@ -34,6 +34,7 @@ function makeParentView(
     meetingUrl: 'https://meet.google.com/abc-defg-hij',
     recordingUrl: null,
     cancellationReason: null,
+    livekitRoomName: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -41,11 +42,13 @@ function makeParentView(
 }
 
 const DEFAULT_VIEW = makeParentView();
+const DEFAULT_WARD = { studentId: 'student-1', studentName: 'Aarav S' };
 
 function buildService(
   opts: {
     wardStudentIds?: string[];
     parentDetail?: ParentOnlineClassView | null;
+    ward?: { studentId: string; studentName: string } | null;
   } = {},
 ) {
   const guardianLinkRepo = {
@@ -61,13 +64,30 @@ function buildService(
       .mockResolvedValue(
         opts.parentDetail === undefined ? DEFAULT_VIEW : opts.parentDetail,
       ),
+    findWardForOnlineClass: jest
+      .fn()
+      .mockResolvedValue(opts.ward === undefined ? DEFAULT_WARD : opts.ward),
+    setLivekitRoom: jest.fn().mockResolvedValue(undefined),
   } as any;
+
+  const liveKit = {
+    roomNameForOnlineClass: jest.fn((id: string) => `online-class-${id}`),
+    mintJoinToken: jest.fn().mockResolvedValue({
+      url: 'ws://localhost:7880',
+      token: 'fake-jwt',
+      roomName: 'online-class-oc-1',
+    }),
+  } as any;
+
+  const audit = { record: jest.fn().mockResolvedValue(undefined) } as any;
 
   const service = new ParentOnlineClassesService(
     guardianLinkRepo,
     onlineClassRepo,
+    liveKit,
+    audit,
   );
-  return { service, guardianLinkRepo, onlineClassRepo };
+  return { service, guardianLinkRepo, onlineClassRepo, liveKit, audit };
 }
 
 describe('ParentOnlineClassesService — list', () => {
@@ -168,154 +188,133 @@ describe('ParentOnlineClassesService — detail', () => {
   });
 });
 
-describe('ParentOnlineClassesService — join', () => {
-  it('1. authorized parent + SCHEDULED + meetingUrl -> allowed, returns only {meetingUrl, status}', async () => {
-    const { service } = buildService({
-      parentDetail: makeParentView({
-        status: 'SCHEDULED',
-        meetingUrl: 'https://meet.google.com/abc-defg-hij',
-      }),
+describe('ParentOnlineClassesService — requestCallToken', () => {
+  it('1. authorized parent + SCHEDULED -> mints a LiveKit token identified as the ward', async () => {
+    const { service, liveKit } = buildService({
+      parentDetail: makeParentView({ status: 'SCHEDULED' }),
     });
 
-    const result = await service.join(PARENT_ACTOR, 'oc-1');
+    const result = await service.requestCallToken(PARENT_ACTOR, 'oc-1', null);
 
     expect(result).toEqual({
-      meetingUrl: 'https://meet.google.com/abc-defg-hij',
-      status: 'SCHEDULED',
+      url: 'ws://localhost:7880',
+      token: 'fake-jwt',
+      roomName: 'online-class-oc-1',
     });
-  });
-
-  it('2. authorized parent + LIVE + meetingUrl -> allowed', async () => {
-    const { service } = buildService({
-      parentDetail: makeParentView({
-        status: 'LIVE',
-        meetingUrl: 'https://meet.google.com/abc-defg-hij',
+    expect(liveKit.mintJoinToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        identity: 'parent:parent-person-1:student:student-1',
+        name: 'Aarav S',
+        canPublish: true,
+        canSubscribe: true,
       }),
-    });
-
-    const result = await service.join(PARENT_ACTOR, 'oc-1');
-
-    expect(result).toEqual({
-      meetingUrl: 'https://meet.google.com/abc-defg-hij',
-      status: 'LIVE',
-    });
-  });
-
-  it('3. authorized parent + DRAFT -> 409, does not reveal a meetingUrl', async () => {
-    const { service } = buildService({
-      parentDetail: makeParentView({ status: 'DRAFT', meetingUrl: null }),
-    });
-
-    await expect(service.join(PARENT_ACTOR, 'oc-1')).rejects.toMatchObject({
-      status: 409,
-    });
-    await expect(service.join(PARENT_ACTOR, 'oc-1')).rejects.toThrow(
-      'Online class has not started yet',
     );
+  });
+
+  it('2. authorized parent + LIVE -> allowed', async () => {
+    const { service } = buildService({
+      parentDetail: makeParentView({ status: 'LIVE' }),
+    });
+
+    await expect(
+      service.requestCallToken(PARENT_ACTOR, 'oc-1', null),
+    ).resolves.toMatchObject({ roomName: 'online-class-oc-1' });
+  });
+
+  it('3. authorized parent + DRAFT -> 409, never mints a token', async () => {
+    const { service, liveKit } = buildService({
+      parentDetail: makeParentView({ status: 'DRAFT' }),
+    });
+
+    await expect(
+      service.requestCallToken(PARENT_ACTOR, 'oc-1', null),
+    ).rejects.toMatchObject({ status: 409 });
+    await expect(
+      service.requestCallToken(PARENT_ACTOR, 'oc-1', null),
+    ).rejects.toThrow('Online class has not started yet');
+    expect(liveKit.mintJoinToken).not.toHaveBeenCalled();
   });
 
   it('4. authorized parent + COMPLETED -> 409', async () => {
     const { service } = buildService({
-      parentDetail: makeParentView({
-        status: 'COMPLETED',
-        meetingUrl: 'https://meet.google.com/abc-defg-hij',
-      }),
+      parentDetail: makeParentView({ status: 'COMPLETED' }),
     });
 
-    await expect(service.join(PARENT_ACTOR, 'oc-1')).rejects.toMatchObject({
-      status: 409,
-    });
-    await expect(service.join(PARENT_ACTOR, 'oc-1')).rejects.toThrow(
-      'Online class has already ended',
-    );
+    await expect(
+      service.requestCallToken(PARENT_ACTOR, 'oc-1', null),
+    ).rejects.toThrow('Online class has already ended');
   });
 
   it('5. authorized parent + CANCELLED -> 409', async () => {
     const { service } = buildService({
-      parentDetail: makeParentView({
-        status: 'CANCELLED',
-        meetingUrl: 'https://meet.google.com/abc-defg-hij',
-      }),
+      parentDetail: makeParentView({ status: 'CANCELLED' }),
     });
 
-    await expect(service.join(PARENT_ACTOR, 'oc-1')).rejects.toMatchObject({
-      status: 409,
-    });
-    await expect(service.join(PARENT_ACTOR, 'oc-1')).rejects.toThrow(
-      'Online class was cancelled',
-    );
+    await expect(
+      service.requestCallToken(PARENT_ACTOR, 'oc-1', null),
+    ).rejects.toThrow('Online class was cancelled');
   });
 
-  it('6. authorized parent + SCHEDULED + meetingUrl NULL -> 409, never returns a null/missing url as success', async () => {
-    const { service } = buildService({
-      parentDetail: makeParentView({ status: 'SCHEDULED', meetingUrl: null }),
+  it('6. no active ward enrolled in this class -> 409, never mints a token', async () => {
+    const { service, liveKit } = buildService({
+      parentDetail: makeParentView({ status: 'LIVE' }),
+      ward: null,
     });
 
-    await expect(service.join(PARENT_ACTOR, 'oc-1')).rejects.toMatchObject({
-      status: 409,
-    });
-    await expect(service.join(PARENT_ACTOR, 'oc-1')).rejects.toThrow(
-      'Online class meeting link is not ready',
-    );
+    await expect(
+      service.requestCallToken(PARENT_ACTOR, 'oc-1', null),
+    ).rejects.toMatchObject({ status: 409 });
+    await expect(
+      service.requestCallToken(PARENT_ACTOR, 'oc-1', null),
+    ).rejects.toThrow('None of your children are enrolled in this class');
+    expect(liveKit.mintJoinToken).not.toHaveBeenCalled();
   });
 
-  it('7. authorized parent + LIVE + meetingUrl NULL -> 409', async () => {
-    const { service } = buildService({
-      parentDetail: makeParentView({ status: 'LIVE', meetingUrl: null }),
-    });
-
-    await expect(service.join(PARENT_ACTOR, 'oc-1')).rejects.toMatchObject({
-      status: 409,
-    });
-    await expect(service.join(PARENT_ACTOR, 'oc-1')).rejects.toThrow(
-      'Online class meeting link is not ready',
-    );
-  });
-
-  it('8/9. unauthorized parent or nonexistent class -> 404, identical either way (never 403, never a state-specific message)', async () => {
+  it('7. unauthorized parent or nonexistent class -> 404, identical either way (never 403, never a state-specific message)', async () => {
     const { service } = buildService({ parentDetail: null });
 
     await expect(
-      service.join(PARENT_ACTOR, 'someone-elses-class'),
+      service.requestCallToken(PARENT_ACTOR, 'someone-elses-class', null),
     ).rejects.toMatchObject({ status: 404 });
     await expect(
-      service.join(PARENT_ACTOR, 'someone-elses-class'),
+      service.requestCallToken(PARENT_ACTOR, 'someone-elses-class', null),
     ).rejects.toThrow('Online class not found');
   });
 
-  it('a parent with no active wards at all gets 404 on join too, via the same detail() short-circuit', async () => {
+  it('a parent with no active wards at all gets 404 too, via the same detail() short-circuit', async () => {
     const { service, onlineClassRepo } = buildService({ wardStudentIds: [] });
 
-    await expect(service.join(PARENT_ACTOR, 'oc-1')).rejects.toMatchObject({
-      status: 404,
-    });
+    await expect(
+      service.requestCallToken(PARENT_ACTOR, 'oc-1', null),
+    ).rejects.toMatchObject({ status: 404 });
     expect(onlineClassRepo.findParentDetailById).not.toHaveBeenCalled();
   });
 
-  it('14. success response contains ONLY meetingUrl and status — no id/subjectName/facultyStaffId/etc.', async () => {
-    const { service } = buildService({
+  it('lazily persists the room name only when the class has none yet — never overwrites an existing one', async () => {
+    const { service, onlineClassRepo } = buildService({
       parentDetail: makeParentView({
         status: 'LIVE',
-        meetingUrl: 'https://meet.google.com/abc-defg-hij',
+        livekitRoomName: 'online-class-oc-1',
       }),
     });
 
-    const result = await service.join(PARENT_ACTOR, 'oc-1');
+    await service.requestCallToken(PARENT_ACTOR, 'oc-1', null);
 
-    expect(Object.keys(result).sort()).toEqual(['meetingUrl', 'status']);
+    expect(onlineClassRepo.setLivekitRoom).not.toHaveBeenCalled();
   });
 
-  it('15. join performs no write and no Google call — it only reads through the existing detail() query', async () => {
+  it('disambiguates via studentId when passed through, never trusting anything else client-supplied', async () => {
     const { service, onlineClassRepo } = buildService({
-      parentDetail: makeParentView({ status: 'SCHEDULED' }),
+      parentDetail: makeParentView({ status: 'LIVE' }),
     });
 
-    await service.join(PARENT_ACTOR, 'oc-1');
+    await service.requestCallToken(PARENT_ACTOR, 'oc-1', 'student-2');
 
-    // The mocked OnlineClassRepository here exposes no update/create/Google methods at
-    // all — if join() tried to call one, this test would throw "not a function" rather
-    // than needing an explicit spy-based assertion.
-    expect(onlineClassRepo.findParentDetailById).toHaveBeenCalledTimes(1);
+    expect(onlineClassRepo.findWardForOnlineClass).toHaveBeenCalledWith(
+      'oc-1',
+      PARENT_ACTOR.personId,
+      'student-2',
+    );
   });
 
   it('reuses the existing authorized detail() lookup — never a second, unscoped lookup by id', async () => {
@@ -324,7 +323,7 @@ describe('ParentOnlineClassesService — join', () => {
     });
     const detailSpy = jest.spyOn(service, 'detail');
 
-    await service.join(PARENT_ACTOR, 'oc-1');
+    await service.requestCallToken(PARENT_ACTOR, 'oc-1', null);
 
     expect(detailSpy).toHaveBeenCalledWith(PARENT_ACTOR, 'oc-1');
     expect(onlineClassRepo.findParentDetailById).toHaveBeenCalledTimes(1);

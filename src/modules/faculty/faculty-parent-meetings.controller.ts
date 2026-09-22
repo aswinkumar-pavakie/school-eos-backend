@@ -67,6 +67,17 @@ export class FacultyParentMeetingsController {
       data: await this.service.decideBooking(actor.personId, id, dto.decision),
     };
   }
+
+  @Post('bookings/:id/call-token')
+  @HttpCode(HttpStatus.OK)
+  async requestCallToken(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.requestFacultyCallToken(actor.personId, id),
+    };
+  }
 }
 
 @Roles('PARENT')
@@ -81,6 +92,17 @@ export class ParentMeetingBookingController {
     @CurrentActor() actor: AuthenticatedUser,
   ) {
     return { data: await this.service.createBooking(actor.personId, dto) };
+  }
+
+  @Post(':id/call-token')
+  @HttpCode(HttpStatus.OK)
+  async requestCallToken(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return {
+      data: await this.service.requestParentCallToken(actor.personId, id),
+    };
   }
 }
 

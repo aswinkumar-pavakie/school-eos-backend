@@ -1,0 +1,7 @@
+# Downloaded binaries/archives -- never commit these. Redownload via each
+# tool's setup script instead (see e.g. livekit/setup.ps1). This repo tracks
+# CONFIG and SETUP SCRIPTS for local dev infrastructure, not the binaries
+# themselves.
+*.exe
+*.zip
+*.tar.gz

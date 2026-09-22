@@ -11,7 +11,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
+import { AuditService } from '../../common/audit/audit.service';
 import { ONLINE_CLASS_ERRORS } from '../../common/errors/error-codes';
+import { JoinCredentials, LiveKitService } from '../livekit/livekit.service';
 import { GuardianLinkRepository } from './repositories/guardian-link.repository';
 import {
   OnlineClassRepository,
@@ -29,16 +31,13 @@ const JOINABLE_STATUSES: ReadonlySet<OnlineClassStatus> = new Set([
   'LIVE',
 ]);
 
-export interface ParentJoinResult {
-  meetingUrl: string;
-  status: OnlineClassStatus;
-}
-
 @Injectable()
 export class ParentOnlineClassesService {
   constructor(
     private readonly guardianLinkRepo: GuardianLinkRepository,
     private readonly onlineClassRepo: OnlineClassRepository,
+    private readonly liveKit: LiveKitService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(
@@ -87,14 +86,19 @@ export class ParentOnlineClassesService {
   }
 
   /**
-   * Pure read — never creates a Meet, never touches Google, never writes to
-   * online_class. Authorization is entirely this.detail()'s existing, unmodified
-   * query: no separate/unscoped lookup by id exists anywhere in this method. detail()
-   * itself throws the same 404 (unauthorized and nonexistent are indistinguishable)
-   * before this method ever inspects status/meetingUrl — so a class this parent
-   * doesn't own never even reaches the join-state check below.
+   * Mints a LiveKit join token for the parent's own device, identified in the room as
+   * the STUDENT they're attending on behalf of (so the roster the faculty sees shows
+   * the child's name, matching the real classroom, not the parent's). Authorization is
+   * entirely this.detail()'s existing, unmodified query — a class this parent doesn't
+   * own never reaches the join-state check below, same as the old join() this
+   * replaces. studentId disambiguates when a parent has more than one active ward in
+   * this same class's section (e.g. twins); omitted, the first match wins.
    */
-  async join(actor: AuthenticatedUser, id: string): Promise<ParentJoinResult> {
+  async requestCallToken(
+    actor: AuthenticatedUser,
+    id: string,
+    studentId: string | null,
+  ): Promise<JoinCredentials> {
     const detail = await this.detail(actor, id);
 
     switch (detail.status) {
@@ -106,18 +110,55 @@ export class ParentOnlineClassesService {
         throw new ConflictException(ONLINE_CLASS_ERRORS.JOIN_CANCELLED);
       case 'SCHEDULED':
       case 'LIVE':
-        if (!JOINABLE_STATUSES.has(detail.status) || !detail.meetingUrl) {
-          // Defensive — JOINABLE_STATUSES already matches this case exactly; the real
-          // gate here is meetingUrl, covering startClass/completeClass not currently
-          // re-verifying that Google creation actually succeeded before flipping
-          // status. Never falls through to returning a URL when this is true.
-          throw new ConflictException(ONLINE_CLASS_ERRORS.JOIN_LINK_NOT_READY);
-        }
-        return { meetingUrl: detail.meetingUrl, status: detail.status };
+        break;
       default:
         // Fail safe on any status this switch doesn't explicitly recognize as
-        // joinable — never accidentally return a meeting URL for an unexpected state.
+        // joinable — never mint a token for an unexpected state.
         throw new ConflictException(ONLINE_CLASS_ERRORS.JOIN_LINK_NOT_READY);
     }
+    if (!JOINABLE_STATUSES.has(detail.status)) {
+      throw new ConflictException(ONLINE_CLASS_ERRORS.JOIN_LINK_NOT_READY);
+    }
+
+    const ward = await this.onlineClassRepo.findWardForOnlineClass(
+      id,
+      actor.personId,
+      studentId,
+    );
+    if (!ward) {
+      throw new ConflictException(ONLINE_CLASS_ERRORS.WARD_NOT_IN_CLASS);
+    }
+
+    // A parent joining while the faculty hasn't started the call yet still gets a
+    // valid room/token -- LiveKit creates the room on first join, whoever that is.
+    // The room name itself, though, must already exist as this class's OWN
+    // deterministic name so both sides land in the same room; this repository call is
+    // read+lazy-write, same ensureRoomName pattern as the faculty side, just inlined
+    // here since this service has no detail-with-room-name-mutation helper of its own.
+    let roomName = detail.livekitRoomName;
+    if (!roomName) {
+      roomName = this.liveKit.roomNameForOnlineClass(id);
+      await this.onlineClassRepo.setLivekitRoom(id, roomName);
+    }
+
+    const credentials = await this.liveKit.mintJoinToken({
+      roomName,
+      identity: `parent:${actor.personId}:student:${ward.studentId}`,
+      name: ward.studentName,
+      canPublish: true,
+      canSubscribe: true,
+      canUpdateOwnMetadata: true,
+    });
+
+    await this.audit.record({
+      actorPersonId: actor.personId,
+      actorRoleCode: 'PARENT',
+      action: 'ONLINE_CLASS_CALL_TOKEN_ISSUED',
+      objectType: 'online_class',
+      objectId: id,
+      outcome: 'SUCCESS',
+    });
+
+    return credentials;
   }
 }

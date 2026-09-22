@@ -68,7 +68,9 @@ export const ONLINE_CLASS_ERRORS = {
   JOIN_NOT_STARTED: 'Online class has not started yet',
   JOIN_ALREADY_ENDED: 'Online class has already ended',
   JOIN_CANCELLED: 'Online class was cancelled',
-  JOIN_LINK_NOT_READY: 'Online class meeting link is not ready',
+  JOIN_LINK_NOT_READY: 'Online class call is not ready yet',
+  WARD_NOT_IN_CLASS:
+    'None of your children are enrolled in this class',
 } as const;
 
 export const GOOGLE_OAUTH_ERRORS = {

@@ -54,6 +54,18 @@ export interface AppConfig {
     // InternalServiceGuard treats as "deny everything", never "allow anything".
     internalKey: string;
   };
+  liveKit: {
+    // Local dev target is livekit-server --dev (ws://localhost:7880, fixed
+    // devkey/secret) -- see LiveKitService's own header comment. Empty
+    // apiKey/apiSecret means "not configured", same posture as every other
+    // optional-integration block above: LiveKitService throws a clear error
+    // rather than silently minting an unusable token. The SAME apiKey/
+    // apiSecret pair also verifies webhook signatures (livekit-server-sdk's
+    // WebhookReceiver takes no separate secret) -- not a distinct config key.
+    url: string;
+    apiKey: string;
+    apiSecret: string;
+  };
 }
 
 export default (): AppConfig => ({
@@ -105,5 +117,10 @@ export default (): AppConfig => ({
   },
   messagingIntegration: {
     internalKey: process.env.MESSAGING_INTERNAL_KEY ?? '',
+  },
+  liveKit: {
+    url: process.env.LIVEKIT_URL ?? '',
+    apiKey: process.env.LIVEKIT_API_KEY ?? '',
+    apiSecret: process.env.LIVEKIT_API_SECRET ?? '',
   },
 });

@@ -36,6 +36,7 @@ import { ONLINE_CLASS_ERRORS } from '../../common/errors/error-codes';
 import { AddRecordingDto } from './dto/add-recording.dto';
 import { CancelOnlineClassDto } from './dto/cancel-online-class.dto';
 import { ListOnlineClassesDto } from './dto/list-online-classes.dto';
+import { MuteParticipantDto } from './dto/mute-participant.dto';
 import { RescheduleOnlineClassDto } from './dto/reschedule-online-class.dto';
 import { ScheduleOnlineClassDto } from './dto/schedule-online-class.dto';
 import { OnlineClassesService } from './online-classes.service';
@@ -112,19 +113,67 @@ export class OnlineClassesController {
     return { data: result };
   }
 
-  // PARENT-only — Faculty already gets meetingUrl via their own detail() above and has
-  // no use for this endpoint's narrow {meetingUrl, status} shape or its join-specific
-  // state rules (SCHEDULED/LIVE only). Pure read: no Google call, no write to
-  // online_class, delegates entirely to ParentOnlineClassesService.join, which itself
-  // delegates authorization entirely to the existing, unmodified detail() lookup.
-  @Roles('PARENT')
-  @Get(':id/join')
-  async join(
+  // FACULTY "Start"/"Resume" AND PARENT "Join" share this one path+method — Nest
+  // routes on path+method only, not on @Roles, so (exactly like list()/detail() above)
+  // this MUST be a single handler branching on actor.roles, never two separate
+  // @Post(':id/call-token') methods; a second decorator on the same route is silently
+  // unreachable (RolesGuard runs for whichever handler Nest matched first), which is
+  // exactly the bug caught in live testing before this comment was written.
+  @Roles('FACULTY', 'PARENT')
+  @Post(':id/call-token')
+  @HttpCode(HttpStatus.OK)
+  async requestCallToken(
+    @CurrentActor() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query('studentId') studentId?: string,
+  ) {
+    if (actor.roles.includes('FACULTY')) {
+      const result = await this.onlineClassesService.requestFacultyCallToken(
+        actor,
+        id,
+      );
+      return { data: result };
+    }
+    const result = await this.parentOnlineClassesService.requestCallToken(
+      actor,
+      id,
+      studentId ?? null,
+    );
+    return { data: result };
+  }
+
+  // FACULTY-only — ends the call for everyone and transitions LIVE -> COMPLETED. This
+  // REPLACES the old plain PATCH :id/complete for the in-app-call flow (kept below,
+  // unchanged, for any caller that just wants the state transition without touching
+  // LiveKit — e.g. a class that ran entirely without anyone actually joining a room).
+  @Roles('FACULTY')
+  @Post(':id/end-call')
+  @HttpCode(HttpStatus.OK)
+  async endCall(
     @CurrentActor() actor: AuthenticatedUser,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
-    const result = await this.parentOnlineClassesService.join(actor, id);
+    const result = await this.onlineClassesService.endClass(actor, id);
     return { data: result };
+  }
+
+  // FACULTY-only — roster moderation from inside the call. identity is exactly what
+  // LiveKit reports for that participant (e.g. "parent:<personId>:student:<id>").
+  @Roles('FACULTY')
+  @Post(':id/participants/mute')
+  @HttpCode(HttpStatus.OK)
+  async muteParticipant(
+    @CurrentActor() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: MuteParticipantDto,
+  ) {
+    await this.onlineClassesService.muteParticipant(
+      actor,
+      id,
+      dto.identity,
+      dto.muted,
+    );
+    return { data: { ok: true } };
   }
 
   @Roles('FACULTY')
