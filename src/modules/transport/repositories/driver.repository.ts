@@ -63,6 +63,20 @@ export class DriverRepository {
     return rows;
   }
 
+  /** Resolves the driver row for the authenticated DRIVER caller's own
+   * person_id -- never a client-supplied driver id. Backs every Driver Phase
+   * 2 endpoint's own object-level scoping. */
+  async findByPersonId(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<DriverRow | null> {
+    const { rows } = await executor.query<DriverRow>(
+      `SELECT ${COLUMNS} FROM driver WHERE person_id = $1`,
+      [personId],
+    );
+    return rows[0] ?? null;
+  }
+
   async findById(
     id: string,
     executor: Queryable = this.postgres,

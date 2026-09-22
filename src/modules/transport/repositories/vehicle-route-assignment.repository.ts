@@ -33,6 +33,7 @@ export interface UpdateVehicleRouteAssignmentInput {
 export interface VehicleRouteAssignmentQuery {
   vehicleId?: string;
   routeId?: string;
+  driverId?: string;
   currentOnly?: boolean;
 }
 
@@ -57,6 +58,10 @@ export class VehicleRouteAssignmentRepository {
     if (query.routeId) {
       params.push(query.routeId);
       conditions.push(`route_id = $${params.length}`);
+    }
+    if (query.driverId) {
+      params.push(query.driverId);
+      conditions.push(`driver_id = $${params.length}`);
     }
     if (query.currentOnly) {
       conditions.push(`(effective_to IS NULL OR effective_to >= CURRENT_DATE)`);

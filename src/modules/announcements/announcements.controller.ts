@@ -49,8 +49,11 @@ export class AnnouncementsController {
   // Home dashboard (Warden App.dc.html's own notice carousel + "View All"
   // notices list) reads SCHOOL-wide + ROLE=HOSTEL_WARDEN announcements via
   // ?roleCode=, read-only here too.
+  // DRIVER added the same way -- Driver's own mobile Home dashboard reads
+  // SCHOOL-wide + ROLE=DRIVER announcements via ?roleCode=, read-only here
+  // too, same as every other mobile-app-only role above.
   @Get()
-  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER', 'SPORTS_ADMIN', 'HOSTEL_WARDEN')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER', 'SPORTS_ADMIN', 'HOSTEL_WARDEN', 'DRIVER')
   async list(@Query() query: AnnouncementQueryDto) {
     return { data: await this.announcementsService.list(query) };
   }
