@@ -91,8 +91,23 @@ export class StaffController {
   // isProfile block: designation/employee no./join date under "Professional
   // information") needs its own staff record the same way VICE_PRINCIPAL's
   // does.
+  // FACULTY added -- this endpoint's own qualification/training columns
+  // (highest_qualification, specialization, workshops_training,
+  // achievements_awards, etc.) were added specifically "so the Faculty
+  // profile detail view ... can show real contact/gender data instead of
+  // fabricating it" (see staff.repository.ts's own StaffRow comment), but
+  // the role grant itself was never added here -- the website's Faculty
+  // Profile screen was shipped with a hard-coded "not available to your
+  // account yet" GapNotice for data that was already fully real and
+  // already being selected by this exact query. Same self-scoped trust
+  // model as every other role already on this list.
+  // HOSTEL_WARDEN and CANTEEN_VENDOR added -- same reasoning again: every
+  // account under both roles is a real staff member with a real `staff`
+  // row (confirmed by direct query, not assumed), and neither role's
+  // mobile app has ANY "tap your avatar -> see your own profile" screen
+  // yet, the same gap Faculty just had. Self-scoped, zero new exposure.
   @Get('me')
-  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'SPORTS_ADMIN')
+  @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'SPORTS_ADMIN', 'FACULTY', 'HOSTEL_WARDEN', 'CANTEEN_VENDOR')
   async getMine(@CurrentActor() actor: AuthenticatedUser) {
     return { data: await this.staffService.getMine(actor.personId) };
   }

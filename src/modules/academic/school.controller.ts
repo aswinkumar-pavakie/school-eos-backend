@@ -20,7 +20,11 @@ import { SchoolService } from './school.service';
 // HOSTEL_WARDEN added -- same read-only identity info, used as the header of
 // the mobile Reports screen's own PDF export (school name/address/contact),
 // same reuse pattern as every role above.
-@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER', 'SPORTS_ADMIN', 'HOSTEL_WARDEN')
+// FACULTY and CANTEEN_VENDOR added -- same read-only identity info, shown as
+// their own new mobile Profile screen's School Information section, the
+// same VP/Sports Admin precedent above extended to the two roles that were
+// missing a "tap your avatar -> see your own profile" screen entirely.
+@Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER', 'SPORTS_ADMIN', 'HOSTEL_WARDEN', 'FACULTY', 'CANTEEN_VENDOR')
 @Controller('school')
 export class SchoolController {
   constructor(private readonly schoolService: SchoolService) {}

@@ -17,6 +17,7 @@ import { AnnouncementsModule } from './modules/announcements/announcements.modul
 import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
+import { CanteenModule } from './modules/canteen/canteen.module';
 import { CommunitiesModule } from './modules/communities/communities.module';
 import { CommunityLoginModule } from './modules/community-login/community-login.module';
 import { CommunityInitiativesModule } from './modules/community-initiatives/community-initiatives.module';
@@ -91,6 +92,7 @@ import { TransportOpsModule } from './modules/transport-ops/transport-ops.module
     HostelWardenModule,
     HostelWardenPendingModule,
     SportsModule,
+    CanteenModule,
     AiBotModule,
     DevicesModule,
     DocumentsModule,
