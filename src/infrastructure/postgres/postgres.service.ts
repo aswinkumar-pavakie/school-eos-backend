@@ -37,6 +37,16 @@ export class PostgresService implements OnModuleDestroy, Queryable {
   constructor(configService: ConfigService) {
     this.pool = new Pool({
       connectionString: configService.get<string>('database.url'),
+      // pg's own default (10) starves under real concurrent traffic -- a
+      // school-wide morning login rush, or many "New message" opens at once,
+      // each need their own DB connection for the duration of their query.
+      // Confirmed live: messaging's internal /users/:id calls (each backed by
+      // one of these connections) timing out en masse under concurrent load,
+      // not one at a time -- the queue behind a too-small pool, not a single
+      // slow query. Supabase's own pooler (pgbouncer=true in the connection
+      // string) sits in front of this and can absorb a larger pool safely.
+      max: 25,
+      connectionTimeoutMillis: 10_000,
     });
 
     // pg's own documented gotcha: an IDLE pooled client can have its
