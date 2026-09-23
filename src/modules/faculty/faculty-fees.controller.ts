@@ -5,7 +5,7 @@ import { Roles } from '../../common/auth/roles.decorator';
 import { FacultyFeesQueryDto } from './dto/faculty-fees-query.dto';
 import { FacultyFeesService } from './faculty-fees.service';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'CLASS_ADVISOR')
 @Controller('faculty/fees')
 export class FacultyFeesController {
   constructor(private readonly service: FacultyFeesService) {}

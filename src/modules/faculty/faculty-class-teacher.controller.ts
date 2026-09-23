@@ -18,7 +18,7 @@ import { CreateStudentDutyDto } from './dto/create-student-duty.dto';
 import { UpdateStudentDutyDto } from './dto/update-student-duty.dto';
 import { FacultyClassTeacherService } from './faculty-class-teacher.service';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'CLASS_ADVISOR')
 @Controller('faculty/class-teacher')
 export class FacultyClassTeacherController {
   constructor(private readonly service: FacultyClassTeacherService) {}

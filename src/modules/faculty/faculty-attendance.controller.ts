@@ -14,7 +14,7 @@ import { AttendanceDayQueryDto } from './dto/attendance-day-query.dto';
 import { MarkAttendanceRecordDto } from './dto/mark-attendance-record.dto';
 import { FacultyAttendanceService } from './faculty-attendance.service';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'CLASS_ADVISOR')
 @Controller('faculty/attendance')
 export class FacultyAttendanceController {
   constructor(private readonly service: FacultyAttendanceService) {}

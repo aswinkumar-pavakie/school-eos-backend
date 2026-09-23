@@ -26,7 +26,7 @@ import { FacultyCreateAnnouncementDto } from './dto/faculty-create-announcement.
 import { FacultyUpdateAnnouncementDto } from './dto/faculty-update-announcement.dto';
 import { FacultyScopeRepository } from './repositories/faculty-scope.repository';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'CLASS_ADVISOR')
 @Controller('faculty/announcements')
 export class FacultyAnnouncementsController {
   constructor(

@@ -19,7 +19,7 @@ import { FacultyStudentLeaveService } from './faculty-student-leave.service';
 // POST /approvals/:id/approve|reject endpoints (this controller's own
 // approvalRequestId on each row is what that call needs) -- not duplicated
 // here.
-@Roles('FACULTY')
+@Roles('FACULTY', 'CLASS_ADVISOR')
 @Controller('faculty/student-leave')
 export class FacultyStudentLeaveController {
   constructor(private readonly service: FacultyStudentLeaveService) {}

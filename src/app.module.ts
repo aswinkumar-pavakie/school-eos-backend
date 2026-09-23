@@ -27,6 +27,7 @@ import { DevicesModule } from './modules/devices/devices.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { ExaminationsModule } from './modules/examinations/examinations.module';
 import { FacultyModule } from './modules/faculty/faculty.module';
+import { CampusModule } from './modules/campus/campus.module';
 import { AdminFinanceModule } from './modules/finance/admin-finance.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { HealthModule } from './modules/health/health.module';
@@ -124,6 +125,7 @@ import { DriverAppModule } from './modules/driver-app/driver-app.module';
     CommunityMembershipRequestsModule,
     NotificationsModule,
     FacultyModule,
+    CampusModule,
   ],
   providers: [
     // Global guards, in order: AuthGuard resolves identity and sets request.user;

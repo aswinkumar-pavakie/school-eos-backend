@@ -4,7 +4,7 @@ import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
 import { FacultyCalendarService } from './faculty-calendar.service';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'CLASS_ADVISOR')
 @Controller('faculty/calendar')
 export class FacultyCalendarController {
   constructor(private readonly service: FacultyCalendarService) {}

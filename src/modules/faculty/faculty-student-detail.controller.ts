@@ -4,7 +4,7 @@ import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
 import { FacultyStudentDetailService } from './faculty-student-detail.service';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'CLASS_ADVISOR')
 @Controller('faculty/students')
 export class FacultyStudentDetailController {
   constructor(private readonly service: FacultyStudentDetailService) {}
