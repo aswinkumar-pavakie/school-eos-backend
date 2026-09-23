@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
 import { OutboxService } from '../../common/outbox/outbox.service';
+import { AdminModule } from '../admin/admin.module';
 import { AnnouncementsModule } from '../announcements/announcements.module';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { AttendanceModule } from '../attendance/attendance.module';
@@ -73,6 +74,7 @@ import { LmsFolderRepository } from './repositories/lms-folder.repository';
 import { LmsLessonPlanRepository } from './repositories/lms-lesson-plan.repository';
 import { LmsTaskRepository } from './repositories/lms-task.repository';
 import { MarksRepository } from './repositories/marks.repository';
+import { FacultyExamsRepository } from './repositories/faculty-exams.repository';
 import { PayslipRepository } from './repositories/payslip.repository';
 import { StaffAppraisalRepository } from './repositories/staff-appraisal.repository';
 import { StaffBusRepository } from './repositories/staff-bus.repository';
@@ -113,6 +115,7 @@ import { MarkCorrectionRepository } from './repositories/mark-correction.reposit
     AdminFinanceModule,
     TimetableModule,
     LiveKitModule,
+    AdminModule,
   ],
   controllers: [
     FacultyScopeController,
@@ -152,6 +155,7 @@ import { MarkCorrectionRepository } from './repositories/mark-correction.reposit
     FacultyStudentLeaveService,
     FacultyApprovalHandlers,
     MarksRepository,
+    FacultyExamsRepository,
     FacultySubjectRecordsService,
     FacultyMarksService,
     FacultyClassResultsService,

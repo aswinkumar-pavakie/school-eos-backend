@@ -125,7 +125,16 @@ export class MessagingService {
   private async resolveActorContext(
     actor: AuthenticatedUser,
   ): Promise<ActorContext> {
-    if (actor.roles.includes('FACULTY')) {
+    // CLASS_ADVISOR here is the separate Class Teacher login (see backend's
+    // class-teacher-login.service.ts) -- a real staff row (fixed there
+    // specifically so this and every other staffId-keyed lookup resolves),
+    // never FACULTY. Folded into the same 'FACULTY' context label rather
+    // than a new ActorContext variant: deriveAuthorizedSections/
+    // deriveAuthorizedFaculty below already union teaching offerings with
+    // class-advisor sections by staffId/personId regardless of which role
+    // label got the actor here, so no other branch needs to know the
+    // difference.
+    if (actor.roles.includes('FACULTY') || actor.roles.includes('CLASS_ADVISOR')) {
       const staff = await this.staffRepo.findByPersonId(actor.personId);
       if (!staff || staff.status !== 'ACTIVE') {
         throw new ForbiddenException(MESSAGING_ERRORS.NOT_ACTIVE_FACULTY);

@@ -80,6 +80,35 @@ export class FacultyScopeRepository {
     return rows.map(mapSection);
   }
 
+  /** This person's own advisor section, WITH its grade's stage -- needed by
+   * getAdvisorSections' plain ScopedSection for the one caller
+   * (FacultyTimetableService.getForAdvisorSection) that needs
+   * timetable_period.applies_to_stage to look up real periods. A new method
+   * rather than widening ScopedSection itself, so every other existing
+   * caller of getAdvisorSections is untouched. Returns the first section
+   * (by grade/section name) if a person somehow holds more than one --
+   * today's real callers (a Class Teacher login) only ever have exactly one. */
+  async findAdvisorSectionWithStage(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<(ScopedSection & { stage: string | null }) | null> {
+    const { rows } = await executor.query(
+      `SELECT DISTINCT sec.id AS section_id, sec.academic_year_id, g.name AS grade_name, sec.name AS section_name, g.stage
+       FROM role_assignment ra
+       JOIN section sec ON sec.id = ra.scope_id AND sec.academic_year_id = (SELECT id FROM academic_year WHERE is_current LIMIT 1)
+       JOIN grade g ON g.id = sec.grade_id
+       JOIN staff s ON s.person_id = ra.person_id AND s.status = 'ACTIVE'
+       WHERE ra.role_code = 'CLASS_ADVISOR' AND ra.scope_type = 'SECTION'
+         AND ra.person_id = $1 AND ra.status = 'ACTIVE'
+       ORDER BY g.name, sec.name
+       LIMIT 1`,
+      [personId],
+    );
+    if (rows.length === 0) return null;
+    const row = rows[0];
+    return { ...mapSection(row), stage: row.stage };
+  }
+
   /** True if this person is the current, ACTIVE class advisor for this exact
    * section (the authorization check every advisor-only feature runs first). */
   async isAdvisorForSection(
@@ -264,5 +293,24 @@ export class FacultyScopeRepository {
       [personId, studentId],
     );
     return rows.length > 0;
+  }
+
+  /** This faculty member's own residency/commute state -- drives the mobile
+   * bottom nav's conditional 5th tab (Hostel / My Bus / nothing at all for
+   * self vehicle). See migration in query.md: mirrors student's own
+   * is_hosteller/uses_school_transport, staff never had the equivalent. A
+   * person with no ACTIVE staff row (shouldn't happen for a real FACULTY
+   * login, but the Class Teacher login never calls this) gets both false --
+   * same as the honest "not assigned" default everywhere else in this file. */
+  async getCommutePrefs(
+    personId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<{ isHosteller: boolean; usesSchoolTransport: boolean }> {
+    const { rows } = await executor.query<{ is_hosteller: boolean; uses_school_transport: boolean }>(
+      `SELECT is_hosteller, uses_school_transport FROM staff WHERE person_id = $1 AND status = 'ACTIVE'`,
+      [personId],
+    );
+    if (rows.length === 0) return { isHosteller: false, usesSchoolTransport: false };
+    return { isHosteller: rows[0].is_hosteller, usesSchoolTransport: rows[0].uses_school_transport };
   }
 }

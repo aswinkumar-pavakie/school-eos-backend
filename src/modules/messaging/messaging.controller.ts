@@ -49,14 +49,14 @@ export class MessagingController {
     private readonly studentsService: StudentsService,
   ) {}
 
-  @Roles('FACULTY', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
+  @Roles('FACULTY', 'CLASS_ADVISOR', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
   @Get('conversations')
   async listConversations(@CurrentActor() actor: AuthenticatedUser) {
     const result = await this.messagingService.listConversations(actor);
     return { data: result };
   }
 
-  @Roles('FACULTY', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
+  @Roles('FACULTY', 'CLASS_ADVISOR', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
   @Get('conversations/:id')
   async getConversation(
     @CurrentActor() actor: AuthenticatedUser,
@@ -66,7 +66,7 @@ export class MessagingController {
     return { data: result };
   }
 
-  @Roles('FACULTY', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
+  @Roles('FACULTY', 'CLASS_ADVISOR', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
   @Get('conversations/:id/messages')
   async listMessages(
     @CurrentActor() actor: AuthenticatedUser,
@@ -82,7 +82,7 @@ export class MessagingController {
     return { data: items, meta };
   }
 
-  @Roles('FACULTY', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
+  @Roles('FACULTY', 'CLASS_ADVISOR', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
   @Post('conversations/:id/messages')
   @HttpCode(HttpStatus.OK)
   async sendMessage(
@@ -103,7 +103,7 @@ export class MessagingController {
     return { data: result };
   }
 
-  @Roles('FACULTY', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
+  @Roles('FACULTY', 'CLASS_ADVISOR', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
   @Patch('conversations/:id/read')
   @HttpCode(HttpStatus.OK)
   async markRead(
@@ -114,7 +114,7 @@ export class MessagingController {
     return { data: { success: true } };
   }
 
-  @Roles('FACULTY', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
+  @Roles('FACULTY', 'CLASS_ADVISOR', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT')
   @Post('conversations/:conversationId/messages/:messageId/translate')
   @HttpCode(HttpStatus.OK)
   async translateMessage(
@@ -166,7 +166,7 @@ export class MessagingController {
   // No target-id/search needed -- PRINCIPAL is single-holder, resolved
   // server-side (see MessagingService.startPrincipalConversation).
 
-  @Roles('FACULTY')
+  @Roles('FACULTY', 'CLASS_ADVISOR')
   @Post('faculty/conversations/principal')
   @HttpCode(HttpStatus.OK)
   async startPrincipalConversation(@CurrentActor() actor: AuthenticatedUser) {

@@ -6,7 +6,7 @@ import { SetReportCardRemarkDto } from './dto/set-report-card-remark.dto';
 import { FacultyClassResultsService } from './faculty-class-results.service';
 import { FacultyReportCardService } from './faculty-report-card.service';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'CLASS_ADVISOR')
 @Controller('faculty/class-results')
 export class FacultyClassResultsController {
   constructor(

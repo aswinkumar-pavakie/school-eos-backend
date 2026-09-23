@@ -20,7 +20,7 @@ import { DecideMeetingBookingDto } from './dto/decide-meeting-booking.dto';
 import { UpdateMeetingSlotDto } from './dto/update-meeting-slot.dto';
 import { FacultyParentMeetingsService } from './faculty-parent-meetings.service';
 
-@Roles('FACULTY')
+@Roles('FACULTY', 'CLASS_ADVISOR')
 @Controller('faculty/parent-meetings')
 export class FacultyParentMeetingsController {
   constructor(private readonly service: FacultyParentMeetingsService) {}
