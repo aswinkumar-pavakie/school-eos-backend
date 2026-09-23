@@ -21,6 +21,7 @@ export interface AnnouncementRow {
   publishAt: Date | null;
   expiresAt: Date | null;
   createdBy: string;
+  createdByName: string | null;
   approvedBy: string | null;
   state: string;
   createdAt: Date;
@@ -54,7 +55,9 @@ export interface AnnouncementFilter {
 
 const COLUMNS = `a.id, a.title, a.body, a.category, a.priority, a.is_emergency AS "isEmergency",
   a.publish_at AS "publishAt", a.expires_at AS "expiresAt",
-  a.created_by AS "createdBy", a.approved_by AS "approvedBy", a.state, a.created_at AS "createdAt"`;
+  a.created_by AS "createdBy", p.display_name AS "createdByName",
+  a.approved_by AS "approvedBy", a.state, a.created_at AS "createdAt"`;
+const FROM = `announcement a LEFT JOIN person p ON p.id = a.created_by`;
 
 @Injectable()
 export class AnnouncementRepository {
@@ -121,7 +124,7 @@ export class AnnouncementRepository {
     const where =
       conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const { rows } = await executor.query<Omit<AnnouncementRow, 'audiences'>>(
-      `SELECT ${COLUMNS} FROM announcement a ${where} ORDER BY a.created_at DESC`,
+      `SELECT ${COLUMNS} FROM ${FROM} ${where} ORDER BY a.created_at DESC`,
       params,
     );
     return this.attachAudiences(rows, executor);
@@ -132,7 +135,7 @@ export class AnnouncementRepository {
     executor: Queryable = this.postgres,
   ): Promise<AnnouncementRow | null> {
     const { rows } = await executor.query<Omit<AnnouncementRow, 'audiences'>>(
-      `SELECT ${COLUMNS} FROM announcement a WHERE a.id = $1`,
+      `SELECT ${COLUMNS} FROM ${FROM} WHERE a.id = $1`,
       [id],
     );
     if (rows.length === 0) return null;

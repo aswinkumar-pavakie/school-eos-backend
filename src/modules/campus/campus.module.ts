@@ -1,5 +1,5 @@
 // Faculty's own Campus tiles (Food Court, Medical, Copy Center, Stationery
-// Store, House) -- see database/migrations/0028_campus_features.sql for the
+// Store, House) -- see database/migrations/0033_campus_features.sql for the
 // full reasoning on why these are new, minimal tables rather than reusing
 // the much bigger canteen/wallet ERD or the purchase_request/purchase_order
 // procurement flow. HouseRepository is provided here too, not exported from

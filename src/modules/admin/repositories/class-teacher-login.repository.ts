@@ -1,6 +1,6 @@
 // Class Teacher (Advisor) login -- persistent per (grade, section_name),
 // reused across whichever faculty member holds it and across academic years.
-// See database/migrations/0027_class_teacher_login.sql for the full schema
+// See database/migrations/0032_class_teacher_login.sql for the full schema
 // reasoning. class_teacher_login is the stable identity; every row in
 // class_teacher_login_assignment is one (academic_year, real section_id,
 // real faculty_person_id) holder period, with at most one ACTIVE at a time.

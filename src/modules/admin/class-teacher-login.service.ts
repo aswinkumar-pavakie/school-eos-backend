@@ -3,7 +3,7 @@
 // Academic Coordinator (persons.service.ts's createAcademicCoordinatorLogin),
 // kept as its own service because this login is section-scoped and reused
 // year over year (reassign), not owned for life by one faculty member the
-// way a coordinator login is. See database/migrations/0027_class_teacher_login.sql
+// way a coordinator login is. See database/migrations/0032_class_teacher_login.sql
 // for the full schema reasoning.
 
 import {

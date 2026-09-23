@@ -1,5 +1,5 @@
 // Campus request queues (Food Court, Medical, Copy Center, Stationery
-// Store) -- real, own tables (see database/migrations/0028_campus_features.sql),
+// Store) -- real, own tables (see database/migrations/0033_campus_features.sql),
 // each a simple own-status fulfillment queue, not routed through the
 // generic approval_request engine (these are "place an order" flows, not
 // manager-approval ones -- see that migration's own header note).
