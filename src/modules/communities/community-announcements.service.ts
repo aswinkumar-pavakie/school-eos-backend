@@ -56,7 +56,7 @@ export class CommunityAnnouncementsService {
       actor.personId,
     );
     if (ownCommunityId !== communityId) {
-      throw new NotFoundException('Community announcement not found');
+      throw new NotFoundException('Community notice not found');
     }
   }
 
@@ -97,11 +97,11 @@ export class CommunityAnnouncementsService {
   ) {
     const existing = await this.announcementRepo.findById(id);
     if (!existing)
-      throw new NotFoundException('Community announcement not found');
+      throw new NotFoundException('Community notice not found');
     await this.assertCanWriteCommunity(existing.communityId, actor);
     const updated = await this.announcementRepo.update(id, dto);
     if (!updated)
-      throw new NotFoundException('Community announcement not found');
+      throw new NotFoundException('Community notice not found');
     await this.auditService.record({
       actorPersonId: actor.personId,
       action: 'COMMUNITY_ANNOUNCEMENT_UPDATED',

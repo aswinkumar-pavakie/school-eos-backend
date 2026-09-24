@@ -136,6 +136,31 @@ export class AttendanceSessionRepository {
       [id, markedBy],
     );
     if (rows.length === 0) return null;
+    await this.notifyGuardiansOfAbsences(id, executor);
     return this.findById(id, executor);
+  }
+
+  /** The day is now final, so tell each absent student's guardians -- once,
+   * because only the unlocked->locked transition reaches here. Best effort: a
+   * failure here must never undo the lock. */
+  private async notifyGuardiansOfAbsences(sessionId: string, executor: Queryable): Promise<void> {
+    try {
+      await executor.query(
+        `INSERT INTO notification
+           (person_id, about_student_id, notification_type, title, body, related_object_type, related_object_id)
+         SELECT DISTINCT g.person_id, s.id, 'ATTENDANCE_ABSENT', 'Marked absent today',
+                sp.first_name || ' was marked absent on ' || to_char(ases.session_date, 'DD Mon YYYY') || '.',
+                'attendance_session', ases.id
+         FROM attendance_session ases
+         JOIN attendance_record ar ON ar.session_id = ases.id AND ar.status = 'ABSENT'
+         JOIN student s ON s.id = ar.student_id
+         JOIN person sp ON sp.id = s.person_id
+         JOIN guardian_link g ON g.student_id = s.id AND g.status = 'ACTIVE'
+         WHERE ases.id = $1 AND ases.session_type = 'DAILY'`,
+        [sessionId],
+      );
+    } catch {
+      // swallowed on purpose (see above)
+    }
   }
 }

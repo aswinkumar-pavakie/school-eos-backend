@@ -1,9 +1,10 @@
 // Locks down exactly which @Roles() a caller needs to reach each route — same
 // approach as online-classes.controller.spec.ts. Every shared conversation route
-// accepts FACULTY, PARENT and PRINCIPAL; the actual per-conversation
+// accepts FACULTY, CLASS_ADVISOR (a Class Teacher login), PARENT, PRINCIPAL and
+// CORRESPONDENT; the actual per-conversation
 // authorization is decided inside MessagingService, not by role alone (see
 // messaging.service.spec.ts). The Principal-only start/search routes accept
-// PRINCIPAL alone -- Faculty/Parent must never reach those, even though they
+// PRINCIPAL (and CORRESPONDENT, which mirrors it) -- Faculty/Parent must never reach those, even though they
 // can reach a conversation once a Principal has started one.
 
 import { ROLES_KEY } from '../../common/auth/roles.decorator';
@@ -35,9 +36,9 @@ const PRINCIPAL_ONLY_ROUTES = [
 const FACULTY_ONLY_ROUTES = ['startPrincipalConversation'] as const;
 
 describe('MessagingController — route roles', () => {
-  it('every shared conversation route accepts FACULTY, PARENT and PRINCIPAL', () => {
+  it('every shared conversation route accepts FACULTY, CLASS_ADVISOR, PARENT, PRINCIPAL and CORRESPONDENT', () => {
     for (const method of SHARED_CONVERSATION_ROUTES) {
-      expect(rolesFor(method)).toEqual(['FACULTY', 'PARENT', 'PRINCIPAL']);
+      expect(rolesFor(method)).toEqual(['FACULTY', 'CLASS_ADVISOR', 'PARENT', 'PRINCIPAL', 'CORRESPONDENT']);
     }
   });
 
@@ -48,15 +49,15 @@ describe('MessagingController — route roles', () => {
     }
   });
 
-  it('Principal-only routes (start a conversation, search directories) accept ONLY PRINCIPAL — never FACULTY or PARENT', () => {
+  it('Principal-only routes (start a conversation, search directories) accept ONLY PRINCIPAL and CORRESPONDENT — never FACULTY, CLASS_ADVISOR or PARENT', () => {
     for (const method of PRINCIPAL_ONLY_ROUTES) {
-      expect(rolesFor(method)).toEqual(['PRINCIPAL']);
+      expect(rolesFor(method)).toEqual(['PRINCIPAL', 'CORRESPONDENT']);
     }
   });
 
-  it('the Faculty-only route (start a conversation with the Principal) accepts ONLY FACULTY — never PARENT or PRINCIPAL', () => {
+  it('the Faculty-side route (start a conversation with the Principal) accepts ONLY FACULTY and CLASS_ADVISOR — never PARENT or PRINCIPAL', () => {
     for (const method of FACULTY_ONLY_ROUTES) {
-      expect(rolesFor(method)).toEqual(['FACULTY']);
+      expect(rolesFor(method)).toEqual(['FACULTY', 'CLASS_ADVISOR']);
     }
   });
 });

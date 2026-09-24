@@ -53,26 +53,30 @@ function methodRolesOf(
 const TRANSPORT_MANAGER_ONLY_METHODS: Record<string, string[]> = {
   VehiclesController: ['requestDeactivate'],
   RoutesController: ['requestDeactivate', 'requestDeleteStop'],
+  DriversController: ['requestDeactivate'],
   StudentTransportAllocationsController: ['requestCancel'],
 };
 
 describe('Transport controllers — TRANSPORT_MANAGER route boundaries', () => {
   it('each controller carries its own real class-level default (not uniformly ADMIN-only)', () => {
-    expect(classRolesOf(VehiclesController)).toEqual(['ADMIN', 'PRINCIPAL']);
+    expect(classRolesOf(VehiclesController)).toEqual(['ADMIN', 'PRINCIPAL', 'CORRESPONDENT']);
     expect(classRolesOf(RoutesController)).toEqual([
       'ADMIN',
       'PRINCIPAL',
+      'CORRESPONDENT',
       'VICE_PRINCIPAL',
     ]);
     expect(classRolesOf(DriversController)).toEqual([
       'ADMIN',
       'PRINCIPAL',
+      'CORRESPONDENT',
       'VICE_PRINCIPAL',
     ]);
     expect(classRolesOf(AttendantsController)).toEqual(['ADMIN']);
     expect(classRolesOf(VehicleRouteAssignmentsController)).toEqual([
       'ADMIN',
       'PRINCIPAL',
+      'CORRESPONDENT',
       'VICE_PRINCIPAL',
     ]);
     expect(classRolesOf(StudentTransportAllocationsController)).toEqual([
@@ -84,12 +88,14 @@ describe('Transport controllers — TRANSPORT_MANAGER route boundaries', () => {
     expect(methodRolesOf(VehiclesController, 'list')).toEqual([
       'ADMIN',
       'PRINCIPAL',
+      'CORRESPONDENT',
       'VICE_PRINCIPAL',
       'TRANSPORT_MANAGER',
     ]);
     expect(methodRolesOf(VehiclesController, 'get')).toEqual([
       'ADMIN',
       'PRINCIPAL',
+      'CORRESPONDENT',
       'VICE_PRINCIPAL',
       'TRANSPORT_MANAGER',
     ]);
@@ -97,24 +103,28 @@ describe('Transport controllers — TRANSPORT_MANAGER route boundaries', () => {
     expect(methodRolesOf(RoutesController, 'list')).toEqual([
       'ADMIN',
       'PRINCIPAL',
+      'CORRESPONDENT',
       'VICE_PRINCIPAL',
       'TRANSPORT_MANAGER',
     ]);
     expect(methodRolesOf(RoutesController, 'get')).toEqual([
       'ADMIN',
       'PRINCIPAL',
+      'CORRESPONDENT',
       'VICE_PRINCIPAL',
       'TRANSPORT_MANAGER',
     ]);
     expect(methodRolesOf(RoutesController, 'listStops')).toEqual([
       'ADMIN',
       'PRINCIPAL',
+      'CORRESPONDENT',
       'VICE_PRINCIPAL',
       'TRANSPORT_MANAGER',
     ]);
     expect(methodRolesOf(RoutesController, 'listAssignedStudents')).toEqual([
       'ADMIN',
       'PRINCIPAL',
+      'CORRESPONDENT',
       'VICE_PRINCIPAL',
       'TRANSPORT_MANAGER',
     ]);
@@ -122,12 +132,14 @@ describe('Transport controllers — TRANSPORT_MANAGER route boundaries', () => {
     expect(methodRolesOf(DriversController, 'list')).toEqual([
       'ADMIN',
       'PRINCIPAL',
+      'CORRESPONDENT',
       'VICE_PRINCIPAL',
       'TRANSPORT_MANAGER',
     ]);
     expect(methodRolesOf(DriversController, 'get')).toEqual([
       'ADMIN',
       'PRINCIPAL',
+      'CORRESPONDENT',
       'VICE_PRINCIPAL',
       'TRANSPORT_MANAGER',
     ]);
@@ -135,22 +147,25 @@ describe('Transport controllers — TRANSPORT_MANAGER route boundaries', () => {
     expect(methodRolesOf(AttendantsController, 'list')).toEqual([
       'ADMIN',
       'PRINCIPAL',
+      'CORRESPONDENT',
       'VICE_PRINCIPAL',
       'TRANSPORT_MANAGER',
     ]);
     expect(methodRolesOf(AttendantsController, 'get')).toEqual([
       'ADMIN',
       'PRINCIPAL',
+      'CORRESPONDENT',
       'VICE_PRINCIPAL',
       'TRANSPORT_MANAGER',
     ]);
 
     expect(
       methodRolesOf(VehicleRouteAssignmentsController, 'list'),
-    ).toEqual(['ADMIN', 'PRINCIPAL', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER']);
+    ).toEqual(['ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'TRANSPORT_MANAGER']);
     expect(methodRolesOf(VehicleRouteAssignmentsController, 'get')).toEqual([
       'ADMIN',
       'PRINCIPAL',
+      'CORRESPONDENT',
       'VICE_PRINCIPAL',
       'TRANSPORT_MANAGER',
     ]);
@@ -216,7 +231,7 @@ describe('Transport controllers — TRANSPORT_MANAGER route boundaries', () => {
     // VICE_PRINCIPAL class default); Attendants has no override at all, so
     // it falls back to its own ADMIN-only class default.
     expect(methodRolesOf(DriversController, 'create')).toEqual(['ADMIN']);
-    expect(methodRolesOf(DriversController, 'update')).toEqual(['ADMIN']);
+    expect(methodRolesOf(DriversController, 'update')).toEqual(['ADMIN', 'TRANSPORT_MANAGER']);
     expect(methodRolesOf(AttendantsController, 'create')).toBeUndefined();
     expect(methodRolesOf(AttendantsController, 'update')).toBeUndefined();
   });

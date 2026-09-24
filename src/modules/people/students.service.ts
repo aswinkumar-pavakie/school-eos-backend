@@ -12,6 +12,7 @@ import { StudentLeaveDto } from './dto/student-leave.dto';
 import { StudentQueryDto } from './dto/student-query.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { isCheckViolation, isUniqueViolation } from './pg-error.util';
+import { StudentEnrolmentRepository } from './repositories/student-enrolment.repository';
 import { StudentRepository } from './repositories/student.repository';
 
 @Injectable()
@@ -21,6 +22,7 @@ export class StudentsService {
     private readonly personRepo: PersonRepository,
     private readonly auditService: AuditService,
     private readonly unitOfWork: UnitOfWork,
+    private readonly enrolmentRepo: StudentEnrolmentRepository,
   ) {}
 
   async list(query: StudentQueryDto) {
@@ -189,11 +191,14 @@ export class StudentsService {
     const dateOfLeaving =
       dto.dateOfLeaving ?? new Date().toISOString().slice(0, 10);
     try {
-      const updated = await this.studentRepo.leave(
-        id,
-        dto.status,
-        dateOfLeaving,
-      );
+      const updated = await this.unitOfWork.run(async (client) => {
+        const row = await this.studentRepo.leave(id, dto.status, dateOfLeaving, client);
+        if (row) {
+          await this.enrolmentRepo.closeActiveForLeaving(id, client);
+          await this.studentRepo.releaseFacilitiesOnLeaving(id, dateOfLeaving, client);
+        }
+        return row;
+      });
       if (!updated) throw new NotFoundException('Student record not found');
       await this.auditService.record({
         actorPersonId,

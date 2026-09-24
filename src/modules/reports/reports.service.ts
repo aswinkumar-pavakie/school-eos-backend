@@ -112,6 +112,7 @@ export class ReportsService {
         `SELECT designation, count(*) AS count
          FROM staff
          WHERE status = 'ACTIVE' AND designation IS NOT NULL
+           AND NOT EXISTS (SELECT 1 FROM class_teacher_login ctl WHERE ctl.login_person_id = staff.person_id)
          GROUP BY designation
          ORDER BY count(*) DESC`,
       ),
@@ -119,7 +120,8 @@ export class ReportsService {
         `SELECT count(*) FILTER (WHERE is_teaching) AS teaching,
                 count(*) FILTER (WHERE NOT is_teaching) AS non_teaching
          FROM staff
-         WHERE status = 'ACTIVE'`,
+         WHERE status = 'ACTIVE'
+           AND NOT EXISTS (SELECT 1 FROM class_teacher_login ctl WHERE ctl.login_person_id = staff.person_id)`,
       ),
       // Effective status (base status, overridden by the latest correction once one
       // exists) -- same derivation attendance-record.repository.ts documents and uses,

@@ -252,4 +252,27 @@ export class FeeDemandRepository {
     );
     return mapRow(rows[0]);
   }
+
+  /** Tells a student's guardians a new fee is due. Best effort; the caller
+   * already saved the demand. */
+  async notifyGuardiansOfNewDemand(demandId: string, executor: Queryable = this.postgres): Promise<void> {
+    try {
+      await executor.query(
+        `INSERT INTO notification
+           (person_id, about_student_id, notification_type, title, body, related_object_type, related_object_id)
+         SELECT DISTINCT g.person_id, d.student_id, 'FEE_DEMAND_CREATED', 'New fee due',
+                'A fee of Rs ' || to_char((d.amount_paise + COALESCE(d.late_fee_paise, 0)) / 100.0, 'FM99,99,99,990.00')
+                  || ' for ' || sp.first_name || ' is due by ' || to_char(d.due_date, 'DD Mon YYYY') || '.',
+                'fee_demand', d.id
+         FROM fee_demand d
+         JOIN student s ON s.id = d.student_id
+         JOIN person sp ON sp.id = s.person_id
+         JOIN guardian_link g ON g.student_id = s.id AND g.status = 'ACTIVE'
+         WHERE d.id = $1`,
+        [demandId],
+      );
+    } catch {
+      // swallowed on purpose: the demand is already saved
+    }
+  }
 }

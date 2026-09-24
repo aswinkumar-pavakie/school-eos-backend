@@ -91,6 +91,12 @@ export class ExamsService {
       beforeData: existing,
       afterData: updated,
     });
+    // Best effort: the exam is already published, so a notification failure must not undo it.
+    try {
+      await this.examRepo.notifyPublished(id);
+    } catch {
+      // swallowed on purpose
+    }
     return updated;
   }
 

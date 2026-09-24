@@ -19,6 +19,7 @@ import { RolesController } from './roles.controller';
 import { RoleRepository } from './repositories/role.repository';
 import { AcademicCoordinatorLoginRepository } from './repositories/academic-coordinator-login.repository';
 import { ClassTeacherLoginRepository } from './repositories/class-teacher-login.repository';
+import { PersonDeviceTokenRepository } from '../notifications/repositories/person-device-token.repository';
 
 // All Admin-facing backend features live here: person listing/creation, role
 // grant/revoke, roles catalog, login-activity/audit read, and the admin-authorized
@@ -43,6 +44,10 @@ import { ClassTeacherLoginRepository } from './repositories/class-teacher-login.
     AcademicCoordinatorLoginRepository,
     ClassTeacherLoginRepository,
     ClassTeacherLoginService,
+    // Provided directly (not via NotificationsModule): a class login changing
+    // hands must drop the previous holder's push devices in the same
+    // transaction, and this repository is a plain query wrapper.
+    PersonDeviceTokenRepository,
   ],
   // PersonsService (activate/deactivate) and RoleAssignmentsService (grant/
   // revoke) back the "Administrative user/access request" effect in

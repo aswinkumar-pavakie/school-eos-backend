@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { jwtModuleFactory } from '../../config/jwt.config';
+import { AccountLinkController } from './account-link.controller';
+import { AccountLinkService } from './account-link.service';
 import { IdentityController } from './identity.controller';
 import { IdentityService } from './identity.service';
 import { PasswordResetController } from './password-reset.controller';
 import { PasswordResetService } from './password-reset.service';
+import { AccountLinkRepository } from './repositories/account-link.repository';
 import { LoginIdentifierRepository } from './repositories/login-identifier.repository';
 import { OtpChallengeRepository } from './repositories/otp-challenge.repository';
 import { PersonRepository } from './repositories/person.repository';
@@ -14,9 +17,11 @@ import { UserCredentialRepository } from './repositories/user-credential.reposit
 
 @Module({
   imports: [JwtModule.registerAsync(jwtModuleFactory)],
-  controllers: [IdentityController, PasswordResetController],
+  controllers: [IdentityController, PasswordResetController, AccountLinkController],
   providers: [
     IdentityService,
+    AccountLinkService,
+    AccountLinkRepository,
     PasswordResetService,
     LoginIdentifierRepository,
     UserCredentialRepository,
@@ -35,6 +40,7 @@ import { UserCredentialRepository } from './repositories/user-credential.reposit
     PersonRepository,
     RoleAssignmentRepository,
     SessionRepository,
+    AccountLinkRepository,
     PasswordResetService,
   ],
 })

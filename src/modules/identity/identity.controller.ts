@@ -15,17 +15,8 @@ import { AuthenticatedUser } from '../../common/auth/authenticated-user.interfac
 import { Public } from '../../common/auth/public.decorator';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh.dto';
-import { DeviceContext, IdentityService } from './identity.service';
-
-function deviceContextFrom(req: Request): DeviceContext {
-  const userAgent = req.headers['user-agent'];
-  return {
-    ipAddress: req.ip ?? null,
-    userAgent: Array.isArray(userAgent)
-      ? (userAgent[0] ?? null)
-      : (userAgent ?? null),
-  };
-}
+import { deviceContextFrom } from './device-context.util';
+import { IdentityService } from './identity.service';
 
 @Controller('auth')
 export class IdentityController {

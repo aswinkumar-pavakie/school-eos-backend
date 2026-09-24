@@ -133,17 +133,22 @@ export class AcademicCoordinatorRepository {
     const { rows } = await executor.query(
       `SELECT sec.id AS section_id, sec.name AS section_name, g.id AS grade_id, g.name AS grade_name,
               COUNT(DISTINCT se.student_id) AS student_count,
-              ra.id AS advisor_role_assignment_id, ra.person_id AS advisor_person_id,
+              ra.id AS advisor_role_assignment_id,
+              COALESCE(cta.faculty_person_id, ra.person_id) AS advisor_person_id,
               (p.first_name || COALESCE(' ' || p.last_name, '')) AS advisor_name
        FROM section sec
        JOIN grade g ON g.id = sec.grade_id
        LEFT JOIN student_enrolment se ON se.section_id = sec.id AND se.status = 'ACTIVE'
        LEFT JOIN role_assignment ra ON ra.scope_id = sec.id AND ra.scope_type = 'SECTION'
          AND ra.role_code = 'CLASS_ADVISOR' AND ra.status = 'ACTIVE'
-       LEFT JOIN person p ON p.id = ra.person_id
+       -- The advisor role sits on the section's constant Class Teacher login; show
+       -- the real faculty member currently standing behind it.
+       LEFT JOIN class_teacher_login_assignment cta
+         ON cta.class_teacher_login_id = ra.person_id AND cta.status = 'ACTIVE'
+       LEFT JOIN person p ON p.id = COALESCE(cta.faculty_person_id, ra.person_id)
        WHERE g.id = ANY($1) AND sec.status = 'ACTIVE'
          AND sec.academic_year_id = (SELECT id FROM academic_year WHERE is_current LIMIT 1)
-       GROUP BY sec.id, sec.name, g.id, g.name, ra.id, ra.person_id, p.first_name, p.last_name
+       GROUP BY sec.id, sec.name, g.id, g.name, ra.id, ra.person_id, cta.faculty_person_id, p.first_name, p.last_name
        ORDER BY g.name, sec.name`,
       [gradeIds],
     );

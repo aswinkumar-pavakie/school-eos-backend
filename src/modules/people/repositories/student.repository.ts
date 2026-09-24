@@ -397,4 +397,28 @@ export class StudentRepository {
     if (rows.length === 0) return null;
     return this.findById(id, executor);
   }
+
+  /** A student who leaves gives up their hostel bed and transport seat: the bed
+   * goes back to VACANT, the allocations end as of the leaving date. */
+  async releaseFacilitiesOnLeaving(
+    studentId: string,
+    leavingDate: string,
+    executor: Queryable,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE hostel_bed SET status = 'VACANT'
+       WHERE id IN (SELECT bed_id FROM hostel_allocation WHERE student_id = $1 AND status = 'ACTIVE')`,
+      [studentId],
+    );
+    await executor.query(
+      `UPDATE hostel_allocation SET status = 'VACATED', allocated_to = $2
+       WHERE student_id = $1 AND status = 'ACTIVE'`,
+      [studentId, leavingDate],
+    );
+    await executor.query(
+      `UPDATE student_transport_allocation SET status = 'CANCELLED', valid_to = $2
+       WHERE student_id = $1 AND status = 'ACTIVE'`,
+      [studentId, leavingDate],
+    );
+  }
 }

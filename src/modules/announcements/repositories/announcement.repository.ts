@@ -259,4 +259,49 @@ export class AnnouncementRepository {
     );
     await executor.query(`DELETE FROM announcement WHERE id = $1`, [id]);
   }
+
+  /** Writes one in-app notification per recipient of an announcement, in a single
+   * set-based statement (school-wide is ~1k rows, still one round trip).
+   * SCHOOL -> everyone holding any active role but ADMIN; ROLE -> holders of that
+   * role; SECTION -> guardians of the section's enrolled students plus that
+   * section's class advisor. The author never notifies themselves. */
+  async notifyAudience(
+    announcementId: string,
+    title: string,
+    body: string,
+    isEmergency: boolean,
+    authorPersonId: string,
+    executor: Queryable = this.postgres,
+  ): Promise<number> {
+    const res = await executor.query(
+      `INSERT INTO notification
+         (person_id, notification_type, title, body, related_object_type, related_object_id, is_emergency)
+       SELECT DISTINCT r.person_id, 'ANNOUNCEMENT', $2, left($3, 300), 'announcement', $1, $4
+       FROM (
+         SELECT ra.person_id
+           FROM announcement_audience aa
+           JOIN v_active_role_assignment ra ON ra.role_code <> 'ADMIN'
+          WHERE aa.announcement_id = $1 AND aa.audience_type = 'SCHOOL'
+         UNION
+         SELECT ra.person_id
+           FROM announcement_audience aa
+           JOIN v_active_role_assignment ra ON ra.role_code = aa.target_role
+          WHERE aa.announcement_id = $1 AND aa.audience_type = 'ROLE'
+         UNION
+         SELECT g.person_id
+           FROM announcement_audience aa
+           JOIN student_enrolment se ON se.section_id = aa.target_id AND se.status = 'ACTIVE'
+           JOIN guardian_link g ON g.student_id = se.student_id AND g.status = 'ACTIVE'
+          WHERE aa.announcement_id = $1 AND aa.audience_type = 'SECTION'
+         UNION
+         SELECT ra.person_id
+           FROM announcement_audience aa
+           JOIN v_active_role_assignment ra ON ra.role_code = 'CLASS_ADVISOR' AND ra.scope_id = aa.target_id
+          WHERE aa.announcement_id = $1 AND aa.audience_type = 'SECTION'
+       ) r
+       WHERE r.person_id <> $5`,
+      [announcementId, title, body, isEmergency, authorPersonId],
+    );
+    return res.rowCount ?? 0;
+  }
 }
