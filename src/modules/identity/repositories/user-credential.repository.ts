@@ -174,6 +174,47 @@ export class UserCredentialRepository {
   }
 
   /**
+   * Password write for a SHARED class-teacher login. Unlike a personal
+   * account: it never forces a change on first sign-in (the holder is not
+   * supposed to own it -- the admin does), and it always marks the
+   * self-service reset as used, so "Forgot password" can never rotate a
+   * password the admin is meant to control (and whose current value the admin
+   * screen shows).
+   */
+  async setSharedLoginPassword(
+    personId: string,
+    passwordHash: string,
+    plaintextPassword: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE user_credential
+       SET password_hash = $2,
+           password_algo = 'argon2id',
+           password_set_at = now(),
+           password_change_count = password_change_count + 1,
+           must_change_password = false,
+           failed_attempt_count = 0,
+           locked_until = NULL,
+           reset_allowance_used = true,
+           admin_visible_password = $3,
+           updated_at = now()
+       WHERE person_id = $1`,
+      [personId, passwordHash, plaintextPassword],
+    );
+  }
+
+  /** Flags an existing credential as a shared login's (see setSharedLoginPassword). */
+  async markSharedLogin(personId: string, executor: Queryable = this.postgres): Promise<void> {
+    await executor.query(
+      `UPDATE user_credential
+       SET must_change_password = false, reset_allowance_used = true, updated_at = now()
+       WHERE person_id = $1`,
+      [personId],
+    );
+  }
+
+  /**
    * General admin-authorized reset for ANY account (Access module). Functionally the
    * same core action as completeAdminReset, but only clears reset_allowance_used when
    * the caller says the target holds a role whose own profile page exposes an

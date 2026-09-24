@@ -57,6 +57,7 @@ import { AcademicCoordinatorSyllabusRepository } from './repositories/academic-c
 import { SubstitutionRepository } from './repositories/substitution.repository';
 import { StaffLeaveRequestRepository } from './repositories/staff-leave-request.repository';
 import { TimetableService } from '../timetable/timetable.service';
+import { ClassTeacherLoginService } from '../admin/class-teacher-login.service';
 import { AssignSubstitutionDto } from './dto/assign-substitution.dto';
 
 interface ResolvedScope {
@@ -88,6 +89,7 @@ export class FacultyAcademicCoordinatorService {
     private readonly staffLeaveRequestRepo: StaffLeaveRequestRepository,
     private readonly timetableService: TimetableService,
     private readonly unitOfWork: UnitOfWork,
+    private readonly classTeacherLogins: ClassTeacherLoginService,
   ) {}
 
   // ============================================================
@@ -802,27 +804,34 @@ export class FacultyAcademicCoordinatorService {
         'Selected person is not an active faculty member.',
       );
 
-    if (section.advisorRoleAssignmentId) {
-      await this.acRepo.revokeRoleAssignment(
-        section.advisorRoleAssignmentId,
-        personId,
+    // A class's advisor is its constant Class Teacher login; the coordinator
+    // changes WHO stands behind it (same hand-over as the admin screen: previous
+    // holder signed out, password rotated). Writing a direct role on the
+    // faculty member's own login would give the section two advisors.
+    const login = await this.classTeacherLogins.findByGradeSection(
+      section.gradeId,
+      section.sectionName,
+    );
+    if (!login) {
+      throw new BadRequestException(
+        'This class has no class teacher login yet. Ask the administrator to create it first.',
       );
     }
-    const newId = await this.acRepo.createClassAdvisorAssignment(
-      sectionId,
-      dto.personId,
+    await this.classTeacherLogins.reassign(
+      login.loginPersonId,
+      { sectionId, facultyPersonId: dto.personId, rotatePassword: true },
       personId,
     );
     await this.audit.record({
       actorPersonId: personId,
       actorRoleCode: 'ACADEMIC_COORDINATOR',
       action: 'COORDINATOR_CLASS_ADVISOR_ASSIGNED',
-      objectType: 'role_assignment',
-      objectId: newId,
+      objectType: 'person',
+      objectId: login.loginPersonId,
       outcome: 'SUCCESS',
-      afterData: { sectionId, personId: dto.personId },
+      afterData: { sectionId, facultyPersonId: dto.personId },
     });
-    return { roleAssignmentId: newId };
+    return { classTeacherLoginId: login.loginPersonId };
   }
 
   async revokeClassAdvisor(personId: string, sectionId: string) {
@@ -831,20 +840,20 @@ export class FacultyAcademicCoordinatorService {
     const section = sections.find((s) => s.sectionId === sectionId);
     if (!section)
       throw new NotFoundException('Section not found in your scope');
-    if (!section.advisorRoleAssignmentId)
-      throw new NotFoundException(
-        'This section has no active advisor to revoke',
-      );
-    await this.acRepo.revokeRoleAssignment(
-      section.advisorRoleAssignmentId,
-      personId,
+    const login = await this.classTeacherLogins.findByGradeSection(
+      section.gradeId,
+      section.sectionName,
     );
+    if (!login) {
+      throw new NotFoundException('This section has no class teacher login to vacate');
+    }
+    await this.classTeacherLogins.vacate(login.loginPersonId, personId);
     await this.audit.record({
       actorPersonId: personId,
       actorRoleCode: 'ACADEMIC_COORDINATOR',
       action: 'COORDINATOR_CLASS_ADVISOR_REVOKED',
-      objectType: 'role_assignment',
-      objectId: section.advisorRoleAssignmentId,
+      objectType: 'person',
+      objectId: login.loginPersonId,
       outcome: 'SUCCESS',
     });
   }
@@ -923,6 +932,7 @@ export class FacultyAcademicCoordinatorService {
     if (!sections.some((s) => s.sectionId === sectionId))
       throw new NotFoundException('Section not found in your scope');
     const count = await this.ttRepo.publishSectionDrafts(sectionId);
+    if (count > 0) await this.ttRepo.notifyTimetablePublished(sectionId);
     await this.audit.record({
       actorPersonId: personId,
       actorRoleCode: 'ACADEMIC_COORDINATOR',

@@ -13,6 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import { AUTH_ERRORS } from '../../common/errors/error-codes';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
+import { PostgresService } from '../../infrastructure/postgres/postgres.service';
 import { AdminPasswordResetDto } from '../admin/dto/admin-password-reset.dto';
 import { PasswordResetCompleteDto } from './dto/password-reset-complete.dto';
 import { PasswordResetRequestDto } from './dto/password-reset-request.dto';
@@ -22,6 +23,7 @@ import {
   generateTempPassword,
   hashToken,
 } from './identity.util';
+import { AccountLinkRepository } from './repositories/account-link.repository';
 import { LoginIdentifierRepository } from './repositories/login-identifier.repository';
 import { OtpChallengeRepository } from './repositories/otp-challenge.repository';
 import { PersonRepository } from './repositories/person.repository';
@@ -40,7 +42,24 @@ export class PasswordResetService {
     private readonly roleAssignmentRepo: RoleAssignmentRepository,
     private readonly unitOfWork: UnitOfWork,
     private readonly configService: ConfigService,
+    private readonly postgres: PostgresService,
+    private readonly linkRepo: AccountLinkRepository,
   ) {}
+
+  /** A class-teacher login is shared: only the admin sets its password (and the
+   * admin screen shows the current one), so it never goes through self-service
+   * reset -- the code would go to a shared address nobody owns. */
+  private async assertNotSharedLogin(personId: string): Promise<void> {
+    const { rows } = await this.postgres.query(
+      `SELECT 1 FROM class_teacher_login WHERE login_person_id = $1`,
+      [personId],
+    );
+    if (rows.length > 0) {
+      throw new ForbiddenException(
+        'This is a shared class login. Ask the school administrator to reset its password.',
+      );
+    }
+  }
 
   async requestReset(dto: PasswordResetRequestDto): Promise<void> {
     const identifier = await this.loginIdentifierRepo.findVerifiedByValue(
@@ -58,6 +77,8 @@ export class PasswordResetService {
     if (!credential) {
       return;
     }
+
+    await this.assertNotSharedLogin(identifier.personId);
 
     if (credential.resetAllowanceUsed) {
       throw new ForbiddenException(AUTH_ERRORS.RESET_ALREADY_USED);
@@ -90,13 +111,20 @@ export class PasswordResetService {
     );
   }
 
-  async completeReset(dto: PasswordResetCompleteDto): Promise<void> {
+  /** `deviceId` is the phone the reset was completed on (X-Device-Id): its links
+   * survive, every other phone's links are revoked -- the owner keeps working, a
+   * phone an attacker had linked does not. */
+  async completeReset(
+    dto: PasswordResetCompleteDto,
+    deviceId: string | null = null,
+  ): Promise<void> {
     const identifier = await this.loginIdentifierRepo.findVerifiedByValue(
       dto.identifier,
     );
     if (!identifier) {
       throw new BadRequestException(AUTH_ERRORS.INVALID_OTP);
     }
+    await this.assertNotSharedLogin(identifier.personId);
 
     const challenge = await this.otpChallengeRepo.findLatestPending(
       identifier.personId,
@@ -130,6 +158,12 @@ export class PasswordResetService {
       await this.otpChallengeRepo.markConsumed(challenge.id, client);
       // A reset implies the old credential may have been compromised — every existing
       // session is revoked so it can't be ridden out after the password changes.
+      await this.linkRepo.revokeForOwner(
+        identifier.personId,
+        'PASSWORD_RESET',
+        deviceId,
+        client,
+      );
       await this.sessionRepo.deleteAllForPerson(identifier.personId, client);
     });
   }

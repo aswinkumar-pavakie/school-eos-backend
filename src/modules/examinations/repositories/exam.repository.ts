@@ -204,6 +204,43 @@ export class ExamRepository {
     return this.findById(id, executor);
   }
 
+  /** Tells everyone the exam concerns -- guardians of students enrolled in any
+   * section it schedules, and those sections' class teachers -- in one
+   * set-based statement. Called once, on the publish transition. */
+  async notifyPublished(examId: string, executor: Queryable = this.postgres): Promise<number> {
+    const res = await executor.query(
+      `INSERT INTO notification
+         (person_id, about_student_id, notification_type, title, body, related_object_type, related_object_id)
+       SELECT DISTINCT r.person_id, r.student_id, 'EXAM_PUBLISHED', e.name || ' timetable is out',
+              'The schedule for ' || e.name || ' has been published.', 'exam', e.id
+       FROM exam e
+       JOIN (
+         SELECT es.exam_id, g.person_id, s.id AS student_id
+           FROM exam_subject es
+           JOIN subject_offering so ON so.id = es.subject_offering_id
+           JOIN student_enrolment se ON se.section_id = so.section_id AND se.status = 'ACTIVE'
+           JOIN student s ON s.id = se.student_id AND s.status = 'ACTIVE'
+           JOIN guardian_link g ON g.student_id = s.id AND g.status = 'ACTIVE'
+          WHERE es.exam_id = $1
+         UNION
+         SELECT es.exam_id, ra.person_id, NULL::uuid
+           FROM exam_subject es
+           JOIN subject_offering so ON so.id = es.subject_offering_id
+           JOIN v_active_role_assignment ra ON ra.role_code = 'CLASS_ADVISOR' AND ra.scope_id = so.section_id
+          WHERE es.exam_id = $1
+         UNION
+         SELECT es.exam_id, st.person_id, NULL::uuid
+           FROM exam_subject es
+           JOIN subject_offering so ON so.id = es.subject_offering_id
+           JOIN staff st ON st.id = so.teacher_staff_id AND st.status = 'ACTIVE'
+          WHERE es.exam_id = $1
+       ) r ON r.exam_id = e.id
+       WHERE e.id = $1`,
+      [examId],
+    );
+    return res.rowCount ?? 0;
+  }
+
   async lock(id: string, executor: Queryable = this.postgres): Promise<ExamRow | null> {
     const { rows } = await executor.query<{ id: string }>(
       `UPDATE exam SET state = 'LOCKED', updated_at = now() WHERE id = $1 RETURNING id`,

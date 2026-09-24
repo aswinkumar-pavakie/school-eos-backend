@@ -198,6 +198,7 @@ describe('RoomBedViewService — no write surface', () => {
       'getStudentRoom',
       'listAllocations',
       'listHostelStructure',
+      'listWardenRoster',
     ]);
   });
 });

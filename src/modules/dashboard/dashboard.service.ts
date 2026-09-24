@@ -97,27 +97,31 @@ export class DashboardService {
   constructor(private readonly postgres: PostgresService) {}
 
   async getSummary(): Promise<DashboardSummary> {
-    const [
-      studentsResult,
-      staffResult,
-      yearResult,
-      bedsResult,
-      sectionsResult,
-      subjectsResult,
-      studentsWithoutGuardianResult,
-      studentsWithoutIdCardResult,
-      draftFeeStructuresResult,
-      vehiclesResult,
-      activeRoutesResult,
-      activeSportsResult,
-      idCardsIssuedResult,
-      activityResult,
-    ] = await Promise.all([
-      this.postgres.query<{ count: string }>(
-        `SELECT count(*) FROM student WHERE status = 'ACTIVE'`,
-      ),
-      this.postgres.query<{ count: string }>(
-        `SELECT count(*) FROM staff WHERE status = 'ACTIVE'`,
+    // One round trip for every headline count (was 12 separate queries, each
+    // holding a pooled connection); the year and the activity feed are the only
+    // other reads.
+    const [countsResult, yearResult, activityResult] = await Promise.all([
+      this.postgres.query<Record<string, string>>(
+        `SELECT
+           (SELECT count(*) FROM student WHERE status = 'ACTIVE') AS students,
+           (SELECT count(*) FROM staff st WHERE st.status = 'ACTIVE'
+              AND NOT EXISTS (SELECT 1 FROM class_teacher_login ctl WHERE ctl.login_person_id = st.person_id)) AS staff,
+           (SELECT count(*) FROM hostel_bed) AS beds_total,
+           (SELECT count(*) FROM hostel_bed WHERE status = 'OCCUPIED') AS beds_occupied,
+           (SELECT count(*) FROM section WHERE status = 'ACTIVE') AS sections,
+           (SELECT count(*) FROM subject WHERE status = 'ACTIVE') AS subjects,
+           (SELECT count(*) FROM student s WHERE s.status = 'ACTIVE'
+              AND NOT EXISTS (SELECT 1 FROM guardian_link gl WHERE gl.student_id = s.id AND gl.status = 'ACTIVE')) AS no_guardian,
+           (SELECT count(*) FROM student s WHERE s.status = 'ACTIVE'
+              AND NOT EXISTS (SELECT 1 FROM id_card ic WHERE ic.student_id = s.id AND ic.status = 'ACTIVE')) AS no_id_card,
+           (SELECT count(*) FROM fee_structure WHERE state = 'DRAFT') AS draft_fees,
+           (SELECT count(*) FROM vehicle WHERE operational_status != 'RETIRED') AS vehicles,
+           (SELECT count(*) FROM route WHERE status = 'ACTIVE') AS routes,
+           (SELECT count(*) FROM sport WHERE status = 'ACTIVE') AS sports,
+           (SELECT count(*) FROM id_card WHERE status = 'ACTIVE') AS id_cards,
+           (SELECT count(*) FROM class_teacher_login ctl
+              WHERE NOT EXISTS (SELECT 1 FROM class_teacher_login_assignment a
+                                WHERE a.class_teacher_login_id = ctl.login_person_id AND a.status = 'ACTIVE')) AS vacant_class_logins`,
       ),
       this.postgres.query<{
         id: string;
@@ -126,44 +130,6 @@ export class DashboardService {
         end_date: string;
       }>(
         `SELECT id, name, start_date, end_date FROM academic_year WHERE is_current LIMIT 1`,
-      ),
-      this.postgres.query<{ total: string; occupied: string }>(
-        `SELECT count(*) AS total, count(*) FILTER (WHERE status = 'OCCUPIED') AS occupied FROM hostel_bed`,
-      ),
-      this.postgres.query<{ count: string }>(
-        `SELECT count(*) FROM section WHERE status = 'ACTIVE'`,
-      ),
-      this.postgres.query<{ count: string }>(
-        `SELECT count(*) FROM subject WHERE status = 'ACTIVE'`,
-      ),
-      this.postgres.query<{ count: string }>(
-        `SELECT count(*) FROM student s
-         WHERE s.status = 'ACTIVE'
-           AND NOT EXISTS (
-             SELECT 1 FROM guardian_link gl WHERE gl.student_id = s.id AND gl.status = 'ACTIVE'
-           )`,
-      ),
-      this.postgres.query<{ count: string }>(
-        `SELECT count(*) FROM student s
-         WHERE s.status = 'ACTIVE'
-           AND NOT EXISTS (
-             SELECT 1 FROM id_card ic WHERE ic.student_id = s.id AND ic.status = 'ACTIVE'
-           )`,
-      ),
-      this.postgres.query<{ count: string }>(
-        `SELECT count(*) FROM fee_structure WHERE state = 'DRAFT'`,
-      ),
-      this.postgres.query<{ count: string }>(
-        `SELECT count(*) FROM vehicle WHERE operational_status != 'RETIRED'`,
-      ),
-      this.postgres.query<{ count: string }>(
-        `SELECT count(*) FROM route WHERE status = 'ACTIVE'`,
-      ),
-      this.postgres.query<{ count: string }>(
-        `SELECT count(*) FROM sport WHERE status = 'ACTIVE'`,
-      ),
-      this.postgres.query<{ count: string }>(
-        `SELECT count(*) FROM id_card WHERE status = 'ACTIVE'`,
       ),
       this.postgres.query<{
         id: string;
@@ -188,11 +154,13 @@ export class DashboardService {
       ),
     ]);
 
+    const c = countsResult.rows[0];
+    const n = (k: string) => parseInt(c[k], 10);
     const year = yearResult.rows[0];
 
     return {
-      activeStudents: parseInt(studentsResult.rows[0].count, 10),
-      activeStaff: parseInt(staffResult.rows[0].count, 10),
+      activeStudents: n('students'),
+      activeStaff: n('staff'),
       currentAcademicYear: year
         ? {
             id: year.id,
@@ -202,30 +170,35 @@ export class DashboardService {
           }
         : null,
       hostelOccupancy: {
-        occupiedBeds: parseInt(bedsResult.rows[0].occupied, 10),
-        totalBeds: parseInt(bedsResult.rows[0].total, 10),
+        occupiedBeds: n('beds_occupied'),
+        totalBeds: n('beds_total'),
       },
-      sectionsCount: parseInt(sectionsResult.rows[0].count, 10),
-      subjectsCount: parseInt(subjectsResult.rows[0].count, 10),
-      vehiclesCount: parseInt(vehiclesResult.rows[0].count, 10),
-      activeRoutesCount: parseInt(activeRoutesResult.rows[0].count, 10),
-      activeSportsCount: parseInt(activeSportsResult.rows[0].count, 10),
-      idCardsIssuedCount: parseInt(idCardsIssuedResult.rows[0].count, 10),
+      sectionsCount: n('sections'),
+      subjectsCount: n('subjects'),
+      vehiclesCount: n('vehicles'),
+      activeRoutesCount: n('routes'),
+      activeSportsCount: n('sports'),
+      idCardsIssuedCount: n('id_cards'),
       actionItems: [
         {
           label: 'Active students with no guardian on file',
-          count: parseInt(studentsWithoutGuardianResult.rows[0].count, 10),
-          href: '/dashboard/students',
+          count: n('no_guardian'),
+          href: '/admin/students',
         },
         {
           label: 'Active students with no ID card issued',
-          count: parseInt(studentsWithoutIdCardResult.rows[0].count, 10),
-          href: '/dashboard/students',
+          count: n('no_id_card'),
+          href: '/admin/students',
         },
         {
           label: 'Fee structures still in draft',
-          count: parseInt(draftFeeStructuresResult.rows[0].count, 10),
-          href: '/dashboard/finance',
+          count: n('draft_fees'),
+          href: '/admin/finance',
+        },
+        {
+          label: 'Class logins with no teacher assigned',
+          count: n('vacant_class_logins'),
+          href: '/admin/academics',
         },
       ],
       recentActivity: activityResult.rows.map((row) => ({

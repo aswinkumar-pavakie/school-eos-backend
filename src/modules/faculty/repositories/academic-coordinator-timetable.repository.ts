@@ -174,6 +174,41 @@ export class AcademicCoordinatorTimetableRepository {
     );
     return rowCount ?? 0;
   }
+
+  /** New timetable is live: tell the section's guardians and its class teacher
+   * (one set-based insert). Best effort -- never fails the publish. */
+  async notifyTimetablePublished(sectionId: string, executor: Queryable = this.postgres): Promise<void> {
+    try {
+      await executor.query(
+        `INSERT INTO notification
+           (person_id, about_student_id, notification_type, title, body, related_object_type, related_object_id)
+         SELECT DISTINCT r.person_id, r.student_id, 'TIMETABLE_PUBLISHED', 'Timetable updated',
+                'The class timetable for ' || g.name || '-' || sec.name || ' has been updated.', 'section', sec.id
+         FROM section sec
+         JOIN grade g ON g.id = sec.grade_id
+         JOIN (
+           SELECT se.section_id, gl.person_id, s.id AS student_id
+             FROM student_enrolment se
+             JOIN student s ON s.id = se.student_id AND s.status = 'ACTIVE'
+             JOIN guardian_link gl ON gl.student_id = s.id AND gl.status = 'ACTIVE'
+            WHERE se.status = 'ACTIVE'
+           UNION
+           SELECT ra.scope_id, ra.person_id, NULL::uuid
+             FROM v_active_role_assignment ra
+            WHERE ra.role_code = 'CLASS_ADVISOR'
+           UNION
+           SELECT so.section_id, st.person_id, NULL::uuid
+             FROM subject_offering so
+             JOIN staff st ON st.id = so.teacher_staff_id AND st.status = 'ACTIVE'
+            WHERE so.status = 'ACTIVE'
+         ) r ON r.section_id = sec.id
+         WHERE sec.id = $1`,
+        [sectionId],
+      );
+    } catch {
+      // swallowed on purpose (see above)
+    }
+  }
 }
 
 function isTeacherClash(err: unknown): boolean {

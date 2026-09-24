@@ -25,6 +25,8 @@ import { UserCredentialRepository } from './repositories/user-credential.reposit
 export interface DeviceContext {
   ipAddress: string | null;
   userAgent: string | null;
+  /** X-Device-Id header: names this phone/browser install. Not a secret. */
+  deviceId?: string | null;
 }
 
 export interface PersonSummary {
@@ -149,6 +151,7 @@ export class IdentityService {
           refreshTokenHash,
           devicePlatform: dto.devicePlatform ?? 'WEB',
           deviceLabel: dto.deviceLabel ?? null,
+          deviceId: device.deviceId ?? null,
           ipAddress: device.ipAddress,
           userAgent: device.userAgent,
           expiresAt,
@@ -204,22 +207,28 @@ export class IdentityService {
       this.issueRefreshToken();
 
     await this.unitOfWork.run(async (client) => {
-      // Rotation, not optional: delete the old row, insert the new one. A stolen
-      // token that gets used first makes the legitimate user's next refresh fail on
-      // a hash that's already gone — that mismatch is the compromise signal.
-      await this.sessionRepo.deleteById(session.id, client);
-      await this.sessionRepo.create(
-        {
-          personId: session.personId,
-          refreshTokenHash,
-          devicePlatform: session.devicePlatform,
-          deviceLabel: session.deviceLabel,
-          ipAddress: device.ipAddress,
-          userAgent: device.userAgent,
-          expiresAt,
-        },
+      // Rotation, not optional: the old hash stops matching the moment this commits. A
+      // stolen token that gets used first makes the legitimate user's next refresh fail
+      // on a hash that's gone -- that mismatch is the compromise signal. Done as an
+      // in-place UPDATE (not delete + insert) so sessions minted by an account switch,
+      // which hang off this row, are not cascade-deleted by a routine refresh.
+      await this.sessionRepo.rotateRefreshToken(
+        session.id,
+        refreshTokenHash,
+        expiresAt,
         client,
       );
+      if (!session.deviceId && device.deviceId) {
+        await this.sessionRepo.bindDeviceIfMissing(session.id, device.deviceId, client);
+      }
+      // A linked (switched-into) session keeps its parent alive while it is in use.
+      if (session.linkedFromSessionId) {
+        await this.sessionRepo.extendExpiry(
+          session.linkedFromSessionId,
+          expiresAt,
+          client,
+        );
+      }
     });
 
     return { accessToken, refreshToken };
@@ -229,9 +238,15 @@ export class IdentityService {
     // Deletes the matching row if present; no-op otherwise. The access token is left
     // to expire naturally (<=15 min) — expected, not a bug: it's never invalidated
     // server-side.
-    await this.sessionRepo.deleteByRefreshTokenHash(
-      hashToken(dto.refreshToken),
-    );
+    const hash = hashToken(dto.refreshToken);
+    // Signing out of a switched-into session ends the whole sign-in: deleting the
+    // parent cascades to it, so the faculty session cannot linger on the server.
+    const session = await this.sessionRepo.findByRefreshTokenHash(hash);
+    if (session?.linkedFromSessionId) {
+      await this.sessionRepo.deleteById(session.linkedFromSessionId);
+      return;
+    }
+    await this.sessionRepo.deleteByRefreshTokenHash(hash);
   }
 
   async me(
@@ -243,6 +258,67 @@ export class IdentityService {
     }
     const roles = await this.roleAssignmentRepo.findActiveByPersonId(personId);
     return {
+      person: this.toPersonSummary(person),
+      roles: roles.map(this.toRoleSummary),
+    };
+  }
+
+  /** Mints (or re-issues) a session for a person without a password check -- only for
+   * callers that have ALREADY proven the right to it (see AccountLinkService). Pass
+   * rotateSessionId to hand an existing session back to its owner instead of creating
+   * a second one. */
+  async issueSession(
+    personId: string,
+    opts: {
+      deviceId: string | null;
+      devicePlatform: 'WEB' | 'ANDROID' | 'IOS';
+      deviceLabel: string | null;
+      linkedFromSessionId?: string | null;
+      rotateSessionId?: string | null;
+    },
+    device: DeviceContext,
+    client?: import('../../infrastructure/postgres/postgres.service').Queryable,
+  ): Promise<LoginResult & { sessionId: string }> {
+    const person = await this.personRepo.findById(personId);
+    if (!person || person.status !== 'ACTIVE') {
+      throw new UnauthorizedException(AUTH_ERRORS.ACCOUNT_DEACTIVATED);
+    }
+    const roles = await this.roleAssignmentRepo.findActiveByPersonId(
+      personId,
+      client,
+    );
+    const accessToken = this.signAccessToken(personId, roles);
+    const { refreshToken, refreshTokenHash, expiresAt } =
+      this.issueRefreshToken();
+    let sessionId: string;
+    if (opts.rotateSessionId) {
+      await this.sessionRepo.rotateRefreshToken(
+        opts.rotateSessionId,
+        refreshTokenHash,
+        expiresAt,
+        client,
+      );
+      sessionId = opts.rotateSessionId;
+    } else {
+      sessionId = await this.sessionRepo.create(
+        {
+          personId,
+          refreshTokenHash,
+          devicePlatform: opts.devicePlatform,
+          deviceLabel: opts.deviceLabel,
+          deviceId: opts.deviceId,
+          linkedFromSessionId: opts.linkedFromSessionId ?? null,
+          ipAddress: device.ipAddress,
+          userAgent: device.userAgent,
+          expiresAt,
+        },
+        client,
+      );
+    }
+    return {
+      sessionId,
+      accessToken,
+      refreshToken,
       person: this.toPersonSummary(person),
       roles: roles.map(this.toRoleSummary),
     };

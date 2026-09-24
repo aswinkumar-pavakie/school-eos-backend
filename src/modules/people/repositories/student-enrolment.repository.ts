@@ -180,6 +180,17 @@ export class StudentEnrolmentRepository {
     return rows[0] ?? null;
   }
 
+  /** A student who leaves drops out of every class roster and headcount: their
+   * ACTIVE enrolment is closed with outcome LEFT (the row stays as history). */
+  async closeActiveForLeaving(studentId: string, executor: Queryable): Promise<number> {
+    const res = await executor.query(
+      `UPDATE student_enrolment SET status = 'CLOSED', outcome = 'LEFT', updated_at = now()
+       WHERE student_id = $1 AND status = 'ACTIVE'`,
+      [studentId],
+    );
+    return res.rowCount ?? 0;
+  }
+
   async delete(
     id: string,
     executor: Queryable = this.postgres,

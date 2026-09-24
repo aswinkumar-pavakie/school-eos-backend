@@ -4,7 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import * as argon2 from 'argon2';
 import { AuditService } from '../../common/audit/audit.service';
+import { UnitOfWork } from '../../common/transactions/unit-of-work';
+import { ARGON2_OPTIONS, generateTempPassword } from '../identity/identity.util';
+import { AccountLinkRepository } from '../identity/repositories/account-link.repository';
+import { SessionRepository } from '../identity/repositories/session.repository';
 import { LoginIdentifierRepository } from '../identity/repositories/login-identifier.repository';
 import { PersonRepository } from '../identity/repositories/person.repository';
 import { UserCredentialRepository } from '../identity/repositories/user-credential.repository';
@@ -23,6 +28,9 @@ export class StaffService {
     private readonly loginIdentifierRepo: LoginIdentifierRepository,
     private readonly userCredentialRepo: UserCredentialRepository,
     private readonly auditService: AuditService,
+    private readonly sessionRepo: SessionRepository,
+    private readonly unitOfWork: UnitOfWork,
+    private readonly linkRepo: AccountLinkRepository,
   ) {}
 
   async list(query: StaffQueryDto) {
@@ -209,7 +217,35 @@ export class StaffService {
     }
     const dateOfExit = dto.dateOfExit ?? new Date().toISOString().slice(0, 10);
     try {
-      const updated = await this.staffRepo.exit(id, dto.exitReason, dateOfExit);
+      // Leaving the school must actually end access: roles revoked, sessions and
+      // push tokens gone, and any class seat released with its shared password
+      // renewed (the leaver knows the old one). One transaction, so a failure
+      // half-way leaves nothing half-exited.
+      const seatLogins = await this.staffRepo.findHeldClassLogins(staff.personId);
+      const renewals = await Promise.all(
+        seatLogins.map(async (loginId) => {
+          const plain = generateTempPassword();
+          return { loginId, plain, hash: await argon2.hash(plain, ARGON2_OPTIONS) };
+        }),
+      );
+      const updated = await this.unitOfWork.run(async (client) => {
+        const row = await this.staffRepo.exit(id, dto.exitReason, dateOfExit, client);
+        if (!row) return null;
+        await this.staffRepo.releaseClassSeats(staff.personId, actorPersonId, client);
+        // Linked-account switching: the leaver's own links, and every phone that had
+        // one of their classes linked, are cut before their sessions are deleted.
+        await this.linkRepo.revokeForOwner(staff.personId, 'STAFF_EXITED', null, client);
+        for (const r of renewals) {
+          await this.linkRepo.revokeForLinked(r.loginId, 'TEACHER_CHANGED', client);
+          await this.userCredentialRepo.setSharedLoginPassword(r.loginId, r.hash, r.plain, client);
+          await this.sessionRepo.deleteAllForPerson(r.loginId, client);
+          await this.staffRepo.removeDeviceTokens(r.loginId, client);
+        }
+        await this.staffRepo.revokeAllRoles(staff.personId, actorPersonId, client);
+        await this.sessionRepo.deleteAllForPerson(staff.personId, client);
+        await this.staffRepo.removeDeviceTokens(staff.personId, client);
+        return row;
+      });
       if (!updated) throw new NotFoundException('Staff record not found');
       await this.auditService.record({
         actorPersonId,
@@ -218,7 +254,7 @@ export class StaffService {
         objectId: id,
         outcome: 'SUCCESS',
         beforeData: staff,
-        afterData: updated,
+        afterData: { ...updated, releasedClassLogins: seatLogins },
       });
       return updated;
     } catch (err) {

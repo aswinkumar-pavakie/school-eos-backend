@@ -199,6 +199,11 @@ export class StaffRepository {
         `EXISTS (SELECT 1 FROM subject_offering so JOIN section sec ON sec.id = so.section_id WHERE ${soConditions.join(' AND ')})`,
       );
     }
+    // A class-teacher login carries a system staff row (advisor lookups need one)
+    // but is not an employee: keep it out of every real staff list.
+    conditions.push(
+      `NOT EXISTS (SELECT 1 FROM class_teacher_login ctl WHERE ctl.login_person_id = s.person_id)`,
+    );
     const where =
       conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -223,7 +228,10 @@ export class StaffRepository {
     isTeaching: boolean | undefined,
     executor: Queryable = this.postgres,
   ): Promise<string[]> {
-    const conditions = [`designation IS NOT NULL`];
+    const conditions = [
+      `designation IS NOT NULL`,
+      `NOT EXISTS (SELECT 1 FROM class_teacher_login ctl WHERE ctl.login_person_id = staff.person_id)`,
+    ];
     const params: unknown[] = [];
     if (isTeaching !== undefined) {
       params.push(isTeaching);
@@ -381,6 +389,48 @@ export class StaffRepository {
     );
     if (rows.length === 0) return null;
     return parseInt(rows[0].employee_no.slice(-4), 10);
+  }
+
+  /** Class-teacher logins this person currently holds (their seats). */
+  async findHeldClassLogins(personId: string, executor: Queryable = this.postgres): Promise<string[]> {
+    const { rows } = await executor.query<{ id: string }>(
+      `SELECT class_teacher_login_id AS id
+       FROM class_teacher_login_assignment
+       WHERE faculty_person_id = $1 AND status = 'ACTIVE'`,
+      [personId],
+    );
+    return rows.map((r) => r.id);
+  }
+
+  /** Ends a person's hold on every class seat and revokes each seat login's
+   * advisor role, so nobody but the admin can re-use the shared login. */
+  async releaseClassSeats(personId: string, revokedBy: string, executor: Queryable = this.postgres): Promise<void> {
+    await executor.query(
+      `UPDATE role_assignment SET status = 'REVOKED', revoked_at = now(), revoked_by = $2, updated_at = now()
+       WHERE status = 'ACTIVE' AND role_code = 'CLASS_ADVISOR'
+         AND person_id IN (SELECT class_teacher_login_id FROM class_teacher_login_assignment
+                           WHERE faculty_person_id = $1 AND status = 'ACTIVE')`,
+      [personId, revokedBy],
+    );
+    await executor.query(
+      `UPDATE class_teacher_login_assignment SET status = 'ENDED', unassigned_on = now()
+       WHERE faculty_person_id = $1 AND status = 'ACTIVE'`,
+      [personId],
+    );
+  }
+
+  /** Revokes every active role of a person (used when they leave the school). */
+  async revokeAllRoles(personId: string, revokedBy: string, executor: Queryable = this.postgres): Promise<void> {
+    await executor.query(
+      `UPDATE role_assignment SET status = 'REVOKED', revoked_at = now(), revoked_by = $2, updated_at = now()
+       WHERE person_id = $1 AND status = 'ACTIVE'`,
+      [personId, revokedBy],
+    );
+  }
+
+  /** Deletes push tokens so a departed person's phone stops receiving alerts. */
+  async removeDeviceTokens(personId: string, executor: Queryable = this.postgres): Promise<void> {
+    await executor.query(`DELETE FROM person_device_token WHERE person_id = $1`, [personId]);
   }
 
   /** Atomic: status and date_of_exit must change together, per the DB's own

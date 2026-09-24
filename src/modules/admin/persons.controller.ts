@@ -151,4 +151,18 @@ export class PersonsController {
     await this.personsService.forceSignOut(id, actor.personId);
     return { data: { signedOut: true } };
   }
+
+  @Get(':id/linked-accounts')
+  async linkedAccounts(@Param('id') id: string) {
+    return { data: await this.personsService.listLinkedAccounts(id) };
+  }
+
+  @Post(':id/revoke-linked-accounts')
+  @HttpCode(HttpStatus.OK)
+  async revokeLinkedAccounts(
+    @Param('id') id: string,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return { data: await this.personsService.revokeLinkedAccounts(id, actor.personId) };
+  }
 }

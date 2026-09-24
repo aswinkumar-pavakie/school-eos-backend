@@ -35,6 +35,12 @@ export class PersonDeviceTokenRepository {
   /** Expo's own push receipts can report a token as permanently invalid
    * (uninstalled app, etc.) -- this is how that gets cleaned up, called by
    * the delivery-tracking step, never by a client directly. */
+  /** Every device registered under this person -- used when a shared login
+   * changes hands, so the previous holder's phone stops getting its pushes. */
+  async removeAllForPerson(personId: string, executor: Queryable = this.postgres): Promise<void> {
+    await executor.query(`DELETE FROM person_device_token WHERE person_id = $1`, [personId]);
+  }
+
   async remove(expoPushToken: string, executor: Queryable = this.postgres): Promise<void> {
     await executor.query(`DELETE FROM person_device_token WHERE expo_push_token = $1`, [expoPushToken]);
   }

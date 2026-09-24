@@ -16,6 +16,7 @@ import {
 import { LoginIdentifierRepository } from '../identity/repositories/login-identifier.repository';
 import { PersonRepository } from '../identity/repositories/person.repository';
 import { RoleAssignmentRepository } from '../identity/repositories/role-assignment.repository';
+import { AccountLinkRepository } from '../identity/repositories/account-link.repository';
 import { SessionRepository } from '../identity/repositories/session.repository';
 import { UserCredentialRepository } from '../identity/repositories/user-credential.repository';
 import { CreatePersonDto } from './dto/create-person.dto';
@@ -41,6 +42,7 @@ export class PersonsService {
     private readonly auditService: AuditService,
     private readonly storageService: StorageService,
     private readonly academicCoordinatorLoginRepo: AcademicCoordinatorLoginRepository,
+    private readonly linkRepo: AccountLinkRepository,
   ) {}
 
   async list(query: PersonQueryDto) {
@@ -308,6 +310,7 @@ export class PersonsService {
       );
       // Deactivating an account that's mid-session shouldn't leave its existing
       // access tokens/sessions usable until they happen to expire naturally.
+      await this.linkRepo.revokeForOwner(personId, 'ACCOUNT_SUSPENDED', null, client);
       await this.sessionRepo.deleteAllForPerson(personId, client);
       await this.auditService.record(
         {
@@ -432,6 +435,8 @@ export class PersonsService {
         password,
         client,
       );
+      // Admin reset = lost or suspected leak: start clean, every linked phone re-adds.
+      await this.linkRepo.revokeForOwner(personId, 'ADMIN_PASSWORD_RESET', null, client);
       await this.sessionRepo.deleteAllForPerson(personId, client);
       await this.auditService.record(
         {
@@ -446,5 +451,35 @@ export class PersonsService {
     });
 
     return { newPassword: password };
+  }
+
+  /** The phones/browsers this person has linked accounts on (admin view). */
+  async listLinkedAccounts(personId: string) {
+    const person = await this.personRepo.findById(personId);
+    if (!person) throw new NotFoundException('Person not found');
+    const links = await this.linkRepo.listForOwner(personId);
+    return links.map((l) => ({
+      id: l.id,
+      label: l.gradeName && l.sectionName ? `${l.gradeName}-${l.sectionName}` : 'Linked account',
+      deviceLabel: l.deviceLabel,
+      createdAt: l.createdAt,
+      lastUsedAt: l.lastUsedAt,
+    }));
+  }
+
+  /** Admin cut-off: every linked phone loses its links (and switched-in sessions). */
+  async revokeLinkedAccounts(personId: string, actorPersonId: string): Promise<{ revoked: number }> {
+    const person = await this.personRepo.findById(personId);
+    if (!person) throw new NotFoundException('Person not found');
+    const revoked = await this.linkRepo.revokeForOwner(personId, 'ADMIN_REVOKED');
+    await this.auditService.record({
+      actorPersonId,
+      action: 'ACCOUNT_LINK_REVOKED',
+      objectType: 'person',
+      objectId: personId,
+      outcome: 'SUCCESS',
+      afterData: { reason: 'ADMIN_REVOKED', revoked },
+    });
+    return { revoked };
   }
 }

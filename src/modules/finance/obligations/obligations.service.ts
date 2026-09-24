@@ -62,7 +62,7 @@ export class ObligationsService {
     lateFeePaise?: string;
     dueDate: string;
   }): Promise<FeeDemandRow> {
-    return this.repo.create({
+    const created = await this.repo.create({
       assignmentId: input.assignmentId,
       studentId: input.studentId,
       feeHeadId: input.feeHeadId ?? null,
@@ -71,6 +71,8 @@ export class ObligationsService {
       lateFeePaise: input.lateFeePaise ?? '0',
       dueDate: input.dueDate,
     });
+    await this.repo.notifyGuardiansOfNewDemand(created.id);
+    return created;
   }
 
   /** Amount/due date only ever change before anything has been paid against this

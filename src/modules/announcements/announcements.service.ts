@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service';
@@ -16,6 +17,8 @@ import {
 
 @Injectable()
 export class AnnouncementsService {
+  private readonly logger = new Logger(AnnouncementsService.name);
+
   constructor(
     private readonly announcementRepo: AnnouncementRepository,
     private readonly auditService: AuditService,
@@ -130,6 +133,20 @@ export class AnnouncementsService {
         outcome: 'SUCCESS',
         afterData: created,
       });
+      // Best effort: the post is already saved, so a notification hiccup must not fail it.
+      try {
+        await this.announcementRepo.notifyAudience(
+          created.id,
+          dto.title,
+          dto.body,
+          dto.isEmergency ?? false,
+          actorPersonId,
+        );
+      } catch (notifyErr) {
+        this.logger.warn(
+          `Announcement ${created.id} saved but notifying recipients failed: ${String(notifyErr)}`,
+        );
+      }
       return created;
     } catch (err) {
       if (isForeignKeyViolation(err)) {
@@ -143,7 +160,7 @@ export class AnnouncementsService {
 
   async archive(id: string, actorPersonId: string) {
     const existing = await this.announcementRepo.findById(id);
-    if (!existing) throw new NotFoundException('Announcement not found');
+    if (!existing) throw new NotFoundException('Notice not found');
     const updated = await this.announcementRepo.setState(id, 'ARCHIVED');
     await this.auditService.record({
       actorPersonId,
@@ -166,9 +183,9 @@ export class AnnouncementsService {
     restrictToOwnerId?: string,
   ) {
     const existing = await this.announcementRepo.findById(id);
-    if (!existing) throw new NotFoundException('Announcement not found');
+    if (!existing) throw new NotFoundException('Notice not found');
     if (restrictToOwnerId && existing.createdBy !== restrictToOwnerId) {
-      throw new ForbiddenException('You can only edit your own announcements.');
+      throw new ForbiddenException('You can only edit your own notices.');
     }
 
     const audiences = dto.audienceType
@@ -208,10 +225,10 @@ export class AnnouncementsService {
   /** Same ownership rule as update(). */
   async remove(id: string, actorPersonId: string, restrictToOwnerId?: string) {
     const existing = await this.announcementRepo.findById(id);
-    if (!existing) throw new NotFoundException('Announcement not found');
+    if (!existing) throw new NotFoundException('Notice not found');
     if (restrictToOwnerId && existing.createdBy !== restrictToOwnerId) {
       throw new ForbiddenException(
-        'You can only delete your own announcements.',
+        'You can only delete your own notices.',
       );
     }
     await this.announcementRepo.delete(id);

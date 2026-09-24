@@ -1,7 +1,9 @@
 // POST /auth/password-reset/request, POST /auth/password-reset/complete.
 
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { Public } from '../../common/auth/public.decorator';
+import { deviceContextFrom } from './device-context.util';
 import { PasswordResetCompleteDto } from './dto/password-reset-complete.dto';
 import { PasswordResetRequestDto } from './dto/password-reset-request.dto';
 import { PasswordResetService } from './password-reset.service';
@@ -23,8 +25,8 @@ export class PasswordResetController {
   @Public()
   @Post('complete')
   @HttpCode(HttpStatus.OK)
-  async complete(@Body() dto: PasswordResetCompleteDto) {
-    await this.passwordResetService.completeReset(dto);
+  async complete(@Body() dto: PasswordResetCompleteDto, @Req() req: Request) {
+    await this.passwordResetService.completeReset(dto, deviceContextFrom(req).deviceId ?? null);
     return { data: { message: 'Password reset successful.' } };
   }
 }

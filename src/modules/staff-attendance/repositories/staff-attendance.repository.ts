@@ -96,6 +96,7 @@ export class StaffAttendanceRepository {
          LIMIT 1
        ) latest ON true
        WHERE ${conditions.join(' AND ')}
+         AND NOT EXISTS (SELECT 1 FROM class_teacher_login ctl WHERE ctl.login_person_id = s.person_id)
        ORDER BY p.first_name, p.last_name`,
       params,
     );
@@ -260,7 +261,8 @@ export class StaffAttendanceRepository {
          ORDER BY e.received_at DESC
          LIMIT 1
        ) latest ON true
-       WHERE s.status = 'ACTIVE'`,
+       WHERE s.status = 'ACTIVE'
+         AND NOT EXISTS (SELECT 1 FROM class_teacher_login ctl WHERE ctl.login_person_id = s.person_id)`,
       [date],
     );
     return {
