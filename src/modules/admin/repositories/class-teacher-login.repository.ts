@@ -131,29 +131,26 @@ export class ClassTeacherLoginRepository {
     return rows.length > 0 ? mapAssignment(rows[0]) : null;
   }
 
-  /** The one thing Faculty's own "can I switch?" check needs -- this faculty
-   * member's current ACTIVE class-teacher assignment, if any, plus which
-   * login it belongs to. */
-  async findActiveAssignmentByFaculty(
+  /** Every ACTIVE class this faculty member holds (a person can advise
+   * several sections), each with its login's email so the mobile switcher
+   * can list and prefill them. Never returns a password. */
+  async findActiveClassLoginsByFaculty(
     facultyPersonId: string,
     executor: Queryable = this.postgres,
-  ): Promise<(ClassTeacherAssignmentRow & { gradeId: string; sectionName: string }) | null> {
+  ): Promise<{ gradeId: string; gradeName: string; sectionName: string; email: string | null }[]> {
     const { rows } = await executor.query(
-      `SELECT a.id, a.class_teacher_login_id, a.academic_year_id, a.section_id,
-              a.faculty_person_id, a.assigned_by, a.assigned_on, a.unassigned_on, a.status,
-              l.grade_id, l.section_name
+      `SELECT l.grade_id AS "gradeId", g.name AS "gradeName", l.section_name AS "sectionName",
+              (SELECT li.value FROM login_identifier li
+                WHERE li.person_id = l.login_person_id AND li.identifier_type = 'EMAIL'
+                ORDER BY li.created_at LIMIT 1) AS email
        FROM class_teacher_login_assignment a
        JOIN class_teacher_login l ON l.login_person_id = a.class_teacher_login_id
-       WHERE a.faculty_person_id = $1 AND a.status = 'ACTIVE'`,
+       JOIN grade g ON g.id = l.grade_id
+       WHERE a.faculty_person_id = $1 AND a.status = 'ACTIVE'
+       ORDER BY g.name, l.section_name`,
       [facultyPersonId],
     );
-    if (rows.length === 0) return null;
-    const row = rows[0];
-    return {
-      ...mapAssignment(row),
-      gradeId: row.grade_id,
-      sectionName: row.section_name,
-    };
+    return rows;
   }
 
   async createAssignment(

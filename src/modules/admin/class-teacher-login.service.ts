@@ -260,13 +260,14 @@ export class ClassTeacherLoginService {
    * into?" check -- never returns the password; Admin communicates that to
    * the faculty member out of band, same as the Academic Coordinator login. */
   async getFacultyClassTeacherLink(facultyPersonId: string) {
-    const assignment =
-      await this.classTeacherLoginRepo.findActiveAssignmentByFaculty(facultyPersonId);
-    if (!assignment) return { hasClassTeacherLogin: false as const };
+    const classes = await this.classTeacherLoginRepo.findActiveClassLoginsByFaculty(facultyPersonId);
+    const first = classes[0];
+    if (!first) return { hasClassTeacherLogin: false as const };
     return {
       hasClassTeacherLogin: true as const,
-      gradeId: assignment.gradeId,
-      sectionName: assignment.sectionName,
+      gradeId: first.gradeId,
+      sectionName: first.sectionName,
+      classes,
     };
   }
 }
