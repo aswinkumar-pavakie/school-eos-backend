@@ -19,7 +19,6 @@ import { AttendanceModule } from './modules/attendance/attendance.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { CanteenModule } from './modules/canteen/canteen.module';
 import { CommunitiesModule } from './modules/communities/communities.module';
-import { CommunityLoginModule } from './modules/community-login/community-login.module';
 import { CommunityInitiativesModule } from './modules/community-initiatives/community-initiatives.module';
 import { CommunityMembershipRequestsModule } from './modules/community-membership-requests/community-membership-requests.module';
 import { CommunityProposalsModule } from './modules/community-proposals/community-proposals.module';
@@ -121,7 +120,6 @@ import { DriverAppModule } from './modules/driver-app/driver-app.module';
     ExaminationsModule,
     HealthModule,
     StudentDevelopmentModule,
-    CommunityLoginModule,
     CommunityProposalsModule,
     CommunityInitiativesModule,
     CommunityMembershipRequestsModule,
