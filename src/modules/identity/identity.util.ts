@@ -8,6 +8,7 @@
 
 import { randomBytes, randomInt, createHash } from 'crypto';
 import * as argon2 from 'argon2';
+import { UnauthorizedException } from '@nestjs/common';
 
 export const ARGON2_OPTIONS = {
   type: argon2.argon2id,
@@ -39,4 +40,19 @@ export function generateTempPassword(length = 12): string {
     out += TEMP_PASSWORD_ALPHABET[bytes[i] % TEMP_PASSWORD_ALPHABET.length];
   }
   return out;
+}
+
+/** Same body UnauthorizedException(message) already produces today
+ * ({statusCode:401, message, error:'Unauthorized'}), with one additive `code`
+ * field for a client to branch on without string-matching `message` -- never
+ * changes the message text itself, so wrong-password and unknown-identifier
+ * keep sharing the identical AUTH_ERRORS.INVALID_CREDENTIALS string (the
+ * existing "don't reveal account existence" rule is untouched). */
+export function authError(message: string, code: string): UnauthorizedException {
+  return new UnauthorizedException({
+    statusCode: 401,
+    message,
+    error: 'Unauthorized',
+    code,
+  });
 }

@@ -55,7 +55,8 @@ export class AttendanceRecordRepository {
     if (studentIds.length === 0) return;
     await executor.query(
       `INSERT INTO attendance_record (session_id, student_id, status)
-       SELECT $1, unnest($2::uuid[]), 'PRESENT'`,
+       SELECT $1, unnest($2::uuid[]), 'PRESENT'
+       ON CONFLICT DO NOTHING`,
       [sessionId, studentIds],
     );
   }

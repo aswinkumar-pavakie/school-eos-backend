@@ -172,10 +172,22 @@ export class StaffController {
     return { data: await this.approvalsService.withdraw(leave.approvalRequestId as string, actor) };
   }
 
+  // Security correction (same pattern as parents.controller.ts's own get()):
+  // staffService.get() returns the admin-only adminVisiblePassword field,
+  // which was being sent over the wire to every role this endpoint allows,
+  // including PRINCIPAL/CORRESPONDENT/VICE_PRINCIPAL, with no server-side
+  // stripping. This masks it for anyone who isn't ADMIN so the raw API
+  // response itself never carries it to a role that shouldn't see it.
   @Get(':id')
   @Roles('ADMIN', 'PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL')
-  async get(@Param('id') id: string) {
-    return { data: await this.staffService.get(id) };
+  async get(@Param('id') id: string, @CurrentActor() actor: AuthenticatedUser) {
+    const staff = await this.staffService.get(id);
+    if (actor.roles.includes('ADMIN')) {
+      return { data: staff };
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentionally dropped, not just renamed
+    const { adminVisiblePassword, ...rest } = staff;
+    return { data: rest };
   }
 
   @Post()

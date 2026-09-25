@@ -73,7 +73,7 @@ export class FacultyAttendanceService {
         client,
       );
       if (!session) {
-        session = await this.sessionRepo.create(sectionId, date, client);
+        session = await this.sessionRepo.findOrCreate(sectionId, date, client);
         const studentIds = await this.sessionRepo.findActiveEnrolledStudentIds(
           sectionId,
           client,
@@ -274,7 +274,7 @@ export class FacultyAttendanceService {
       client,
     );
     if (!session) {
-      session = await this.sessionRepo.create(
+      session = await this.sessionRepo.findOrCreate(
         params.sectionId,
         params.date,
         client,

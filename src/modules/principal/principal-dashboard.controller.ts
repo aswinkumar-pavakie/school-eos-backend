@@ -24,3 +24,20 @@ export class PrincipalDashboardController {
     return { data: await this.principalDashboardService.getSummary() };
   }
 }
+
+// Same read-only leadership-oversight role set as the dashboard summary
+// above -- a separate controller (not a second route on the one above)
+// since this backs a different page (the Students list) with its own,
+// unrelated real query set.
+@Roles('PRINCIPAL', 'CORRESPONDENT', 'VICE_PRINCIPAL', 'ADMIN')
+@Controller('principal/students-overview')
+export class PrincipalStudentsOverviewController {
+  constructor(
+    private readonly principalDashboardService: PrincipalDashboardService,
+  ) {}
+
+  @Get()
+  async get() {
+    return { data: await this.principalDashboardService.getStudentsOverview() };
+  }
+}

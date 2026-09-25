@@ -115,10 +115,9 @@ export class PersonsService {
           dto.identifierValue,
           client,
         );
-        await this.userCredentialRepo.createInitial(
+        await this.userCredentialRepo.createInitialSecure(
           person.id,
           passwordHash,
-          password,
           client,
         );
 
@@ -213,10 +212,9 @@ export class PersonsService {
           dto.identifierValue,
           client,
         );
-        await this.userCredentialRepo.createInitial(
+        await this.userCredentialRepo.createInitialSecure(
           coordinatorPerson.id,
           passwordHash,
-          dto.password,
           client,
         );
         await this.academicCoordinatorLoginRepo.create(
@@ -432,7 +430,6 @@ export class PersonsService {
         personId,
         passwordHash,
         hasSelfServiceResetUi,
-        password,
         client,
       );
       // Admin reset = lost or suspected leak: start clean, every linked phone re-adds.
