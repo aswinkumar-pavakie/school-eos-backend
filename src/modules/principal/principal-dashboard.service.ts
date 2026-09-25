@@ -167,9 +167,18 @@ export class PrincipalDashboardService {
            )`,
       ),
       this.postgres.query<{ teaching: string; support: string }>(
+        // Excludes class-teacher-login's own synthetic staff row (advisor
+        // lookups need one; it's not a real employee), the same exclusion
+        // dashboard.service.ts's own activeStaff count and
+        // staff.repository.ts's own findMany() already apply -- this query
+        // was the one place in the codebase missing it, inflating the total
+        // by exactly one row per section (confirmed live: 212 shown here vs
+        // 156 real employees, 56 sections).
         `SELECT count(*) FILTER (WHERE is_teaching) AS teaching,
                 count(*) FILTER (WHERE NOT is_teaching) AS support
-         FROM staff WHERE status = 'ACTIVE'`,
+         FROM staff st
+         WHERE st.status = 'ACTIVE'
+           AND NOT EXISTS (SELECT 1 FROM class_teacher_login ctl WHERE ctl.login_person_id = st.person_id)`,
       ),
       this.postgres.query<{ hostellers: string; day_scholars: string }>(
         `SELECT count(*) FILTER (WHERE is_hosteller) AS hostellers,

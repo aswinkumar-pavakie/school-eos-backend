@@ -11,7 +11,10 @@
 // that decision, not the original LLD's narrower one. CLASS_ADVISOR/
 // ACADEMIC_COORDINATOR are assignment labels layered on the base FACULTY
 // role_code (a Faculty member always also carries the base FACULTY role_code),
-// so they're already covered via FACULTY here, not listed separately.
+// so they're already covered via FACULTY here, not listed separately. The
+// standalone COMMUNITY login was removed (its own login surface, not the real
+// Communities feature, which stays under Admin/Principal/VP/Correspondent) --
+// dropped from here with it.
 export const MESSAGING_ENABLED_ROLE_CODES = [
   'PARENT',
   'FACULTY',
@@ -25,5 +28,4 @@ export const MESSAGING_ENABLED_ROLE_CODES = [
   'FINANCE',
   'MEDIA_ROOM',
   'SPORTS_ADMIN',
-  'COMMUNITY',
 ] as const;
