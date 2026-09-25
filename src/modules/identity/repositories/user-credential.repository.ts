@@ -132,12 +132,14 @@ export class UserCredentialRepository {
   }
 
   /** Admin-issued reset: sets a new hash, clears the allowance so self-service
-   * reopens, and records the plaintext as admin_visible_password (admin set it,
-   * so admin can see it -- until this account holder self-services again). */
+   * reopens. The new password is never persisted anywhere recoverable -- it is
+   * only ever returned once, in the same API response that triggered this
+   * reset (already the case before this change); admin_visible_password is
+   * explicitly cleared rather than set, so no admin (including the one who
+   * just reset it) can look this account's password up again afterward. */
   async completeAdminReset(
     personId: string,
     passwordHash: string,
-    plaintextPassword: string,
     executor: Queryable = this.postgres,
   ): Promise<void> {
     await executor.query(
@@ -150,16 +152,23 @@ export class UserCredentialRepository {
            failed_attempt_count = 0,
            locked_until = NULL,
            reset_allowance_used = false,
-           admin_visible_password = $3,
+           admin_visible_password = NULL,
            updated_at = now()
        WHERE person_id = $1`,
-      [personId, passwordHash, plaintextPassword],
+      [personId, passwordHash],
     );
   }
 
   /** First credential row for a newly-created person (Access module's Create User
    * flow) -- admin_visible_password starts out set, same as any other admin-set
-   * password, since nobody but Admin has ever seen it yet. */
+   * password, since nobody but Admin has ever seen it yet.
+   *
+   * Used only by the shared class-teacher login's own creation path
+   * (class-teacher-login.service.ts), where there is deliberately no personal
+   * account holder to force a change on and the admin screen shows the login's
+   * current password indefinitely (see setSharedLoginPassword) -- a carved-out
+   * exception, not the default for a real person's account. Real personal
+   * accounts must use createInitialSecure below instead. */
   async createInitial(
     personId: string,
     passwordHash: string,
@@ -170,6 +179,23 @@ export class UserCredentialRepository {
       `INSERT INTO user_credential (person_id, password_hash, must_change_password, admin_visible_password)
        VALUES ($1, $2, true, $3)`,
       [personId, passwordHash, plaintextPassword],
+    );
+  }
+
+  /** First credential row for a newly-created PERSONAL account (a real person
+   * who will change their own password). Never persists the temporary password
+   * anywhere recoverable -- the one-time plaintext value is only ever handed
+   * back in the same create-account API response (already the case before this
+   * change), never written to the database. */
+  async createInitialSecure(
+    personId: string,
+    passwordHash: string,
+    executor: Queryable = this.postgres,
+  ): Promise<void> {
+    await executor.query(
+      `INSERT INTO user_credential (person_id, password_hash, must_change_password)
+       VALUES ($1, $2, true)`,
+      [personId, passwordHash],
     );
   }
 
@@ -221,14 +247,15 @@ export class UserCredentialRepository {
    * admin re-reset once the allowance is used up (Parent, Faculty) -- for every
    * other role that flag is never read by anything, so it's left untouched
    * rather than flipped to a value nothing consumes. admin_visible_password is
-   * always set here regardless of role -- an admin-set password is visible to
-   * admin no matter which role holds the account.
+   * explicitly cleared here regardless of role -- the new password is never
+   * persisted anywhere recoverable; it is only ever returned once, in the same
+   * API response that triggered this reset (already the case before this
+   * change).
    */
   async generalPasswordReset(
     personId: string,
     passwordHash: string,
     clearResetAllowance: boolean,
-    plaintextPassword: string,
     executor: Queryable = this.postgres,
   ): Promise<void> {
     await executor.query(
@@ -241,10 +268,10 @@ export class UserCredentialRepository {
            failed_attempt_count = 0,
            locked_until = NULL,
            reset_allowance_used = CASE WHEN $3 THEN false ELSE reset_allowance_used END,
-           admin_visible_password = $4,
+           admin_visible_password = NULL,
            updated_at = now()
        WHERE person_id = $1`,
-      [personId, passwordHash, clearResetAllowance, plaintextPassword],
+      [personId, passwordHash, clearResetAllowance],
     );
   }
 }

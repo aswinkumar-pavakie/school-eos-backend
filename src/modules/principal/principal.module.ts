@@ -4,7 +4,7 @@ import { LibraryModule } from '../library/library.module';
 import { MaintenanceModule } from '../maintenance/maintenance.module';
 import { SportsModule } from '../sports/sports.module';
 import { TransportModule } from '../transport/transport.module';
-import { PrincipalDashboardController } from './principal-dashboard.controller';
+import { PrincipalDashboardController, PrincipalStudentsOverviewController } from './principal-dashboard.controller';
 import { PrincipalDashboardService } from './principal-dashboard.service';
 
 // Correspondent Phase 5 addition -- the shared dashboard summary's real
@@ -17,7 +17,7 @@ import { PrincipalDashboardService } from './principal-dashboard.service';
 // Compliance dashboard KPI, same reuse pattern.
 @Module({
   imports: [InventoryModule, MaintenanceModule, LibraryModule, SportsModule, TransportModule],
-  controllers: [PrincipalDashboardController],
+  controllers: [PrincipalDashboardController, PrincipalStudentsOverviewController],
   providers: [PrincipalDashboardService],
 })
 export class PrincipalModule {}

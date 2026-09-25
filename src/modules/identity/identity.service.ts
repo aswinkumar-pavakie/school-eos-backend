@@ -9,7 +9,7 @@ import { AUTH_ERRORS } from '../../common/errors/error-codes';
 import { UnitOfWork } from '../../common/transactions/unit-of-work';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh.dto';
-import { generateOpaqueToken, hashToken } from './identity.util';
+import { authError, generateOpaqueToken, hashToken } from './identity.util';
 import { LoginIdentifierRepository } from './repositories/login-identifier.repository';
 import {
   PersonAuthView,
@@ -70,7 +70,7 @@ export class IdentityService {
       dto.identifier,
     );
     if (!identifier) {
-      throw new UnauthorizedException(AUTH_ERRORS.INVALID_CREDENTIALS);
+      throw authError(AUTH_ERRORS.INVALID_CREDENTIALS, 'INVALID_CREDENTIALS');
     }
 
     // 2. Load credentials for that person.
@@ -78,7 +78,7 @@ export class IdentityService {
       identifier.personId,
     );
     if (!credential) {
-      throw new UnauthorizedException(AUTH_ERRORS.INVALID_CREDENTIALS);
+      throw authError(AUTH_ERRORS.INVALID_CREDENTIALS, 'INVALID_CREDENTIALS');
     }
 
     // Load the person now (not after password verification) so status can be checked
@@ -87,7 +87,7 @@ export class IdentityService {
     const person = await this.personRepo.findById(identifier.personId);
     if (!person) {
       // FK guarantees this can't happen; fail closed rather than trust that.
-      throw new UnauthorizedException(AUTH_ERRORS.INVALID_CREDENTIALS);
+      throw authError(AUTH_ERRORS.INVALID_CREDENTIALS, 'INVALID_CREDENTIALS');
     }
 
     // Deactivated by Admin (Access module) -- distinct message is an accepted,
@@ -96,7 +96,7 @@ export class IdentityService {
     // information leak.
     if (person.status !== 'ACTIVE') {
       await this.auditFailure(identifier.personId, device);
-      throw new UnauthorizedException(AUTH_ERRORS.ACCOUNT_DEACTIVATED);
+      throw authError(AUTH_ERRORS.ACCOUNT_DEACTIVATED, 'ACCOUNT_DEACTIVATED');
     }
 
     // 3. Lockout check BEFORE any password hashing — never spend a hash-check on an
@@ -106,7 +106,7 @@ export class IdentityService {
       credential.lockedUntil.getTime() > Date.now()
     ) {
       await this.auditFailure(identifier.personId, device);
-      throw new UnauthorizedException(AUTH_ERRORS.ACCOUNT_LOCKED);
+      throw authError(AUTH_ERRORS.ACCOUNT_LOCKED, 'ACCOUNT_LOCKED');
     }
 
     // 4. Verify password. argon2.verify reads the algorithm/cost parameters back out
@@ -124,7 +124,7 @@ export class IdentityService {
         this.configService.get<number>('auth.lockoutMinutes')!,
       );
       await this.auditFailure(identifier.personId, device);
-      throw new UnauthorizedException(AUTH_ERRORS.INVALID_CREDENTIALS);
+      throw authError(AUTH_ERRORS.INVALID_CREDENTIALS, 'INVALID_CREDENTIALS');
     }
 
     return this.unitOfWork.run(async (client) => {
@@ -281,7 +281,7 @@ export class IdentityService {
   ): Promise<LoginResult & { sessionId: string }> {
     const person = await this.personRepo.findById(personId);
     if (!person || person.status !== 'ACTIVE') {
-      throw new UnauthorizedException(AUTH_ERRORS.ACCOUNT_DEACTIVATED);
+      throw authError(AUTH_ERRORS.ACCOUNT_DEACTIVATED, 'ACCOUNT_DEACTIVATED');
     }
     const roles = await this.roleAssignmentRepo.findActiveByPersonId(
       personId,

@@ -42,6 +42,12 @@ export interface PrincipalDashboardSummary {
   // schema, just not read here before.
   staffSplit: { teaching: number; support: number };
   studentResidence: { hostellers: number; dayScholars: number };
+  // Dashboard-card reframe: today's live present counts split the same way
+  // as staffSplit/studentResidence above, so the frontend can render
+  // "105/106 hostellers" instead of a bare headcount. Denominators are
+  // studentResidence/staffSplit's own totals, not repeated here.
+  studentAttendanceToday: { hostellersPresent: number; dayScholarsPresent: number };
+  staffAttendanceToday: { teachingPresent: number; supportPresent: number };
   activeSectionsCount: number;
   // Correspondent Phase 5 addition -- real operational KPIs for the six
   // school-operations modules (Transport/Hostel already covered above by
@@ -86,6 +92,8 @@ export class PrincipalDashboardService {
       unadvisedSectionsResult,
       staffSplitResult,
       studentResidenceResult,
+      studentAttendanceTodayResult,
+      staffAttendanceTodayResult,
       activeSectionsResult,
       inventoryOverview,
       maintenanceOverview,
@@ -192,6 +200,43 @@ export class PrincipalDashboardService {
                 count(*) FILTER (WHERE NOT is_hosteller) AS day_scholars
          FROM student WHERE status = 'ACTIVE'`,
       ),
+      // Today's real per-residence present count -- same effective-status
+      // derivation (post-correction) as attendance-record.repository.ts's own
+      // reads, joined through today's DAILY attendance_session per section.
+      // Denominator is studentResidenceResult above (today's session simply
+      // may not exist yet for every section, which correctly shows as "not
+      // yet marked" via a lower numerator, not a smaller denominator).
+      this.postgres.query<{ hostellers_present: string; day_scholars_present: string }>(
+        `SELECT
+           count(*) FILTER (WHERE s.is_hosteller) AS hostellers_present,
+           count(*) FILTER (WHERE NOT s.is_hosteller) AS day_scholars_present
+         FROM attendance_record ar
+         JOIN attendance_session asess ON asess.id = ar.session_id
+           AND asess.session_date = CURRENT_DATE AND asess.session_type = 'DAILY'
+         JOIN student s ON s.id = ar.student_id AND s.status = 'ACTIVE'
+         LEFT JOIN LATERAL (
+           SELECT new_status FROM attendance_correction
+           WHERE attendance_record_id = ar.id ORDER BY corrected_at DESC LIMIT 1
+         ) latest_correction ON true
+         WHERE COALESCE(latest_correction.new_status, ar.status) IN ('PRESENT', 'LATE', 'HALF_DAY')`,
+      ),
+      // Today's real per-type staff present count -- same CHECK_IN-derived
+      // "present" definition as staffMarkedResult above, just split by
+      // is_teaching. Denominator is staffSplitResult above.
+      this.postgres.query<{ teaching_present: string; support_present: string }>(
+        `SELECT
+           count(*) FILTER (WHERE s.is_teaching AND latest.status = 'CHECK_IN') AS teaching_present,
+           count(*) FILTER (WHERE NOT s.is_teaching AND latest.status = 'CHECK_IN') AS support_present
+         FROM staff s
+         LEFT JOIN LATERAL (
+           SELECT event_type AS status
+           FROM staff_attendance_event e
+           WHERE e.staff_id = s.id AND e.occurred_at::date = CURRENT_DATE
+           ORDER BY e.received_at DESC
+           LIMIT 1
+         ) latest ON true
+         WHERE s.status = 'ACTIVE'`,
+      ),
       this.postgres.query<{ count: string }>(
         `SELECT count(*) FROM section
          WHERE status = 'ACTIVE'
@@ -258,6 +303,14 @@ export class PrincipalDashboardService {
         hostellers: parseInt(studentResidenceResult.rows[0].hostellers, 10),
         dayScholars: parseInt(studentResidenceResult.rows[0].day_scholars, 10),
       },
+      studentAttendanceToday: {
+        hostellersPresent: parseInt(studentAttendanceTodayResult.rows[0].hostellers_present, 10),
+        dayScholarsPresent: parseInt(studentAttendanceTodayResult.rows[0].day_scholars_present, 10),
+      },
+      staffAttendanceToday: {
+        teachingPresent: parseInt(staffAttendanceTodayResult.rows[0].teaching_present, 10),
+        supportPresent: parseInt(staffAttendanceTodayResult.rows[0].support_present, 10),
+      },
       activeSectionsCount: parseInt(activeSectionsResult.rows[0].count, 10),
       inventoryLowStockCount: inventoryOverview.lowStock,
       inventoryDamagedCount: inventoryOverview.damaged,
@@ -268,6 +321,75 @@ export class PrincipalDashboardService {
       complianceExpiringCount: complianceSummary.expiring,
       complianceOverdueCount: complianceSummary.overdue,
       generatedAt: new Date().toISOString(),
+    };
+  }
+
+  /** Backs the Students list page's own stat row (distinct from getSummary()
+   * above, which backs the dashboard) -- real, live figures for today's
+   * present count, exam pass rate, and hostel/transport enrolment, all
+   * school-wide across every ACTIVE student. */
+  async getStudentsOverview(): Promise<{
+    presentToday: { present: number; total: number };
+    passPercentage: { passed: number; total: number } | null;
+    hostelCount: number;
+    transportCount: number;
+  }> {
+    const [presentTodayResult, totalStudentsResult, passResult, hostelResult, transportResult] =
+      await Promise.all([
+        // Same effective-status derivation as principal-dashboard.service's
+        // own studentAttendanceToday query above, just unsplit by residence.
+        this.postgres.query<{ present: string }>(
+          `SELECT count(*) AS present
+           FROM attendance_record ar
+           JOIN attendance_session asess ON asess.id = ar.session_id
+             AND asess.session_date = CURRENT_DATE AND asess.session_type = 'DAILY'
+           JOIN student s ON s.id = ar.student_id AND s.status = 'ACTIVE'
+           LEFT JOIN LATERAL (
+             SELECT new_status FROM attendance_correction
+             WHERE attendance_record_id = ar.id ORDER BY corrected_at DESC LIMIT 1
+           ) latest_correction ON true
+           WHERE COALESCE(latest_correction.new_status, ar.status) IN ('PRESENT', 'LATE', 'HALF_DAY')`,
+        ),
+        this.postgres.query<{ count: string }>(`SELECT count(*) FROM student WHERE status = 'ACTIVE'`),
+        // Same PUBLISHED-exam / VERIFIED-or-PUBLISHED-mark gating as
+        // parent-academic.repository.ts's own Records/Class Results read --
+        // a draft or entered-only mark never counts here, matching what a
+        // parent/student is actually allowed to see as a "real" result.
+        this.postgres.query<{ passed: string; total: string }>(
+          `SELECT
+             count(*) FILTER (WHERE COALESCE(mc.new_marks, m.marks_obtained) >= es.pass_marks) AS passed,
+             count(*) AS total
+           FROM mark m
+           JOIN exam_subject es ON es.id = m.exam_subject_id AND es.pass_marks IS NOT NULL
+           JOIN exam e ON e.id = es.exam_id AND e.state = 'PUBLISHED'
+           LEFT JOIN LATERAL (
+             SELECT new_marks FROM mark_correction
+             WHERE mark_id = m.id ORDER BY corrected_at DESC LIMIT 1
+           ) mc ON true
+           WHERE m.state IN ('VERIFIED', 'PUBLISHED') AND NOT m.is_absent`,
+        ),
+        this.postgres.query<{ count: string }>(
+          `SELECT count(*) FROM student WHERE status = 'ACTIVE' AND is_hosteller`,
+        ),
+        this.postgres.query<{ count: string }>(
+          `SELECT count(DISTINCT student_id) FROM student_transport_allocation WHERE status = 'ACTIVE'`,
+        ),
+      ]);
+
+    const passTotal = parseInt(passResult.rows[0].total, 10);
+
+    return {
+      presentToday: {
+        present: parseInt(presentTodayResult.rows[0].present, 10),
+        total: parseInt(totalStudentsResult.rows[0].count, 10),
+      },
+      // No PUBLISHED exam with results yet -- null, not a fabricated 0%.
+      passPercentage:
+        passTotal === 0
+          ? null
+          : { passed: parseInt(passResult.rows[0].passed, 10), total: passTotal },
+      hostelCount: parseInt(hostelResult.rows[0].count, 10),
+      transportCount: parseInt(transportResult.rows[0].count, 10),
     };
   }
 }
