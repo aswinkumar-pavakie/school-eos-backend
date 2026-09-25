@@ -25,6 +25,9 @@ export interface LibraryMemberRow {
 export interface LibraryMemberListRow extends LibraryMemberRow {
   activeIssuesCount: number;
   overdueCount: number;
+  totalIssuesCount: number;
+  lastIssuedAt: Date | null;
+  lastIssueTitle: string | null;
   pendingFinesAmountPaise: string;
 }
 
@@ -116,13 +119,24 @@ export class LibraryMemberRepository {
       `SELECT ${COLUMNS},
               COALESCE(iss.active, 0) AS "activeIssuesCount",
               COALESCE(iss.overdue, 0) AS "overdueCount",
+              COALESCE(iss.total, 0) AS "totalIssuesCount",
+              lst.issued_at AS "lastIssuedAt", lst.title AS "lastIssueTitle",
               COALESCE(fin.pending, 0) AS "pendingFinesAmountPaise"
        FROM ${FROM}
        LEFT JOIN LATERAL (
-         SELECT count(*) FILTER (WHERE status IN ('ISSUED', 'OVERDUE')) AS active,
+         SELECT count(*) AS total,
+                count(*) FILTER (WHERE status IN ('ISSUED', 'OVERDUE')) AS active,
                 count(*) FILTER (WHERE status IN ('ISSUED', 'OVERDUE') AND due_date < current_date) AS overdue
          FROM library_issue WHERE member_id = m.id
        ) iss ON true
+       LEFT JOIN LATERAL (
+         SELECT li.issued_at, b.title
+         FROM library_issue li
+         JOIN library_book_copy c ON c.id = li.copy_id
+         JOIN library_book b ON b.id = c.book_id
+         WHERE li.member_id = m.id
+         ORDER BY li.issued_at DESC LIMIT 1
+       ) lst ON true
        LEFT JOIN LATERAL (
          SELECT sum(amount_paise) AS pending FROM library_fine
          WHERE member_id = m.id AND status IN ('PENDING', 'SENT_TO_FINANCE', 'PARTIALLY_PAID')
@@ -137,6 +151,7 @@ export class LibraryMemberRepository {
         ...r,
         activeIssuesCount: Number(r.activeIssuesCount),
         overdueCount: Number(r.overdueCount),
+        totalIssuesCount: Number(r.totalIssuesCount),
         pendingFinesAmountPaise: String(r.pendingFinesAmountPaise),
       })),
       total: parseInt(countResult.rows[0].count, 10),

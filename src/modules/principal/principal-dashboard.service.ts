@@ -97,7 +97,14 @@ export class PrincipalDashboardService {
         `SELECT count(*) FROM student WHERE status = 'ACTIVE'`,
       ),
       this.postgres.query<{ count: string }>(
-        `SELECT count(*) FROM staff WHERE status = 'ACTIVE'`,
+        // Same class-teacher-login exclusion as the staffSplit query below and
+        // dashboard.service.ts's own activeStaff count -- this headline total
+        // was the one place that still counted the 56 synthetic per-section
+        // rows, so it disagreed with its own now-fixed teaching/support
+        // breakdown (212 here vs 110+46=156 in the breakdown).
+        `SELECT count(*) FROM staff s
+         WHERE s.status = 'ACTIVE'
+           AND NOT EXISTS (SELECT 1 FROM class_teacher_login ctl WHERE ctl.login_person_id = s.person_id)`,
       ),
       this.postgres.query<{
         id: string;

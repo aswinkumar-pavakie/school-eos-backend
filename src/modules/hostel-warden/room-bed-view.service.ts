@@ -22,6 +22,7 @@ export interface HostelStructureRoom {
 
 export interface HostelStructureBlock {
   id: string;
+  hostelId: string;
   name: string;
   rooms: HostelStructureRoom[];
 }
@@ -64,7 +65,7 @@ export class RoomBedViewService {
             });
           }
         }
-        blocks.push({ id: block.id, name: block.name, rooms });
+        blocks.push({ id: block.id, hostelId, name: block.name, rooms });
       }
     }
     return blocks;
