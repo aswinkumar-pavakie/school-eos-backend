@@ -25,6 +25,8 @@ const SENSITIVE_KEYS = new Set([
   'refreshToken',
   'passwordHash',
   'mfaSecret',
+  'adminVisiblePassword',
+  'admin_visible_password',
 ]);
 
 function redact(value: unknown): unknown {

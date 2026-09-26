@@ -9,7 +9,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AnnouncementsService } from '../announcements/announcements.service';
-import { AttendanceRecordsService } from '../attendance/attendance-records.service';
 import { CalendarRepository } from '../faculty/repositories/calendar.repository';
 import { LMS_MATERIALS_BUCKET } from '../faculty/lms-storage.util';
 import { StorageService } from '../../infrastructure/storage/storage.service';
@@ -23,7 +22,6 @@ export class ParentAcademicService {
   constructor(
     private readonly academicRepo: ParentAcademicRepository,
     private readonly guardianRepo: GuardianLinkRepository,
-    private readonly attendanceRecordsService: AttendanceRecordsService,
     private readonly calendarRepo: CalendarRepository,
     private readonly storage: StorageService,
     private readonly announcementsService: AnnouncementsService,
@@ -50,10 +48,6 @@ export class ParentAcademicService {
 
   async getAttendance(personId: string, studentId: string, month?: string) {
     await this.assertGuardian(personId, studentId);
-    const summary =
-      await this.attendanceRecordsService.getAttendanceSummaryForStudent(
-        studentId,
-      );
     const now = new Date();
     const [year, mon] = (
       month ??
@@ -70,6 +64,26 @@ export class ParentAcademicService {
       monthStart,
       monthEnd,
     );
+    // Month-scoped summary computed from the same `days` this response
+    // already returns -- previously called AttendanceRecordsService's own
+    // getAttendanceSummaryForStudent() here, which has no month parameter at
+    // all (it's a genuine whole-term total, correctly used unscoped
+    // elsewhere e.g. a student profile header). Pairing that whole-term
+    // number with a month-scoped day list under a specific month's own
+    // heading was a real, visible bug -- confirmed live: a month with 0
+    // attendance records still showed the whole term's 96%/188/196 next to
+    // that month's own label. Same PRESENT/LATE/HALF_DAY-counts-as-present
+    // convention as AttendanceRecordsService.getAttendanceSummaryForStudent.
+    const presentCount = days.filter((d) =>
+      ['PRESENT', 'LATE', 'HALF_DAY'].includes(d.status),
+    ).length;
+    const totalCount = days.length;
+    const summary = {
+      presentCount,
+      totalCount,
+      percentage:
+        totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : null,
+    };
     return { summary, days };
   }
 

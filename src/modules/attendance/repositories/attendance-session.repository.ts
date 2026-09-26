@@ -40,6 +40,37 @@ export class AttendanceSessionRepository {
     return (await this.findById(rows[0].id, executor))!;
   }
 
+  /** Race-safe "open today's roll call": two requests for the same section+date at the same
+   * moment (a page that loads the roster twice, two tabs, a retry) must both get the ONE
+   * session, never a unique-violation 500. The loser of the race waits for the winner's
+   * commit, then reads the winner's row. Callers that want an explicit "already exists"
+   * error keep using create(). */
+  async findOrCreate(
+    sectionId: string,
+    sessionDate: string,
+    executor: Queryable = this.postgres,
+  ): Promise<AttendanceSessionRow> {
+    const { rows } = await executor.query<{ id: string }>(
+      `INSERT INTO attendance_session (section_id, session_date, session_type)
+       VALUES ($1, $2, 'DAILY')
+       ON CONFLICT DO NOTHING
+       RETURNING id`,
+      [sectionId, sessionDate],
+    );
+    if (rows[0]) return (await this.findById(rows[0].id, executor))!;
+    const existing = await this.findBySectionAndDate(
+      sectionId,
+      sessionDate,
+      executor,
+    );
+    if (!existing) {
+      throw new Error(
+        'Attendance session disappeared after a concurrent create.',
+      );
+    }
+    return existing;
+  }
+
   async findById(
     id: string,
     executor: Queryable = this.postgres,
@@ -143,7 +174,10 @@ export class AttendanceSessionRepository {
   /** The day is now final, so tell each absent student's guardians -- once,
    * because only the unlocked->locked transition reaches here. Best effort: a
    * failure here must never undo the lock. */
-  private async notifyGuardiansOfAbsences(sessionId: string, executor: Queryable): Promise<void> {
+  private async notifyGuardiansOfAbsences(
+    sessionId: string,
+    executor: Queryable,
+  ): Promise<void> {
     try {
       await executor.query(
         `INSERT INTO notification

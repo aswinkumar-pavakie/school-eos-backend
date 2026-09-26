@@ -19,7 +19,6 @@ import { AttendanceModule } from './modules/attendance/attendance.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { CanteenModule } from './modules/canteen/canteen.module';
 import { CommunitiesModule } from './modules/communities/communities.module';
-import { CommunityLoginModule } from './modules/community-login/community-login.module';
 import { CommunityInitiativesModule } from './modules/community-initiatives/community-initiatives.module';
 import { CommunityMembershipRequestsModule } from './modules/community-membership-requests/community-membership-requests.module';
 import { CommunityProposalsModule } from './modules/community-proposals/community-proposals.module';
@@ -60,6 +59,7 @@ import { RequestsApprovalsModule } from './modules/requests-approvals/requests-a
 import { SportsModule } from './modules/sports/sports.module';
 import { AiBotModule } from './modules/ai-bot/ai-bot.module';
 import { StaffAttendanceModule } from './modules/staff-attendance/staff-attendance.module';
+import { AttendanceDiaryModule } from './modules/attendance-diary/attendance-diary.module';
 import { StudentDevelopmentModule } from './modules/student-development/student-development.module';
 import { StudentEventsModule } from './modules/student-events/student-events.module';
 import { TimetableModule } from './modules/timetable/timetable.module';
@@ -106,6 +106,7 @@ import { DriverAppModule } from './modules/driver-app/driver-app.module';
     TimetableModule,
     CalendarModule,
     StaffAttendanceModule,
+    AttendanceDiaryModule,
     InventoryModule,
     MaintenanceModule,
     RequestsApprovalsModule,
@@ -121,7 +122,6 @@ import { DriverAppModule } from './modules/driver-app/driver-app.module';
     ExaminationsModule,
     HealthModule,
     StudentDevelopmentModule,
-    CommunityLoginModule,
     CommunityProposalsModule,
     CommunityInitiativesModule,
     CommunityMembershipRequestsModule,

@@ -441,7 +441,7 @@ export class FacultyAcademicCoordinatorService {
         client,
       );
       if (!session) {
-        session = await this.attendanceSessionRepo.create(
+        session = await this.attendanceSessionRepo.findOrCreate(
           sectionId,
           date,
           client,

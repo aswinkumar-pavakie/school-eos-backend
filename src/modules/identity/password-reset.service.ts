@@ -103,12 +103,11 @@ export class PasswordResetService {
       expiresAt,
     );
 
-    // Stub for the real SMS/email gateway. The OTP has to be visible somewhere for
-    // this flow to be testable before that gateway exists — deliberately logged,
-    // unlike passwords/tokens which must never appear in a log line.
-    console.log(
-      `[OTP STUB] purpose=PASSWORD_RESET destination=${destination} code=${code} expiresInMinutes=${ttlMinutes}`,
-    );
+    // No real SMS/email delivery gateway is wired up yet -- this is a known,
+    // pre-existing gap (self-service reset has no production delivery channel
+    // today), tracked separately from this fix. The OTP itself must never be
+    // logged, so nothing is printed here; building the actual gateway is a
+    // separate, distinctly-scoped piece of work.
   }
 
   /** `deviceId` is the phone the reset was completed on (X-Device-Id): its links
@@ -194,7 +193,6 @@ export class PasswordResetService {
       await this.userCredentialRepo.completeAdminReset(
         personId,
         passwordHash,
-        newPassword,
         client,
       );
       await this.sessionRepo.deleteAllForPerson(personId, client);

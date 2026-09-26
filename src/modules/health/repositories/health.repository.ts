@@ -126,7 +126,16 @@ export class HealthRepository {
   }
 
   async findInfirmaryVisits(
-    filter: { studentId?: string; action?: string; limit?: number },
+    filter: {
+      studentId?: string;
+      action?: string;
+      limit?: number;
+      /** Optional extras (used by the Health In-charge console). All additive. */
+      id?: string;
+      from?: string;
+      to?: string;
+      needsParentNotice?: boolean;
+    },
     executor: Queryable = this.postgres,
   ): Promise<InfirmaryVisitRow[]> {
     const conditions: string[] = [];
@@ -138,6 +147,21 @@ export class HealthRepository {
     if (filter.action) {
       params.push(filter.action);
       conditions.push(`iv.action = $${params.length}`);
+    }
+    if (filter.id) {
+      params.push(filter.id);
+      conditions.push(`iv.id = $${params.length}`);
+    }
+    if (filter.from) {
+      params.push(filter.from);
+      conditions.push(`iv.visited_at >= ($${params.length}::date)::timestamp AT TIME ZONE 'Asia/Kolkata'`);
+    }
+    if (filter.to) {
+      params.push(filter.to);
+      conditions.push(`iv.visited_at < (($${params.length}::date + 1)::timestamp AT TIME ZONE 'Asia/Kolkata')`);
+    }
+    if (filter.needsParentNotice) {
+      conditions.push(`iv.parent_notified_at IS NULL AND iv.action IN ('SENT_HOME', 'REFERRED', 'SICKBAY_ADMIT')`);
     }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     params.push(filter.limit ?? 200);

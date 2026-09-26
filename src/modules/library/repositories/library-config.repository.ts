@@ -4,7 +4,11 @@ import {
   Queryable,
 } from '../../../infrastructure/postgres/postgres.service';
 
-const CONFIG_ID = '00000000-0000-0000-0000-000000000001';
+// library_config is a single-row table. The row's id is not guaranteed to be
+// any fixed value (the live row's id is a random uuid, not a sentinel), so
+// every query addresses "the one row" instead of a hardcoded id -- a hardcoded
+// id made get() return undefined and broke Issue books/Settings/fines.
+const SINGLE_ROW = `(SELECT id FROM library_config ORDER BY updated_at DESC LIMIT 1)`;
 
 export interface LibraryConfigRow {
   loanPeriodDays: number;
@@ -35,8 +39,7 @@ export class LibraryConfigRepository {
 
   async get(executor: Queryable = this.postgres): Promise<LibraryConfigRow> {
     const { rows } = await executor.query<LibraryConfigRow>(
-      `SELECT ${COLUMNS} FROM library_config WHERE id = $1`,
-      [CONFIG_ID],
+      `SELECT ${COLUMNS} FROM library_config WHERE id = ${SINGLE_ROW}`,
     );
     return rows[0];
   }
@@ -48,16 +51,15 @@ export class LibraryConfigRepository {
   ): Promise<LibraryConfigRow> {
     await executor.query(
       `UPDATE library_config SET
-         loan_period_days = COALESCE($2, loan_period_days),
-         max_renewals = COALESCE($3, max_renewals),
-         fine_per_day_paise = COALESCE($4, fine_per_day_paise),
-         max_books_per_member = COALESCE($5, max_books_per_member),
-         reservation_hold_days = COALESCE($6, reservation_hold_days),
+         loan_period_days = COALESCE($1, loan_period_days),
+         max_renewals = COALESCE($2, max_renewals),
+         fine_per_day_paise = COALESCE($3, fine_per_day_paise),
+         max_books_per_member = COALESCE($4, max_books_per_member),
+         reservation_hold_days = COALESCE($5, reservation_hold_days),
          updated_at = now(),
-         updated_by = $7
-       WHERE id = $1`,
+         updated_by = $6
+       WHERE id = ${SINGLE_ROW}`,
       [
-        CONFIG_ID,
         input.loanPeriodDays ?? null,
         input.maxRenewals ?? null,
         input.finePerDayPaise ?? null,

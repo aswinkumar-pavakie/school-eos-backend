@@ -20,10 +20,11 @@ export class SportsPtController {
   @Get()
   async list() {
     const { rows } = await this.postgres.query<{ id: string }>(
-      `SELECT id FROM subject WHERE name = 'Physical Training' LIMIT 1`,
+      `SELECT id FROM subject WHERE name IN ('Physical Training', 'Physical Education')
+       ORDER BY (name = 'Physical Training') DESC LIMIT 1`,
     );
     const subjectId = rows[0]?.id;
-    if (!subjectId) throw new NotFoundException('Physical Training subject not found in the catalog');
+    if (!subjectId) throw new NotFoundException('Physical Training / Physical Education subject not found in the catalog');
     return { data: await this.timetableService.getForSubject(subjectId) };
   }
 }
