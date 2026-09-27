@@ -271,6 +271,7 @@ export class PersonRepository {
       conditions.push(
         `(lower(p.first_name) LIKE $${params.length}
           OR lower(coalesce(p.last_name, '')) LIKE $${params.length}
+          OR lower(p.first_name || ' ' || coalesce(p.last_name, '')) LIKE $${params.length}
           OR lower(coalesce(p.email, '')) LIKE $${params.length}
           OR coalesce(p.mobile, '') LIKE $${params.length}
           OR EXISTS (SELECT 1 FROM login_identifier li WHERE li.person_id = p.id AND lower(li.value) LIKE $${params.length}))`,

@@ -20,6 +20,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user.interface';
 import { CurrentActor } from '../../common/auth/current-actor.decorator';
 import { Roles } from '../../common/auth/roles.decorator';
+import { AddLoginIdentifierDto } from './dto/add-login-identifier.dto';
 import { CreateAcademicCoordinatorLoginDto } from './dto/create-academic-coordinator-login.dto';
 import { CreatePersonDto } from './dto/create-person.dto';
 import { GeneralPasswordResetDto } from './dto/general-password-reset.dto';
@@ -62,6 +63,16 @@ export class PersonsController {
     @CurrentActor() actor: AuthenticatedUser,
   ) {
     return { data: await this.personsService.update(id, dto, actor.personId) };
+  }
+
+  @Post(':id/identifiers')
+  @HttpCode(HttpStatus.CREATED)
+  async addLoginIdentifier(
+    @Param('id') id: string,
+    @Body() dto: AddLoginIdentifierDto,
+    @CurrentActor() actor: AuthenticatedUser,
+  ) {
+    return { data: await this.personsService.addLoginIdentifier(id, dto, actor.personId) };
   }
 
   @Post(':id/activate')

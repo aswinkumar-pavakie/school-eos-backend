@@ -327,7 +327,7 @@ export class CommunityMembershipRequestsService {
            SELECT 1 FROM community_membership_request cmr
            WHERE cmr.community_id = $1 AND cmr.student_id = s.id AND cmr.action = 'ADD' AND cmr.status = 'PENDING'
          )
-         AND (p.first_name ILIKE $2 OR p.last_name ILIKE $2 OR s.admission_no ILIKE $2)
+         AND (p.first_name ILIKE $2 OR p.last_name ILIKE $2 OR s.admission_no ILIKE $2 OR (p.first_name || ' ' || COALESCE(p.last_name, '')) ILIKE $2)
        ORDER BY p.first_name
        LIMIT 8`,
       [communityId, `%${trimmed}%`],

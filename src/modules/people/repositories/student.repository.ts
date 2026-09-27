@@ -189,7 +189,8 @@ export class StudentRepository {
       // additive (an OR branch), so every existing caller only ever gets the
       // same-or-more results, never fewer.
       conditions.push(
-        `(lower(p.first_name) LIKE $${params.length} OR lower(coalesce(p.last_name, '')) LIKE $${params.length} OR lower(s.admission_no) LIKE $${params.length} OR CAST(se.roll_no AS text) LIKE $${params.length})`,
+        `(lower(p.first_name) LIKE $${params.length} OR lower(coalesce(p.last_name, '')) LIKE $${params.length} OR lower(s.admission_no) LIKE $${params.length} OR CAST(se.roll_no AS text) LIKE $${params.length}
+          OR lower(p.first_name || ' ' || coalesce(p.last_name, '')) LIKE $${params.length})`,
       );
     }
     if (filter.sectionId) {

@@ -19,6 +19,7 @@ import { RoleAssignmentRepository } from '../identity/repositories/role-assignme
 import { AccountLinkRepository } from '../identity/repositories/account-link.repository';
 import { SessionRepository } from '../identity/repositories/session.repository';
 import { UserCredentialRepository } from '../identity/repositories/user-credential.repository';
+import { AddLoginIdentifierDto } from './dto/add-login-identifier.dto';
 import { CreatePersonDto } from './dto/create-person.dto';
 import { GeneralPasswordResetDto } from './dto/general-password-reset.dto';
 import { PersonQueryDto } from './dto/person-query.dto';
@@ -281,6 +282,61 @@ export class PersonsService {
       }
       throw err;
     }
+  }
+
+  /** Gives an existing person a second, independent login identifier -- e.g. a
+   * guardian created with a MOBILE identifier who also gave a real email.
+   * Both resolve to the same person_id and therefore the same user_credential
+   * row, so the same password works for either one; this never touches the
+   * password itself. Also backfills the matching person.mobile/email contact
+   * field (COALESCE-based update -- only fills it if it's still null), so the
+   * profile's Contact section shows it too, same as the reverse case this
+   * mirrors (email PATCHed onto a MOBILE-first account). */
+  async addLoginIdentifier(
+    personId: string,
+    dto: AddLoginIdentifierDto,
+    actorPersonId: string,
+  ) {
+    const person = await this.personRepo.findById(personId);
+    if (!person) throw new NotFoundException('Person not found');
+
+    try {
+      await this.unitOfWork.run(async (client) => {
+        await this.loginIdentifierRepo.create(
+          personId,
+          dto.identifierType,
+          dto.identifierValue,
+          client,
+        );
+        await this.personRepo.update(
+          personId,
+          {
+            mobile: dto.identifierType === 'MOBILE' ? dto.identifierValue : null,
+            email: dto.identifierType === 'EMAIL' ? dto.identifierValue : null,
+          },
+          actorPersonId,
+          client,
+        );
+      });
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new ConflictException(
+          'An account with this email or mobile number already exists.',
+        );
+      }
+      throw err;
+    }
+
+    await this.auditService.record({
+      actorPersonId,
+      action: 'LOGIN_IDENTIFIER_ADDED',
+      objectType: 'person',
+      objectId: personId,
+      outcome: 'SUCCESS',
+      afterData: { identifierType: dto.identifierType },
+    });
+
+    return { added: true };
   }
 
   async activate(personId: string, actorPersonId: string): Promise<void> {

@@ -87,7 +87,8 @@ export class LibraryIssueRepository {
       params.push(`%${filter.search.toLowerCase()}%`);
       conditions.push(
         `(lower(p.first_name) LIKE $${params.length} OR lower(coalesce(p.last_name, '')) LIKE $${params.length}
-          OR lower(b.title) LIKE $${params.length})`,
+          OR lower(b.title) LIKE $${params.length}
+          OR lower(p.first_name || ' ' || coalesce(p.last_name, '')) LIKE $${params.length})`,
       );
     }
     if (filter.memberId) {
