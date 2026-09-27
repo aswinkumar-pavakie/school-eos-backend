@@ -81,7 +81,8 @@ export class PaymentRepository {
       conditions.push(
         `(lower(coalesce(p.first_name, '')) LIKE $${params.length} OR lower(coalesce(p.last_name, '')) LIKE $${params.length}
           OR lower(coalesce(s.admission_no, '')) LIKE $${params.length} OR lower(coalesce(r.receipt_no, '')) LIKE $${params.length}
-          OR lower(coalesce(pay.gateway_ref, '')) LIKE $${params.length})`,
+          OR lower(coalesce(pay.gateway_ref, '')) LIKE $${params.length}
+          OR lower(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, '')) LIKE $${params.length})`,
       );
     }
 

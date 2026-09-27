@@ -93,7 +93,8 @@ export class ApprovalRequestRepository {
       params.push(`%${filter.search.toLowerCase()}%`);
       conditions.push(
         `(lower(coalesce(rp.first_name, '')) LIKE $${params.length} OR lower(coalesce(rp.last_name, '')) LIKE $${params.length}
-          OR lower(coalesce(ar.payload->>'description', '')) LIKE $${params.length})`,
+          OR lower(coalesce(ar.payload->>'description', '')) LIKE $${params.length}
+          OR lower(coalesce(rp.first_name, '') || ' ' || coalesce(rp.last_name, '')) LIKE $${params.length})`,
       );
     }
 

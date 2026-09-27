@@ -129,7 +129,7 @@ export class CanteenRepository {
        ${STUDENT_JOIN}
        LEFT JOIN wallet w ON w.student_id = s.id
        WHERE s.status = 'ACTIVE'
-         AND (p.first_name ILIKE $1 OR p.last_name ILIKE $1 OR s.admission_no ILIKE $1)
+         AND (p.first_name ILIKE $1 OR p.last_name ILIKE $1 OR s.admission_no ILIKE $1 OR (p.first_name || ' ' || COALESCE(p.last_name, '')) ILIKE $1)
        ORDER BY p.first_name, p.last_name
        LIMIT 20`,
       [`%${query}%`],

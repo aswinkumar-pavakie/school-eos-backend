@@ -165,7 +165,8 @@ export class StaffRepository {
     if (filter.search) {
       params.push(`%${filter.search.toLowerCase()}%`);
       conditions.push(
-        `(lower(p.first_name) LIKE $${params.length} OR lower(coalesce(p.last_name, '')) LIKE $${params.length} OR lower(s.employee_no) LIKE $${params.length})`,
+        `(lower(p.first_name) LIKE $${params.length} OR lower(coalesce(p.last_name, '')) LIKE $${params.length} OR lower(s.employee_no) LIKE $${params.length}
+          OR lower(p.first_name || ' ' || coalesce(p.last_name, '')) LIKE $${params.length})`,
       );
     }
     if (filter.designation) {

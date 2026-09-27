@@ -88,7 +88,8 @@ export class LibraryMemberRepository {
       params.push(`%${filter.search.toLowerCase()}%`);
       conditions.push(
         `(lower(p.first_name) LIKE $${params.length} OR lower(coalesce(p.last_name, '')) LIKE $${params.length}
-          OR lower(coalesce(s.admission_no, '')) LIKE $${params.length} OR lower(coalesce(st.employee_no, '')) LIKE $${params.length})`,
+          OR lower(coalesce(s.admission_no, '')) LIKE $${params.length} OR lower(coalesce(st.employee_no, '')) LIKE $${params.length}
+          OR lower(p.first_name || ' ' || coalesce(p.last_name, '')) LIKE $${params.length})`,
       );
     }
     if (filter.status) {
@@ -206,12 +207,12 @@ export class LibraryMemberRepository {
     let searchClause = '';
     if (search) {
       params.push(`%${search.toLowerCase()}%`);
-      searchClause = `AND (lower(p.first_name) LIKE $1 OR lower(coalesce(p.last_name, '')) LIKE $1 OR lower(s.admission_no) LIKE $1)`;
+      searchClause = `AND (lower(p.first_name) LIKE $1 OR lower(coalesce(p.last_name, '')) LIKE $1 OR lower(s.admission_no) LIKE $1 OR lower(p.first_name || ' ' || coalesce(p.last_name, '')) LIKE $1)`;
     }
     const studentParams = [...params];
     let staffSearchClause = '';
     if (search) {
-      staffSearchClause = `AND (lower(p.first_name) LIKE $1 OR lower(coalesce(p.last_name, '')) LIKE $1 OR lower(st.employee_no) LIKE $1)`;
+      staffSearchClause = `AND (lower(p.first_name) LIKE $1 OR lower(coalesce(p.last_name, '')) LIKE $1 OR lower(st.employee_no) LIKE $1 OR lower(p.first_name || ' ' || coalesce(p.last_name, '')) LIKE $1)`;
     }
 
     const { rows } = await executor.query<EligiblePersonRow>(

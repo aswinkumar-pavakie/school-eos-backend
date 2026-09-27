@@ -249,17 +249,31 @@ export class IdentityService {
     await this.sessionRepo.deleteByRefreshTokenHash(hash);
   }
 
-  async me(
-    personId: string,
-  ): Promise<{ person: PersonSummary; roles: RoleSummary[] }> {
+  async me(personId: string): Promise<{
+    person: PersonSummary;
+    roles: RoleSummary[];
+    /** What this account actually signs in with -- distinct from person.email/
+     * mobile (contact fields, which can drift). Lets any role's own profile
+     * screen tell someone with two identifiers (e.g. a guardian with both a
+     * phone and an email login) which values genuinely work, instead of
+     * guessing from a single contact field. */
+    loginIdentifiers: { identifierType: string; value: string }[];
+  }> {
     const person = await this.personRepo.findById(personId);
     if (!person) {
       throw new UnauthorizedException();
     }
-    const roles = await this.roleAssignmentRepo.findActiveByPersonId(personId);
+    const [roles, loginIdentifiers] = await Promise.all([
+      this.roleAssignmentRepo.findActiveByPersonId(personId),
+      this.loginIdentifierRepo.findByPersonId(personId),
+    ]);
     return {
       person: this.toPersonSummary(person),
       roles: roles.map(this.toRoleSummary),
+      loginIdentifiers: loginIdentifiers.map((li) => ({
+        identifierType: li.identifierType,
+        value: li.value,
+      })),
     };
   }
 

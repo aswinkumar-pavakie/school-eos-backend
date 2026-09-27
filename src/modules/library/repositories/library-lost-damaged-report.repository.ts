@@ -108,7 +108,8 @@ export class LibraryLostDamagedReportRepository {
       params.push(`%${filter.search.toLowerCase()}%`);
       conditions.push(
         `(lower(b.title) LIKE $${params.length} OR lower(mp.first_name) LIKE $${params.length}
-          OR lower(coalesce(mp.last_name, '')) LIKE $${params.length})`,
+          OR lower(coalesce(mp.last_name, '')) LIKE $${params.length}
+          OR lower(mp.first_name || ' ' || coalesce(mp.last_name, '')) LIKE $${params.length})`,
       );
     }
     const where =
